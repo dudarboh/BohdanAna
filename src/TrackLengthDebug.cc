@@ -28,7 +28,7 @@ using dd4hep::rec::Vector3D;
 TrackLengthDebug aTrackLengthDebug ;
 
 
-TrackLengthDebug::TrackLengthDebug() : marlin::Processor("TrackLengthDebug") {
+TrackLengthDebug::TrackLengthDebug() : marlin::Processor("TrackLengthDebug"), EventDisplayer(this) {
     _description = "TrackLengthDebug debugs track length";
 
     registerInputCollection(LCIO::RECONSTRUCTEDPARTICLE,
@@ -36,11 +36,6 @@ TrackLengthDebug::TrackLengthDebug() : marlin::Processor("TrackLengthDebug") {
                             "Name of the ReconstructedParticle collection",
                             _pfoCollectionName,
                             std::string("PandoraPFOs") );
-
-    registerProcessorParameter("eventDisplay",
-                             "eventDisplay",
-                             _eventDisplay,
-                             bool(false));
 }
 
 
@@ -57,10 +52,36 @@ void TrackLengthDebug::init(){
     _trkSystem->init();
 
     prepareRootTree();
-    if (_eventDisplay) DDMarlinCED::init(this);
-
+    // initDisplay(this);
 }
 
+
+void drawPFO(ReconstructedParticle* pfo){
+    std::vector<Track*> tracks = pfo->getTracks();
+    for(auto* track: tracks){
+        auto hits = track->getTrackerHits();
+        for (auto* hit: hits){
+            auto pos = hit->getPosition();
+            int type = 0; // point
+            int layer = 1; // doesn't matter
+            int size = 3; // larger point
+            unsigned long color = 0x3232a8;
+            ced_hit_ID(pos[0], pos[1], pos[2], type, layer, size, color, 0 ); // tracker hits
+        }
+    }
+    std::vector<Cluster*> clusters = pfo->getClusters();
+    for(auto* cluster: clusters){
+        auto hits = cluster->getCalorimeterHits();
+        for (auto* hit: hits){
+            auto pos = hit->getPosition();
+            int type = 0; // point
+            int layer = 1; // doesn't matter
+            int size = 6; // larger point
+            unsigned long color = 0xbf2659;
+            ced_hit_ID(pos[0], pos[1], pos[2], type, layer, size, color, 0 ); // tracker hits
+        }
+    }
+}
 
 void TrackLengthDebug::processEvent(EVENT::LCEvent * evt){
     ++_nEvent;
@@ -107,15 +128,7 @@ void TrackLengthDebug::processEvent(EVENT::LCEvent * evt){
 
         _tree->Fill();
 
-        if(_eventDisplay){
-            DDMarlinCED::newEvent(this, evt);
-            DDMarlinCED::drawDD4hepDetector(_detector, false, vector<string>{""});
-            DDCEDPickingHandler& pHandler= DDCEDPickingHandler::getInstance();
-            pHandler.update(evt);
-            drawPFO(pfo);
-            DDMarlinCED::draw(this);            
-        }
-
+        drawDisplay(this, evt, drawPFO, pfo);
 
         // EVENT DISPLAY SHENANIGENS
         // if (trackLength == bullshit) {
@@ -203,31 +216,4 @@ void TrackLengthDebug::prepareRootTree(){
     _tree->Branch("massTanL", &_massTanL);
     _tree->Branch("massZ", &_massZ);
     
-}
-
-void TrackLengthDebug::drawPFO(ReconstructedParticle* pfo){
-    std::vector<Track*> tracks = pfo->getTracks();
-    for(auto* track: tracks){
-        auto hits = track->getTrackerHits();
-        for (auto* hit: hits){
-            auto pos = hit->getPosition();
-            int type = 0; // point
-            int layer = 1; // doesn't matter
-            int size = 3; // larger point
-            unsigned long color = 0x3232a8;
-            ced_hit_ID(pos[0], pos[1], pos[2], type, layer, size, color, 0 ); // tracker hits
-        }
-    }
-    std::vector<Cluster*> clusters = pfo->getClusters();
-    for(auto* cluster: clusters){
-        auto hits = cluster->getCalorimeterHits();
-        for (auto* hit: hits){
-            auto pos = hit->getPosition();
-            int type = 0; // point
-            int layer = 1; // doesn't matter
-            int size = 6; // larger point
-            unsigned long color = 0xbf2659;
-            ced_hit_ID(pos[0], pos[1], pos[2], type, layer, size, color, 0 ); // tracker hits
-        }
-    }
 }

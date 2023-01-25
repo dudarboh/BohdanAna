@@ -1,8 +1,8 @@
 #ifndef TrackLengthDebug_h
 #define TrackLengthDebug_h 1
 
-#include <string>
-#include <vector>
+#include "EventDisplayer.h"
+
 #include "marlin/Processor.h"
 #include "MarlinTrk/IMarlinTrkSystem.h"
 #include "EVENT/Track.h"
@@ -12,12 +12,16 @@
 #include "TTree.h"
 #include "DD4hep/Detector.h"
 
+#include <string>
+#include <vector>
+
 
 /**
 Marlin processor that calculates harmonic mean momentum and track length of the track.
 \author B. Dudar, DESY, 2022
 */
-class TrackLengthDebug : public marlin::Processor {
+class TrackLengthDebug : public marlin::Processor, EventDisplayer {
+    friend class EventDisplayer;
     public:
         /**
         Copy constructor.
@@ -55,7 +59,7 @@ class TrackLengthDebug : public marlin::Processor {
         double getTrackLengthZ(const std::vector<IMPL::TrackStateImpl>& trackStates);
         float getParameterFromPID(EVENT::ReconstructedParticle* pfo, UTIL::PIDHandler& pidHandler, std::string algorithmName, std::string parameterName);
         void prepareRootTree();
-        void drawPFO(EVENT::ReconstructedParticle* pfo);
+        // void drawPFO(EVENT::ReconstructedParticle* pfo);
 
 
 
@@ -63,7 +67,6 @@ class TrackLengthDebug : public marlin::Processor {
         /** Stores ReconstructedParticleCollection steering parameter.
         */
         std::string _pfoCollectionName{};
-        bool _eventDisplay{};
         /** Stores current event number.
         */
         int _nEvent{};
@@ -94,7 +97,7 @@ class TrackLengthDebug : public marlin::Processor {
         double _massDefault;
         double _massTanL;
         double _massZ;
-        dd4hep::Detector& _detector = dd4hep::Detector::getInstance();
+
 
 };
 
