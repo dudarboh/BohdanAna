@@ -129,7 +129,7 @@ void TrackLengthDebug::processEvent(EVENT::LCEvent * evt){
 }
 
 
-double TrackLengthDebug::getTrackLengthDefault(std::vector<IMPL::TrackStateImpl> trackStates){
+double TrackLengthDebug::getTrackLengthDefault(const std::vector<IMPL::TrackStateImpl>& trackStates){
     double trackLength = 0.;
     int nTrackStates = trackStates.size();
     //exclude last track state at the ECal
@@ -146,7 +146,7 @@ double TrackLengthDebug::getTrackLengthDefault(std::vector<IMPL::TrackStateImpl>
     return trackLength;
 }
 
-double TrackLengthDebug::getTrackLengthTanL(std::vector<IMPL::TrackStateImpl> trackStates){
+double TrackLengthDebug::getTrackLengthTanL(const std::vector<IMPL::TrackStateImpl>& trackStates){
     double trackLength = 0.;
     int nTrackStates = trackStates.size();
     //exclude last track state at the ECal
@@ -165,7 +165,7 @@ double TrackLengthDebug::getTrackLengthTanL(std::vector<IMPL::TrackStateImpl> tr
 
 
 
-double TrackLengthDebug::getTrackLengthZ(std::vector<IMPL::TrackStateImpl> trackStates){
+double TrackLengthDebug::getTrackLengthZ(const std::vector<IMPL::TrackStateImpl>& trackStates){
     double trackLength = 0.;
     int nTrackStates = trackStates.size();
     //exclude last track state at the ECal

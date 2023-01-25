@@ -50,9 +50,9 @@ class TrackLengthDebug : public marlin::Processor {
         */
         void processEvent(EVENT::LCEvent* evt);
 
-        double getTrackLengthDefault(std::vector<IMPL::TrackStateImpl> trackStates);
-        double getTrackLengthTanL(std::vector<IMPL::TrackStateImpl> trackStates);
-        double getTrackLengthZ(std::vector<IMPL::TrackStateImpl> trackStates);
+        double getTrackLengthDefault(const std::vector<IMPL::TrackStateImpl>& trackStates);
+        double getTrackLengthTanL(const std::vector<IMPL::TrackStateImpl>& trackStates);
+        double getTrackLengthZ(const std::vector<IMPL::TrackStateImpl>& trackStates);
         float getParameterFromPID(EVENT::ReconstructedParticle* pfo, UTIL::PIDHandler& pidHandler, std::string algorithmName, std::string parameterName);
         void prepareRootTree();
         void drawPFO(EVENT::ReconstructedParticle* pfo);
