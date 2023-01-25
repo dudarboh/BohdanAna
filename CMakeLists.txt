@@ -12,7 +12,7 @@ message(STATUS "C++ flags are set to: " ${CMAKE_CXX_FLAGS})
 
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
-add_library(${PROJECT_NAME} SHARED ${PROJECT_SOURCE_DIR}/src/TrackLengthDebug.cc ${PROJECT_SOURCE_DIR}/src/TrackLengthUtils.cc ${PROJECT_SOURCE_DIR}/src/EventDisplayer.cc)
+add_library(${PROJECT_NAME} SHARED ${PROJECT_SOURCE_DIR}/src/TrackLengthDebug.cc ${PROJECT_SOURCE_DIR}/src/TrackLengthUtils.cc)
 
 ### DEPENDENCIES ###
 find_package(Marlin REQUIRED)

@@ -52,7 +52,6 @@ void TrackLengthDebug::init(){
     _trkSystem->init();
 
     prepareRootTree();
-    // initDisplay(this);
 }
 
 
@@ -128,15 +127,7 @@ void TrackLengthDebug::processEvent(EVENT::LCEvent * evt){
 
         _tree->Fill();
 
-        drawDisplay(this, evt, drawPFO, pfo);
-
-        // EVENT DISPLAY SHENANIGENS
-        // if (trackLength == bullshit) {
-        //     MyAmazingEventDisplay evDisplay;
-        //     evDisplay.draw()
-        // }
-
-    
+        drawDisplay(this, evt, drawPFO, pfo);    
 
     }
 }

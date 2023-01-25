@@ -37,6 +37,13 @@ class EventDisplayer {
 
 };
 
+void EventDisplayer::initDisplay(marlin::Processor* proc){
+    if (_eventDisplay && !_isInit) {
+        DDMarlinCED::init(proc);
+        _isInit = true;
+    }
+}
+
 template<typename Func, typename... Args>
 void EventDisplayer::drawDisplay(marlin::Processor* proc, EVENT::LCEvent* evt, Func&& func, Args&&... args) {
     if (!_eventDisplay) {
