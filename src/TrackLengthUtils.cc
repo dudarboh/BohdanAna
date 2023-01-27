@@ -175,20 +175,21 @@ std::vector<IMPL::TrackStateImpl> TrackLengthUtils::getTrackStatesPerHit(std::ve
         double zFirst = std::abs( hitsInFit.front().first->getPosition()[2] );
         double zLast = std::abs( hitsInFit.back().first->getPosition()[2] );
 
+        if ( zLast < zFirst ) loopForward = false;
         // OPTIMIZE: 10 mm is just a round number. With very small z difference it is more robust to use rho, to be sure z difference is not caused by tpc Z resolution or multiple scattering
-        if ( std::abs(zLast - zFirst) > 10. ){
-            if ( zLast < zFirst ) loopForward = false;
-            streamlog_out(DEBUG8)<<"Using Z to define loop direction over subTrack hits."<<std::endl;
-            streamlog_out(DEBUG8)<<"subTrack "<<i+1<<" zFirst: "<<hitsInFit.front().first->getPosition()[2]<<" zLast: "<<hitsInFit.back().first->getPosition()[2]<<" loop forward: "<<loopForward<<std::endl;
-        }
-        else{
-            double rhoFirst = std::hypot( hitsInFit.front().first->getPosition()[0], hitsInFit.front().first->getPosition()[1] );
-            double rhoLast = std::hypot( hitsInFit.back().first->getPosition()[0], hitsInFit.back().first->getPosition()[1] );
-            if ( rhoLast < rhoFirst ) loopForward = false;
-            streamlog_out(DEBUG8)<<"Track is very perpendicular (dz < 10 mm). Using rho to define loop direction over subTrack hits."<<std::endl;
-            streamlog_out(DEBUG8)<<"subTrack "<<i+1<<" zFirst: "<<hitsInFit.front().first->getPosition()[2]<<" zLast: "<<hitsInFit.back().first->getPosition()[2]<<std::endl;
-            streamlog_out(DEBUG8)<<"subTrack "<<i+1<<" rhoFirst: "<<rhoFirst<<" rhoLast: "<<rhoLast<<" loop forward: "<<loopForward<<std::endl;
-        }
+        // if ( std::abs(zLast - zFirst) > 10. ){
+        //     if ( zLast < zFirst ) loopForward = false;
+        //     streamlog_out(DEBUG8)<<"Using Z to define loop direction over subTrack hits."<<std::endl;
+        //     streamlog_out(DEBUG8)<<"subTrack "<<i+1<<" zFirst: "<<hitsInFit.front().first->getPosition()[2]<<" zLast: "<<hitsInFit.back().first->getPosition()[2]<<" loop forward: "<<loopForward<<std::endl;
+        // }
+        // else{
+        //     double rhoFirst = std::hypot( hitsInFit.front().first->getPosition()[0], hitsInFit.front().first->getPosition()[1] );
+        //     double rhoLast = std::hypot( hitsInFit.back().first->getPosition()[0], hitsInFit.back().first->getPosition()[1] );
+        //     if ( rhoLast < rhoFirst ) loopForward = false;
+        //     streamlog_out(DEBUG8)<<"Track is very perpendicular (dz < 10 mm). Using rho to define loop direction over subTrack hits."<<std::endl;
+        //     streamlog_out(DEBUG8)<<"subTrack "<<i+1<<" zFirst: "<<hitsInFit.front().first->getPosition()[2]<<" zLast: "<<hitsInFit.back().first->getPosition()[2]<<std::endl;
+        //     streamlog_out(DEBUG8)<<"subTrack "<<i+1<<" rhoFirst: "<<rhoFirst<<" rhoLast: "<<rhoLast<<" loop forward: "<<loopForward<<std::endl;
+        // }
 
         int nHitsInFit = hitsInFit.size();
         // if first successfully fitted subTrack add IP track state
