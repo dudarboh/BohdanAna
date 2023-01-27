@@ -11,19 +11,16 @@
 #include "MarlinTrk/Factory.h"
 #include "EVENT/SimTrackerHit.h"
 #include "marlinutil/DDMarlinCED.h"
+#include "UTIL/TrackTools.h"
+#include "UTIL/LCRelationNavigator.h"
+#include "EVENT/MCParticle.h"
 
 using namespace TrackLengthUtils;
+using namespace EVENT;
+using namespace UTIL;
+using dd4hep::rec::Vector3D;
 using std::vector;
 using std::string;
-using EVENT::LCCollection;
-using EVENT::ReconstructedParticle;
-using EVENT::TrackerHit;
-using EVENT::Track;
-using EVENT::TrackState;
-using EVENT::SimTrackerHit;
-using EVENT::TrackState;
-using EVENT::LCObject;
-using dd4hep::rec::Vector3D;
 
 TrackLengthDebug aTrackLengthDebug ;
 
@@ -84,17 +81,25 @@ void drawPFO(ReconstructedParticle* pfo){
 
 void TrackLengthDebug::processEvent(EVENT::LCEvent * evt){
     ++_nEvent;
-    streamlog_out(DEBUG9)<<std::endl<<"==========Event========== "<<_nEvent<<std::endl;
+    streamlog_out(DEBUG8)<<std::endl<<"==========Event========== "<<_nEvent<<std::endl;
 
     LCCollection* pfos = evt->getCollection(_pfoCollectionName);
 
     PIDHandler pidHandler( pfos );
     int algoID = pidHandler.addAlgorithm( name(), _outputParNames );
 
+    LCRelationNavigator nav ( evt->getCollection("RecoMCTruthLink") );
+
 
     for (int i=0; i<pfos->getNumberOfElements(); ++i){
-        streamlog_out(DEBUG9)<<std::endl<<"Starting to analyze "<<i+1<<" PFO"<<std::endl;
+        streamlog_out(DEBUG7)<<std::endl<<"Starting to analyze "<<i+1<<" PFO"<<std::endl;
         ReconstructedParticle* pfo = static_cast <ReconstructedParticle*> ( pfos->getElementAt(i) );
+        const MCParticle* mc = nullptr;
+        double trackWeight = nav.getRelatedToMaxWeight(pfo, "track");
+        if(trackWeight != 0) mc = static_cast<const MCParticle*> ( nav.getRelatedToMaxWeightObject(pfo, "track") );
+        else mc = static_cast<const MCParticle*> ( nav.getRelatedToMaxWeightObject(pfo, "cluster") );
+
+        _pdg = mc->getPDG();
 
         int nClusters = pfo->getClusters().size();
         int nTracks = pfo->getTracks().size();
@@ -102,9 +107,24 @@ void TrackLengthDebug::processEvent(EVENT::LCEvent * evt){
         if( nClusters != 1 || nTracks != 1) continue;
 
         Track* track = pfo->getTracks()[0];
+
+        _d0Ip = track->getD0();
+        _z0Ip = track->getZ0();
+        _omegaIp = track->getOmega();
+        _tanLIp = track->getTanLambda();
+        _phiIp = track->getPhi();
+
         const TrackState* tsCalo = track->getTrackState(TrackState::AtCalorimeter);
+        _zCalo = tsCalo->getReferencePoint()[2] + tsCalo->getZ0();
+        std::array<double, 3> momCalo = getTrackMomentum(tsCalo, _bField);
+        _momCalo = Vector3D(momCalo[0], momCalo[1], momCalo[2]);
+        _d0Calo = tsCalo->getD0();
+        _z0Calo = tsCalo->getZ0();
+        _omegaCalo = tsCalo->getOmega();
+        _tanLCalo = tsCalo->getTanLambda();
+        _phiCalo = tsCalo->getPhi();
         //only barrel to check
-        if ( std::abs(tsCalo->getReferencePoint()[2] + tsCalo->getZ0() ) > 2300. ) continue;
+        // if ( std::abs(tsCalo->getReferencePoint()[2] + tsCalo->getZ0() ) > 2300. ) continue;
         vector<Track*> subTracks = getSubTracks(track);
         vector<TrackStateImpl> trackStates = getTrackStatesPerHit(subTracks, _trkSystem, _bField);
 
@@ -113,25 +133,34 @@ void TrackLengthDebug::processEvent(EVENT::LCEvent * evt){
         _trackLengthZ = getTrackLengthZ(trackStates);
     
         double speedOfLight = 299.792458;
-        _momentum = Vector3D( pfo->getMomentum() ).r();
+        _momIp = Vector3D( pfo->getMomentum() );
+        _momentum = _momIp.r();
         _tof = getParameterFromPID(pfo, pidHandler, "MyTofClosest0ps", "timeOfFlight"); // in ns
-        _massDefault = _momentum * std::sqrt( std::pow(_tof*speedOfLight/_trackLengthDefault, 2) - 1 );
-        _massTanL = _momentum * std::sqrt( std::pow(_tof*speedOfLight/_trackLengthTanL, 2) - 1 );
-        _massZ = _momentum * std::sqrt( std::pow(_tof*speedOfLight/_trackLengthZ, 2) - 1 );
+        if ( std::pow(_tof*speedOfLight/_trackLengthDefault, 2) - 1 > 0 ) _massDefault = _momentum * std::sqrt( std::pow(_tof*speedOfLight/_trackLengthDefault, 2) - 1 );
+        else _massDefault = 0;
 
-        std::cout<<"Final results for the "<<i+1<<" PFO"<<std::endl;
-        std::cout<<"Track length using default: "<<_trackLengthDefault<<" mm"<<std::endl;
-        std::cout<<"Track length using tanL: "<<_trackLengthTanL<<" mm"<<std::endl;
-        std::cout<<"Track length using Z: "<<_trackLengthZ<<" mm"<<std::endl;
-        std::cout<<std::endl<<std::endl;
+        if ( std::pow(_tof*speedOfLight/_trackLengthTanL, 2) - 1 > 0 ) _massTanL = _momentum * std::sqrt( std::pow(_tof*speedOfLight/_trackLengthTanL, 2) - 1 );
+        else _massTanL = 0;
 
+        if ( std::pow(_tof*speedOfLight/_trackLengthZ, 2) - 1 > 0 ) _massZ = _momentum * std::sqrt( std::pow(_tof*speedOfLight/_trackLengthZ, 2) - 1 );
+        else _massZ = 0;
+
+        streamlog_out(DEBUG5)<<"Final results for the "<<i+1<<" PFO"<<std::endl;
+        streamlog_out(DEBUG5)<<"Track length using default: "<<_trackLengthDefault<<" mm"<<std::endl;
+        streamlog_out(DEBUG5)<<"Track length using tanL: "<<_trackLengthTanL<<" mm"<<std::endl;
+        streamlog_out(DEBUG5)<<"Track length using Z: "<<_trackLengthZ<<" mm"<<std::endl;
+        streamlog_out(DEBUG5)<<std::endl<<std::endl;
+
+        drawDisplay(this, evt, drawPFO, pfo);
         _tree->Fill();
 
-        drawDisplay(this, evt, drawPFO, pfo);    
 
     }
 }
 
+void TrackLengthDebug::end(){
+    _file->Write();
+}
 
 double TrackLengthDebug::getTrackLengthDefault(const std::vector<IMPL::TrackStateImpl>& trackStates){
     double trackLength = 0.;
@@ -206,5 +235,22 @@ void TrackLengthDebug::prepareRootTree(){
     _tree->Branch("massDefault", &_massDefault);
     _tree->Branch("massTanL", &_massTanL);
     _tree->Branch("massZ", &_massZ);
+
+    _tree->Branch("pdg", &_pdg);
+    _tree->Branch("mom_ip", &_momIp);
+    _tree->Branch("d0_ip", &_d0Ip);
+    _tree->Branch("z0_ip", &_z0Ip);
+    _tree->Branch("omega_ip", &_omegaIp);
+    _tree->Branch("tanL_ip", &_tanLIp);
+    _tree->Branch("phi_ip", &_phiIp);
+
+    _tree->Branch("mom_calo", &_momCalo);
+    _tree->Branch("d0_calo", &_d0Calo);
+    _tree->Branch("z0_calo", &_z0Calo);
+    _tree->Branch("omega_calo", &_omegaCalo);
+    _tree->Branch("tanL_calo", &_tanLCalo);
+    _tree->Branch("phi_calo", &_phiCalo);
+
+    _tree->Branch("z_calo", &_zCalo);
     
 }

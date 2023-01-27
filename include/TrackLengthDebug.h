@@ -15,7 +15,6 @@
 #include <string>
 #include <vector>
 
-
 /**
 Marlin processor that calculates harmonic mean momentum and track length of the track.
 \author B. Dudar, DESY, 2022
@@ -53,6 +52,9 @@ class TrackLengthDebug : public marlin::Processor, EventDisplayer {
         Calculates momentum and track length and writes them into PIDHandler of the input collection object.
         */
         void processEvent(EVENT::LCEvent* evt);
+
+        void end();
+
 
         double getTrackLengthDefault(const std::vector<IMPL::TrackStateImpl>& trackStates);
         double getTrackLengthTanL(const std::vector<IMPL::TrackStateImpl>& trackStates);
@@ -98,6 +100,20 @@ class TrackLengthDebug : public marlin::Processor, EventDisplayer {
         double _massTanL;
         double _massZ;
 
+        int _pdg;
+        dd4hep::rec::Vector3D _momIp;
+        double _d0Ip;
+        double _z0Ip;
+        double _omegaIp;
+        double _tanLIp;
+        double _phiIp;
+        dd4hep::rec::Vector3D _momCalo;
+        double _d0Calo;
+        double _z0Calo;
+        double _omegaCalo;
+        double _tanLCalo;
+        double _phiCalo;
+        double _zCalo;
 
 };
 
