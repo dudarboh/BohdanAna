@@ -7,6 +7,8 @@
 #include "MarlinTrk/IMarlinTrkSystem.h"
 #include "MarlinTrk/IMarlinTrack.h"
 #include "DDRec/Vector3D.h"
+#include "EVENT/SimTrackerHit.h"
+#include "IMPL/SimTrackerHitImpl.h"
 
 /**
  * Utility functions that are used by the TrackLengthProcessor.
@@ -104,6 +106,8 @@ namespace TrackLengthUtils{
     inside all provided subTracks as tracks argument and the track state at the ECal surface if extrapolateToEcal argument is set to true.
     */
     std::vector<IMPL::TrackStateImpl> getTrackStatesPerHit(std::vector<EVENT::Track*> tracks, MarlinTrk::IMarlinTrkSystem* trkSystem, double bField);
+    EVENT::SimTrackerHit* getSimTrackerHit(EVENT::LCEvent* evt, EVENT::TrackerHit* hit);
+    std::vector<EVENT::SimTrackerHit*> convertHitsToSimHits(EVENT::LCEvent* evt, const std::vector<EVENT::Track*>& tracks, MarlinTrk::IMarlinTrkSystem* trkSystem, double bField);
 
 
 }

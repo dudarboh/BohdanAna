@@ -10,8 +10,9 @@
 #include "UTIL/PIDHandler.h"
 #include "TFile.h"
 #include "TTree.h"
+#include "TGraph.h"
 #include "DD4hep/Detector.h"
-
+#include "EVENT/SimTrackerHit.h"
 #include <string>
 #include <vector>
 
@@ -60,6 +61,7 @@ class TrackLengthDebug : public marlin::Processor, EventDisplayer {
         double getTrackLengthTanL(const std::vector<IMPL::TrackStateImpl>& trackStates);
         double getTrackLengthZ(const std::vector<IMPL::TrackStateImpl>& trackStates);
         float getParameterFromPID(EVENT::ReconstructedParticle* pfo, UTIL::PIDHandler& pidHandler, std::string algorithmName, std::string parameterName);
+
         void prepareRootTree();
         // void drawPFO(EVENT::ReconstructedParticle* pfo);
 
@@ -114,6 +116,30 @@ class TrackLengthDebug : public marlin::Processor, EventDisplayer {
         double _tanLCalo;
         double _phiCalo;
         double _zCalo;
+
+        TGraph* _hD0;
+        TGraph* _hZ0;
+        TGraph* _hOmega;
+        TGraph* _hTanL;
+        TGraph* _hPhi;
+        TGraph* _hZ;
+        TGraph* _hPt;
+        TGraph* _hPz;
+        TGraph* _hP;
+        TGraph* _hTrkLenDefault;
+        TGraph* _hTrkLenTanL;
+        TGraph* _hTrkLenZ;
+
+        TGraph* _hMcOmega;
+        TGraph* _hMcTanL;
+        TGraph* _hMcPhi;
+        TGraph* _hMcZ;
+        TGraph* _hMcPt;
+        TGraph* _hMcPz;
+        TGraph* _hMcP;
+        TGraph* _hMcTrkLenDefault;
+        TGraph* _hMcTrkLenTanL;
+        TGraph* _hMcTrkLenZ;
 
 };
 
