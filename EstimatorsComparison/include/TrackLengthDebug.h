@@ -1,8 +1,6 @@
 #ifndef TrackLengthDebug_h
 #define TrackLengthDebug_h 1
 
-#include "EventDisplayer.h"
-
 #include "marlin/Processor.h"
 #include "MarlinTrk/IMarlinTrkSystem.h"
 #include "EVENT/Track.h"
