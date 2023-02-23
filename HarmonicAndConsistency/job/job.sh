@@ -6,7 +6,6 @@ project_folder=/afs/desy.de/user/d/dudarboh/analysis/TrackLength/HarmonicAndCons
 file=${1}
 cluster_id=${2}
 proc_id=${3}
-job_name=${4}
 
 # Usually I just need some version of ilcsoft with one additional lib
 # source /cvmfs/ilc.desy.de/sw/x86_64_gcc82_centos7/v02-02-03/init_ilcsoft.sh
@@ -21,5 +20,5 @@ mkdir ${cluster_id}_${proc_id} && cd ${cluster_id}_${proc_id}
 
 Marlin ${project_folder}/xml/steer.xml --global.LCIOInputFiles="${file}"
 # # Marlin sometimes seg. faults after successful finish so don't do &&...
-mv *.root ../../final/${job_name}_${cluster_id}_${proc_id}.root
+mv *.root ../../final/${cluster_id}_${proc_id}.root
 cd .. && rm -r ${cluster_id}_${proc_id}
