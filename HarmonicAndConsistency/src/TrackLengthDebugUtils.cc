@@ -54,6 +54,7 @@ IMPL::TrackStateImpl TrackLengthDebugUtils::getTrackStateAtHit(MarlinTrk::IMarli
 std::vector<EVENT::Track*> TrackLengthDebugUtils::getSubTracks(EVENT::Track* track){
     vector<Track*> subTracks;
     // track itself contains VXD+FTD+SIT+TPC hits of the first curl.
+    std::cout<<"Track has "<<track->getTrackerHits().size()<<" hits and "<<track->getTracks().size()<<" subtracks"<<std::endl;
     subTracks.push_back(track);
 
     int nSubTracks = track->getTracks().size();
@@ -73,7 +74,14 @@ std::vector<EVENT::Track*> TrackLengthDebugUtils::getSubTracks(EVENT::Track* tra
         streamlog_out(WARNING)<<"Can't understand which subTrack is responsible for the first TPC hits! Skip adding subTracks."<<std::endl;
         return subTracks;
     }
-    for(int j=startIdx; j < nSubTracks; ++j) subTracks.push_back( track->getTracks()[j] );
+    for(int j=0; j < nSubTracks; ++j){
+        if (j < startIdx){
+            std::cout<<"Subtrack #"<<j+1<<" has"<<track->getTracks()[j]->getTrackerHits().size()<<" hits and ignored"<<std::endl;
+            continue;
+        }
+        std::cout<<"Subtrack #"<<j+1<<" has"<<track->getTracks()[j]->getTrackerHits().size()<<" hits and added"<<std::endl;
+        subTracks.push_back( track->getTracks()[j] );
+    }
     return subTracks;
 }
 

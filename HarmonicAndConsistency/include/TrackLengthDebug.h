@@ -1,6 +1,7 @@
 #ifndef TrackLengthDebug_h
 #define TrackLengthDebug_h 1
 
+#include "EventDisplayer.h"
 #include "marlin/Processor.h"
 #include "MarlinTrk/IMarlinTrkSystem.h"
 #include "MarlinTrk/IMarlinTrack.h"
@@ -26,7 +27,8 @@ struct Vars{
     int nSegments = 0;
 };
 
-class TrackLengthDebug : public marlin::Processor{
+class TrackLengthDebug : public marlin::Processor, EventDisplayer{
+    friend class EventDisplayer;
     public:
         TrackLengthDebug(const TrackLengthDebug&) = delete;
         TrackLengthDebug& operator=(const TrackLengthDebug&) = delete;
@@ -37,7 +39,7 @@ class TrackLengthDebug : public marlin::Processor{
         void init();
         void processEvent(EVENT::LCEvent* evt);
         void end();
-        Vars getTrackLengthUsingZ(EVENT::Track* track, double bField, MarlinTrk::IMarlinTrkSystem* trkSystem);
+        Vars getTrackLengthUsingZ(EVENT::ReconstructedParticle* pfo, double bField, MarlinTrk::IMarlinTrkSystem* trkSystem);
 
     private:
         int _nEvent{};
