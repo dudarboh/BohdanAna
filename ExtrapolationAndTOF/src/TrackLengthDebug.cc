@@ -32,6 +32,15 @@ using MarlinTrk::IMarlinTrkSystem;
 
 TrackLengthDebug aTrackLengthDebug;
 
+
+//TODOS:
+// 1) Add event display for the whole event, only highlighting analysed particle
+// 2) Check if the closest hit corresponds to the analysed MC particle
+// 3) get distance between closest hit and tsCalo
+// 4) Check if the track is pure or there are mixins
+// 5) get pure TOF w/o distance correction
+// 6) Figure out why the fuck track doesnt fit !?!!??!!?
+
 void drawPFO(ReconstructedParticle* pfo){
     vector<Track*> tracks;
     if ( not pfo->getTracks().empty() )

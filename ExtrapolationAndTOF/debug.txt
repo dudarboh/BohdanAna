@@ -1,0 +1,499 @@
+[ VERBOSE "TestProcessor"] Track has 18 hits and 5 subtracks
+[ VERBOSE "TestProcessor"] Subtrack #1 has8 hits and ignored
+[ VERBOSE "TestProcessor"] Subtrack #2 has10 hits and ignored
+[ VERBOSE "TestProcessor"] Subtrack #3 has10 hits and added
+[ VERBOSE "TestProcessor"] Subtrack #4 has8 hits and added
+[ VERBOSE "TestProcessor"] Subtrack #5 has8 hits and added
+*****
+
+[ DEBUG2 "TestProcessor"] MarlinTrk::createFit Start Fit: AddHits: number of hits to fit 8
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: trkhit = 298531 addr: 0x163bb550 ml = 0x14dd6980
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: hit added number of hits for track = 1
+[ DEBUG4 "TestProcessor"] MarlinTrk::createFit ndof_added = 2
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: trkhit = 298570 addr: 0x163bdc10 ml = 0x14dd6c70
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: hit added number of hits for track = 2
+[ DEBUG4 "TestProcessor"] MarlinTrk::createFit ndof_added = 4
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: trkhit = 298609 addr: 0x163c0310 ml = 0x14dd6d40
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: hit added number of hits for track = 3
+[ DEBUG4 "TestProcessor"] MarlinTrk::createFit ndof_added = 6
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: trkhit = 298644 addr: 0x163c2610 ml = 0x14dd6e80
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: hit added number of hits for track = 4
+[ DEBUG4 "TestProcessor"] MarlinTrk::createFit ndof_added = 8
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: trkhit = 298675 addr: 0x163c4510 ml = 0x14dd6860
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: hit added number of hits for track = 5
+[ DEBUG4 "TestProcessor"] MarlinTrk::createFit ndof_added = 10
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: trkhit = 298705 addr: 0x163c6310 ml = 0x14dd3e80
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: hit added number of hits for track = 6
+[ DEBUG4 "TestProcessor"] MarlinTrk::createFit ndof_added = 12
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: trkhit = 298735 addr: 0x163c8110 ml = 0x14dd3f70
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: hit added number of hits for track = 7
+[ DEBUG4 "TestProcessor"] MarlinTrk::createFit ndof_added = 14
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: trkhit = 298765 addr: 0x163c9f10 ml = 0x14dd4060
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: hit added number of hits for track = 8
+[ DEBUG4 "TestProcessor"] MarlinTrk::createFit ndof_added = 16
+[ DEBUG2 "TestProcessor"] MarlinDDKalTestTrack::initialise using TrackState: track parameters used for init : 	 D0 2.870330e-02	 Phi :-1.413412e+00	 Omega 4.644974e-03	 Z0 1.188925e+00	 tan(Lambda) 3.303711e-01	 pivot : [4.287782e+02, 1.661620e+01, 2.055541e+02 - r: 4.291000e+02]
+[ DEBUG2 "TestProcessor"] MarlinDDKalTestTrack::fit() called 
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addAndFit called : maxChi2Increment = 1.000000e+02
+[ DEBUG1 "TestProcessor"] Kaltrack::addAndFit :  add site to track at index : 1511 for type DDCylinderMeasL
+[ DEBUG1 "TestProcessor"]  KalTrackFilter::IsAccepted called  !  deltaChi2 = 1.020383e+04 _maxDeltaChi2 = 1.000000e+02
+[ DEBUG2 "TestProcessor"] Kaltrack::addAndFit : site discarded! at index : 1511 for type DDCylinderMeasL chi2increment = 1.020383e+04 maxChi2Increment = 1.000000e+02 x = 4.152705e+02 y = 3.902378e+01 z = 6.299690e+02 with CellIDs: 
+[ DEBUG1 "TestProcessor"]  CellID = 932
+[ DEBUG1 "TestProcessor"]  CellID = 996
+[ DEBUG2 "TestProcessor"]  addAndFit : Site passed Chi2 filter step ? 0
+[ DEBUG2 "TestProcessor"] >>>>>>>>>>>  fit(): Number of Outliers : 1
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addAndFit called : maxChi2Increment = 1.000000e+02
+[ DEBUG1 "TestProcessor"] Kaltrack::addAndFit :  add site to track at index : 1510 for type DDCylinderMeasL
+[ DEBUG1 "TestProcessor"]  KalTrackFilter::IsAccepted called  !  deltaChi2 = 5.156579e+03 _maxDeltaChi2 = 1.000000e+02
+[ DEBUG2 "TestProcessor"] Kaltrack::addAndFit : site discarded! at index : 1510 for type DDCylinderMeasL chi2increment = 5.156579e+03 maxChi2Increment = 1.000000e+02 x = 4.054632e+02 y = 6.784397e+01 z = 6.185640e+02 with CellIDs: 
+[ DEBUG1 "TestProcessor"]  CellID = 804
+[ DEBUG1 "TestProcessor"]  CellID = 868
+[ DEBUG2 "TestProcessor"]  addAndFit : Site passed Chi2 filter step ? 0
+[ DEBUG2 "TestProcessor"] >>>>>>>>>>>  fit(): Number of Outliers : 2
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addAndFit called : maxChi2Increment = 1.000000e+02
+[ DEBUG1 "TestProcessor"] Kaltrack::addAndFit :  add site to track at index : 1509 for type DDCylinderMeasL
+[ DEBUG1 "TestProcessor"]  KalTrackFilter::IsAccepted called  !  deltaChi2 = 2.614520e+03 _maxDeltaChi2 = 1.000000e+02
+[ DEBUG2 "TestProcessor"] Kaltrack::addAndFit : site discarded! at index : 1509 for type DDCylinderMeasL chi2increment = 2.614520e+03 maxChi2Increment = 1.000000e+02 x = 3.949946e+02 y = 8.991831e+01 z = 6.112417e+02 with CellIDs: 
+[ DEBUG1 "TestProcessor"]  CellID = 676
+[ DEBUG1 "TestProcessor"]  CellID = 740
+[ DEBUG2 "TestProcessor"]  addAndFit : Site passed Chi2 filter step ? 0
+[ DEBUG2 "TestProcessor"] >>>>>>>>>>>  fit(): Number of Outliers : 3
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addAndFit called : maxChi2Increment = 1.000000e+02
+[ DEBUG1 "TestProcessor"] Kaltrack::addAndFit :  add site to track at index : 1508 for type DDCylinderMeasL
+[ DEBUG1 "TestProcessor"]  KalTrackFilter::IsAccepted called  !  deltaChi2 = 2.210003e+03 _maxDeltaChi2 = 1.000000e+02
+[ DEBUG2 "TestProcessor"] Kaltrack::addAndFit : site discarded! at index : 1508 for type DDCylinderMeasL chi2increment = 2.210003e+03 maxChi2Increment = 1.000000e+02 x = 3.855464e+02 y = 1.031249e+02 z = 6.059631e+02 with CellIDs: 
+[ DEBUG1 "TestProcessor"]  CellID = 548
+[ DEBUG1 "TestProcessor"]  CellID = 612
+[ DEBUG2 "TestProcessor"]  addAndFit : Site passed Chi2 filter step ? 0
+[ DEBUG2 "TestProcessor"] >>>>>>>>>>>  fit(): Number of Outliers : 4
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addAndFit called : maxChi2Increment = 1.000000e+02
+[ DEBUG1 "TestProcessor"] Kaltrack::addAndFit :  add site to track at index : 1507 for type DDCylinderMeasL
+[ DEBUG1 "TestProcessor"]  KalTrackFilter::IsAccepted called  !  deltaChi2 = 1.421412e+03 _maxDeltaChi2 = 1.000000e+02
+[ DEBUG2 "TestProcessor"] Kaltrack::addAndFit : site discarded! at index : 1507 for type DDCylinderMeasL chi2increment = 1.421412e+03 maxChi2Increment = 1.000000e+02 x = 3.752691e+02 y = 1.170500e+02 z = 6.018380e+02 with CellIDs: 
+[ DEBUG1 "TestProcessor"]  CellID = 420
+[ DEBUG1 "TestProcessor"]  CellID = 484
+[ DEBUG2 "TestProcessor"]  addAndFit : Site passed Chi2 filter step ? 0
+[ DEBUG2 "TestProcessor"] >>>>>>>>>>>  fit(): Number of Outliers : 5
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addAndFit called : maxChi2Increment = 1.000000e+02
+[ DEBUG1 "TestProcessor"] Kaltrack::addAndFit :  add site to track at index : 1506 for type DDCylinderMeasL
+[ DEBUG1 "TestProcessor"]  KalTrackFilter::IsAccepted called  !  deltaChi2 = 7.597805e+02 _maxDeltaChi2 = 1.000000e+02
+[ DEBUG2 "TestProcessor"] Kaltrack::addAndFit : site discarded! at index : 1506 for type DDCylinderMeasL chi2increment = 7.597805e+02 maxChi2Increment = 1.000000e+02 x = 3.645010e+02 y = 1.303283e+02 z = 5.953614e+02 with CellIDs: 
+[ DEBUG1 "TestProcessor"]  CellID = 292
+[ DEBUG1 "TestProcessor"]  CellID = 356
+[ DEBUG2 "TestProcessor"]  addAndFit : Site passed Chi2 filter step ? 0
+[ DEBUG2 "TestProcessor"] >>>>>>>>>>>  fit(): Number of Outliers : 6
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addAndFit called : maxChi2Increment = 1.000000e+02
+[ DEBUG1 "TestProcessor"] Kaltrack::addAndFit :  add site to track at index : 1505 for type DDCylinderMeasL
+[ DEBUG1 "TestProcessor"]  KalTrackFilter::IsAccepted called  !  deltaChi2 = 6.440580e+02 _maxDeltaChi2 = 1.000000e+02
+[ DEBUG2 "TestProcessor"] Kaltrack::addAndFit : site discarded! at index : 1505 for type DDCylinderMeasL chi2increment = 6.440580e+02 maxChi2Increment = 1.000000e+02 x = 3.548514e+02 y = 1.389882e+02 z = 5.911850e+02 with CellIDs: 
+[ DEBUG1 "TestProcessor"]  CellID = 164
+[ DEBUG1 "TestProcessor"]  CellID = 228
+[ DEBUG2 "TestProcessor"]  addAndFit : Site passed Chi2 filter step ? 0
+[ DEBUG2 "TestProcessor"] >>>>>>>>>>>  fit(): Number of Outliers : 7
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addAndFit called : maxChi2Increment = 1.000000e+02
+[ DEBUG1 "TestProcessor"] Kaltrack::addAndFit :  add site to track at index : 1504 for type DDCylinderMeasL
+[ DEBUG1 "TestProcessor"]  KalTrackFilter::IsAccepted called  !  deltaChi2 = 5.490285e+02 _maxDeltaChi2 = 1.000000e+02
+[ DEBUG2 "TestProcessor"] Kaltrack::addAndFit : site discarded! at index : 1504 for type DDCylinderMeasL chi2increment = 5.490285e+02 maxChi2Increment = 1.000000e+02 x = 3.452655e+02 y = 1.466005e+02 z = 5.861679e+02 with CellIDs: 
+[ DEBUG1 "TestProcessor"]  CellID = 36
+[ DEBUG1 "TestProcessor"]  CellID = 100
+[ DEBUG2 "TestProcessor"]  addAndFit : Site passed Chi2 filter step ? 0
+[ DEBUG2 "TestProcessor"] >>>>>>>>>>>  fit(): Number of Outliers : 8
+[ DEBUG2 "TestProcessor"] Perform Smoothing for All Previous Measurement Sites 
+[ DEBUG2 "TestProcessor"] MarlinDDKalTestTrack::smooth() 
+[ DEBUG3 "TestProcessor"] MarlinTrk::createFinalisedLCIOTrack fit failed: fit_status = 7
+
+
+
+
+
+*****
+
+
+
+
+
+
+
+
+
+[ VERBOSE "TestProcessor"]  Fit failed, trying to fit forward
+[ DEBUG2 "TestProcessor"] MarlinTrk::createFit Start Fit: AddHits: number of hits to fit 8
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: trkhit = 298531 addr: 0x163bb550 ml = 0x14dd6980
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: hit added number of hits for track = 1
+[ DEBUG4 "TestProcessor"] MarlinTrk::createFit ndof_added = 2
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: trkhit = 298570 addr: 0x163bdc10 ml = 0x14dd6c70
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: hit added number of hits for track = 2
+[ DEBUG4 "TestProcessor"] MarlinTrk::createFit ndof_added = 4
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: trkhit = 298609 addr: 0x163c0310 ml = 0x14dd6d40
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: hit added number of hits for track = 3
+[ DEBUG4 "TestProcessor"] MarlinTrk::createFit ndof_added = 6
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: trkhit = 298644 addr: 0x163c2610 ml = 0x14dd6e80
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: hit added number of hits for track = 4
+[ DEBUG4 "TestProcessor"] MarlinTrk::createFit ndof_added = 8
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: trkhit = 298675 addr: 0x163c4510 ml = 0x14dd6860
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: hit added number of hits for track = 5
+[ DEBUG4 "TestProcessor"] MarlinTrk::createFit ndof_added = 10
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: trkhit = 298705 addr: 0x163c6310 ml = 0x14dd3e80
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: hit added number of hits for track = 6
+[ DEBUG4 "TestProcessor"] MarlinTrk::createFit ndof_added = 12
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: trkhit = 298735 addr: 0x163c8110 ml = 0x14dd3f70
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: hit added number of hits for track = 7
+[ DEBUG4 "TestProcessor"] MarlinTrk::createFit ndof_added = 14
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: trkhit = 298765 addr: 0x163c9f10 ml = 0x14dd4060
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: hit added number of hits for track = 8
+[ DEBUG4 "TestProcessor"] MarlinTrk::createFit ndof_added = 16
+[ DEBUG2 "TestProcessor"] MarlinDDKalTestTrack::initialise using TrackState: track parameters used for init : 	 D0 2.870330e-02	 Phi :-1.413412e+00	 Omega 4.644974e-03	 Z0 1.188925e+00	 tan(Lambda) 3.303711e-01	 pivot : [4.287782e+02, 1.661620e+01, 2.055541e+02 - r: 4.291000e+02]
+[ DEBUG2 "TestProcessor"] MarlinDDKalTestTrack::fit() called 
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addAndFit called : maxChi2Increment = 1.000000e+02
+[ DEBUG1 "TestProcessor"] Kaltrack::addAndFit :  add site to track at index : 1504 for type DDCylinderMeasL
+[ DEBUG1 "TestProcessor"]  KalTrackFilter::IsAccepted called  !  deltaChi2 = 5.488445e+02 _maxDeltaChi2 = 1.000000e+02
+[ DEBUG2 "TestProcessor"] Kaltrack::addAndFit : site discarded! at index : 1504 for type DDCylinderMeasL chi2increment = 5.488445e+02 maxChi2Increment = 1.000000e+02 x = 3.452655e+02 y = 1.466005e+02 z = 5.861679e+02 with CellIDs: 
+[ DEBUG1 "TestProcessor"]  CellID = 36
+[ DEBUG1 "TestProcessor"]  CellID = 100
+[ DEBUG2 "TestProcessor"]  addAndFit : Site passed Chi2 filter step ? 0
+[ DEBUG2 "TestProcessor"] >>>>>>>>>>>  fit(): Number of Outliers : 1
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addAndFit called : maxChi2Increment = 1.000000e+02
+[ DEBUG1 "TestProcessor"] Kaltrack::addAndFit :  add site to track at index : 1505 for type DDCylinderMeasL
+[ DEBUG1 "TestProcessor"]  KalTrackFilter::IsAccepted called  !  deltaChi2 = 6.439125e+02 _maxDeltaChi2 = 1.000000e+02
+[ DEBUG2 "TestProcessor"] Kaltrack::addAndFit : site discarded! at index : 1505 for type DDCylinderMeasL chi2increment = 6.439125e+02 maxChi2Increment = 1.000000e+02 x = 3.548514e+02 y = 1.389882e+02 z = 5.911850e+02 with CellIDs: 
+[ DEBUG1 "TestProcessor"]  CellID = 164
+[ DEBUG1 "TestProcessor"]  CellID = 228
+[ DEBUG2 "TestProcessor"]  addAndFit : Site passed Chi2 filter step ? 0
+[ DEBUG2 "TestProcessor"] >>>>>>>>>>>  fit(): Number of Outliers : 2
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addAndFit called : maxChi2Increment = 1.000000e+02
+[ DEBUG1 "TestProcessor"] Kaltrack::addAndFit :  add site to track at index : 1506 for type DDCylinderMeasL
+[ DEBUG1 "TestProcessor"]  KalTrackFilter::IsAccepted called  !  deltaChi2 = 7.596760e+02 _maxDeltaChi2 = 1.000000e+02
+[ DEBUG2 "TestProcessor"] Kaltrack::addAndFit : site discarded! at index : 1506 for type DDCylinderMeasL chi2increment = 7.596760e+02 maxChi2Increment = 1.000000e+02 x = 3.645010e+02 y = 1.303283e+02 z = 5.953614e+02 with CellIDs: 
+[ DEBUG1 "TestProcessor"]  CellID = 292
+[ DEBUG1 "TestProcessor"]  CellID = 356
+[ DEBUG2 "TestProcessor"]  addAndFit : Site passed Chi2 filter step ? 0
+[ DEBUG2 "TestProcessor"] >>>>>>>>>>>  fit(): Number of Outliers : 3
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addAndFit called : maxChi2Increment = 1.000000e+02
+[ DEBUG1 "TestProcessor"] Kaltrack::addAndFit :  add site to track at index : 1507 for type DDCylinderMeasL
+[ DEBUG1 "TestProcessor"]  KalTrackFilter::IsAccepted called  !  deltaChi2 = 1.421352e+03 _maxDeltaChi2 = 1.000000e+02
+[ DEBUG2 "TestProcessor"] Kaltrack::addAndFit : site discarded! at index : 1507 for type DDCylinderMeasL chi2increment = 1.421352e+03 maxChi2Increment = 1.000000e+02 x = 3.752691e+02 y = 1.170500e+02 z = 6.018380e+02 with CellIDs: 
+[ DEBUG1 "TestProcessor"]  CellID = 420
+[ DEBUG1 "TestProcessor"]  CellID = 484
+[ DEBUG2 "TestProcessor"]  addAndFit : Site passed Chi2 filter step ? 0
+[ DEBUG2 "TestProcessor"] >>>>>>>>>>>  fit(): Number of Outliers : 4
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addAndFit called : maxChi2Increment = 1.000000e+02
+[ DEBUG1 "TestProcessor"] Kaltrack::addAndFit :  add site to track at index : 1508 for type DDCylinderMeasL
+[ DEBUG1 "TestProcessor"]  KalTrackFilter::IsAccepted called  !  deltaChi2 = 2.210022e+03 _maxDeltaChi2 = 1.000000e+02
+[ DEBUG2 "TestProcessor"] Kaltrack::addAndFit : site discarded! at index : 1508 for type DDCylinderMeasL chi2increment = 2.210022e+03 maxChi2Increment = 1.000000e+02 x = 3.855464e+02 y = 1.031249e+02 z = 6.059631e+02 with CellIDs: 
+[ DEBUG1 "TestProcessor"]  CellID = 548
+[ DEBUG1 "TestProcessor"]  CellID = 612
+[ DEBUG2 "TestProcessor"]  addAndFit : Site passed Chi2 filter step ? 0
+[ DEBUG2 "TestProcessor"] >>>>>>>>>>>  fit(): Number of Outliers : 5
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addAndFit called : maxChi2Increment = 1.000000e+02
+[ DEBUG1 "TestProcessor"] Kaltrack::addAndFit :  add site to track at index : 1509 for type DDCylinderMeasL
+[ DEBUG1 "TestProcessor"]  KalTrackFilter::IsAccepted called  !  deltaChi2 = 2.614605e+03 _maxDeltaChi2 = 1.000000e+02
+[ DEBUG2 "TestProcessor"] Kaltrack::addAndFit : site discarded! at index : 1509 for type DDCylinderMeasL chi2increment = 2.614605e+03 maxChi2Increment = 1.000000e+02 x = 3.949946e+02 y = 8.991831e+01 z = 6.112417e+02 with CellIDs: 
+[ DEBUG1 "TestProcessor"]  CellID = 676
+[ DEBUG1 "TestProcessor"]  CellID = 740
+[ DEBUG2 "TestProcessor"]  addAndFit : Site passed Chi2 filter step ? 0
+[ DEBUG2 "TestProcessor"] >>>>>>>>>>>  fit(): Number of Outliers : 6
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addAndFit called : maxChi2Increment = 1.000000e+02
+[ DEBUG1 "TestProcessor"] Kaltrack::addAndFit :  add site to track at index : 1510 for type DDCylinderMeasL
+[ DEBUG1 "TestProcessor"]  KalTrackFilter::IsAccepted called  !  deltaChi2 = 5.156881e+03 _maxDeltaChi2 = 1.000000e+02
+[ DEBUG2 "TestProcessor"] Kaltrack::addAndFit : site discarded! at index : 1510 for type DDCylinderMeasL chi2increment = 5.156881e+03 maxChi2Increment = 1.000000e+02 x = 4.054632e+02 y = 6.784397e+01 z = 6.185640e+02 with CellIDs: 
+[ DEBUG1 "TestProcessor"]  CellID = 804
+[ DEBUG1 "TestProcessor"]  CellID = 868
+[ DEBUG2 "TestProcessor"]  addAndFit : Site passed Chi2 filter step ? 0
+[ DEBUG2 "TestProcessor"] >>>>>>>>>>>  fit(): Number of Outliers : 7
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addAndFit called : maxChi2Increment = 1.000000e+02
+[ DEBUG1 "TestProcessor"] Kaltrack::addAndFit :  add site to track at index : 1511 for type DDCylinderMeasL
+[ DEBUG1 "TestProcessor"]  KalTrackFilter::IsAccepted called  !  deltaChi2 = 1.020471e+04 _maxDeltaChi2 = 1.000000e+02
+[ DEBUG2 "TestProcessor"] Kaltrack::addAndFit : site discarded! at index : 1511 for type DDCylinderMeasL chi2increment = 1.020471e+04 maxChi2Increment = 1.000000e+02 x = 4.152705e+02 y = 3.902378e+01 z = 6.299690e+02 with CellIDs: 
+[ DEBUG1 "TestProcessor"]  CellID = 932
+[ DEBUG1 "TestProcessor"]  CellID = 996
+[ DEBUG2 "TestProcessor"]  addAndFit : Site passed Chi2 filter step ? 0
+[ DEBUG2 "TestProcessor"] >>>>>>>>>>>  fit(): Number of Outliers : 8
+[ DEBUG2 "TestProcessor"] Perform Smoothing for All Previous Measurement Sites 
+[ DEBUG2 "TestProcessor"] MarlinDDKalTestTrack::smooth() 
+[ DEBUG3 "TestProcessor"] MarlinTrk::createFinalisedLCIOTrack fit failed: fit_status = 7
+
+
+[ VERBOSE "TestProcessor"]  Fit failed completely, ignoring the subtrack
+
+
+
+
+*****
+
+
+
+
+
+
+
+
+[ DEBUG2 "TestProcessor"] MarlinTrk::createFit Start Fit: AddHits: number of hits to fit 8
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: trkhit = 298565 addr: 0x163bd710 ml = 0x14dd6980
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: hit added number of hits for track = 1
+[ DEBUG4 "TestProcessor"] MarlinTrk::createFit ndof_added = 2
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: trkhit = 298604 addr: 0x163bfe10 ml = 0x14dd6c70
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: hit added number of hits for track = 2
+[ DEBUG4 "TestProcessor"] MarlinTrk::createFit ndof_added = 4
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: trkhit = 298639 addr: 0x163c2110 ml = 0x14dd6d40
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: hit added number of hits for track = 3
+[ DEBUG4 "TestProcessor"] MarlinTrk::createFit ndof_added = 6
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: trkhit = 298671 addr: 0x163c4110 ml = 0x14dd6e80
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: hit added number of hits for track = 4
+[ DEBUG4 "TestProcessor"] MarlinTrk::createFit ndof_added = 8
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: trkhit = 298701 addr: 0x163c5f10 ml = 0x14dd6860
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: hit added number of hits for track = 5
+[ DEBUG4 "TestProcessor"] MarlinTrk::createFit ndof_added = 10
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: trkhit = 298731 addr: 0x163c7d10 ml = 0x14dd3e80
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: hit added number of hits for track = 6
+[ DEBUG4 "TestProcessor"] MarlinTrk::createFit ndof_added = 12
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: trkhit = 298761 addr: 0x163c9b10 ml = 0x14dd3f70
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: hit added number of hits for track = 7
+[ DEBUG4 "TestProcessor"] MarlinTrk::createFit ndof_added = 14
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: trkhit = 298791 addr: 0x163cb910 ml = 0x14dd4060
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: hit added number of hits for track = 8
+[ DEBUG4 "TestProcessor"] MarlinTrk::createFit ndof_added = 16
+[ DEBUG2 "TestProcessor"] MarlinDDKalTestTrack::initialise using TrackState: track parameters used for init : 	 D0 2.870330e-02	 Phi :-1.413412e+00	 Omega 4.644974e-03	 Z0 1.188925e+00	 tan(Lambda) 3.303711e-01	 pivot : [4.287782e+02, 1.661620e+01, 2.055541e+02 - r: 4.291000e+02]
+[ DEBUG2 "TestProcessor"] MarlinDDKalTestTrack::fit() called 
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addAndFit called : maxChi2Increment = 1.000000e+02
+[ DEBUG1 "TestProcessor"] Kaltrack::addAndFit :  add site to track at index : 1511 for type DDCylinderMeasL
+[ DEBUG1 "TestProcessor"]  KalTrackFilter::IsAccepted called  !  deltaChi2 = 3.498964e+03 _maxDeltaChi2 = 1.000000e+02
+[ DEBUG2 "TestProcessor"] Kaltrack::addAndFit : site discarded! at index : 1511 for type DDCylinderMeasL chi2increment = 3.498964e+03 maxChi2Increment = 1.000000e+02 x = 4.058881e+02 y = -9.605870e+01 z = 6.723625e+02 with CellIDs: 
+[ DEBUG1 "TestProcessor"]  CellID = 932
+[ DEBUG1 "TestProcessor"]  CellID = 996
+[ DEBUG2 "TestProcessor"]  addAndFit : Site passed Chi2 filter step ? 0
+[ DEBUG2 "TestProcessor"] >>>>>>>>>>>  fit(): Number of Outliers : 1
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addAndFit called : maxChi2Increment = 1.000000e+02
+[ DEBUG1 "TestProcessor"] Kaltrack::addAndFit :  add site to track at index : 1510 for type DDCylinderMeasL
+[ DEBUG1 "TestProcessor"]  KalTrackFilter::IsAccepted called  !  deltaChi2 = 2.123304e+03 _maxDeltaChi2 = 1.000000e+02
+[ DEBUG2 "TestProcessor"] Kaltrack::addAndFit : site discarded! at index : 1510 for type DDCylinderMeasL chi2increment = 2.123304e+03 maxChi2Increment = 1.000000e+02 x = 3.924694e+02 y = -1.223560e+02 z = 6.800931e+02 with CellIDs: 
+[ DEBUG1 "TestProcessor"]  CellID = 804
+[ DEBUG1 "TestProcessor"]  CellID = 868
+[ DEBUG2 "TestProcessor"]  addAndFit : Site passed Chi2 filter step ? 0
+[ DEBUG2 "TestProcessor"] >>>>>>>>>>>  fit(): Number of Outliers : 2
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addAndFit called : maxChi2Increment = 1.000000e+02
+[ DEBUG1 "TestProcessor"] Kaltrack::addAndFit :  add site to track at index : 1509 for type DDCylinderMeasL
+[ DEBUG1 "TestProcessor"]  KalTrackFilter::IsAccepted called  !  deltaChi2 = 1.451469e+03 _maxDeltaChi2 = 1.000000e+02
+[ DEBUG2 "TestProcessor"] Kaltrack::addAndFit : site discarded! at index : 1509 for type DDCylinderMeasL chi2increment = 1.451469e+03 maxChi2Increment = 1.000000e+02 x = 3.796660e+02 y = -1.412789e+02 z = 6.865156e+02 with CellIDs: 
+[ DEBUG1 "TestProcessor"]  CellID = 676
+[ DEBUG1 "TestProcessor"]  CellID = 740
+[ DEBUG2 "TestProcessor"]  addAndFit : Site passed Chi2 filter step ? 0
+[ DEBUG2 "TestProcessor"] >>>>>>>>>>>  fit(): Number of Outliers : 3
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addAndFit called : maxChi2Increment = 1.000000e+02
+[ DEBUG1 "TestProcessor"] Kaltrack::addAndFit :  add site to track at index : 1508 for type DDCylinderMeasL
+[ DEBUG1 "TestProcessor"]  KalTrackFilter::IsAccepted called  !  deltaChi2 = 1.174512e+03 _maxDeltaChi2 = 1.000000e+02
+[ DEBUG2 "TestProcessor"] Kaltrack::addAndFit : site discarded! at index : 1508 for type DDCylinderMeasL chi2increment = 1.174512e+03 maxChi2Increment = 1.000000e+02 x = 3.677827e+02 y = -1.549733e+02 z = 6.961366e+02 with CellIDs: 
+[ DEBUG1 "TestProcessor"]  CellID = 548
+[ DEBUG1 "TestProcessor"]  CellID = 612
+[ DEBUG2 "TestProcessor"]  addAndFit : Site passed Chi2 filter step ? 0
+[ DEBUG2 "TestProcessor"] >>>>>>>>>>>  fit(): Number of Outliers : 4
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addAndFit called : maxChi2Increment = 1.000000e+02
+[ DEBUG1 "TestProcessor"] Kaltrack::addAndFit :  add site to track at index : 1507 for type DDCylinderMeasL
+[ DEBUG1 "TestProcessor"]  KalTrackFilter::IsAccepted called  !  deltaChi2 = 7.939357e+02 _maxDeltaChi2 = 1.000000e+02
+[ DEBUG2 "TestProcessor"] Kaltrack::addAndFit : site discarded! at index : 1507 for type DDCylinderMeasL chi2increment = 7.939357e+02 maxChi2Increment = 1.000000e+02 x = 3.551999e+02 y = -1.684061e+02 z = 7.005510e+02 with CellIDs: 
+[ DEBUG1 "TestProcessor"]  CellID = 420
+[ DEBUG1 "TestProcessor"]  CellID = 484
+[ DEBUG2 "TestProcessor"]  addAndFit : Site passed Chi2 filter step ? 0
+[ DEBUG2 "TestProcessor"] >>>>>>>>>>>  fit(): Number of Outliers : 5
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addAndFit called : maxChi2Increment = 1.000000e+02
+[ DEBUG1 "TestProcessor"] Kaltrack::addAndFit :  add site to track at index : 1506 for type DDCylinderMeasL
+[ DEBUG1 "TestProcessor"]  KalTrackFilter::IsAccepted called  !  deltaChi2 = 6.600962e+02 _maxDeltaChi2 = 1.000000e+02
+[ DEBUG2 "TestProcessor"] Kaltrack::addAndFit : site discarded! at index : 1506 for type DDCylinderMeasL chi2increment = 6.600962e+02 maxChi2Increment = 1.000000e+02 x = 3.438699e+02 y = -1.777636e+02 z = 7.043603e+02 with CellIDs: 
+[ DEBUG1 "TestProcessor"]  CellID = 292
+[ DEBUG1 "TestProcessor"]  CellID = 356
+[ DEBUG2 "TestProcessor"]  addAndFit : Site passed Chi2 filter step ? 0
+[ DEBUG2 "TestProcessor"] >>>>>>>>>>>  fit(): Number of Outliers : 6
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addAndFit called : maxChi2Increment = 1.000000e+02
+[ DEBUG1 "TestProcessor"] Kaltrack::addAndFit :  add site to track at index : 1505 for type DDCylinderMeasL
+[ DEBUG1 "TestProcessor"]  KalTrackFilter::IsAccepted called  !  deltaChi2 = 4.981983e+02 _maxDeltaChi2 = 1.000000e+02
+[ DEBUG2 "TestProcessor"] Kaltrack::addAndFit : site discarded! at index : 1505 for type DDCylinderMeasL chi2increment = 4.981983e+02 maxChi2Increment = 1.000000e+02 x = 3.321842e+02 y = -1.867909e+02 z = 7.095093e+02 with CellIDs: 
+[ DEBUG1 "TestProcessor"]  CellID = 164
+[ DEBUG1 "TestProcessor"]  CellID = 228
+[ DEBUG2 "TestProcessor"]  addAndFit : Site passed Chi2 filter step ? 0
+[ DEBUG2 "TestProcessor"] >>>>>>>>>>>  fit(): Number of Outliers : 7
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addAndFit called : maxChi2Increment = 1.000000e+02
+[ DEBUG1 "TestProcessor"] Kaltrack::addAndFit :  add site to track at index : 1504 for type DDCylinderMeasL
+[ DEBUG1 "TestProcessor"]  KalTrackFilter::IsAccepted called  !  deltaChi2 = 5.096916e+02 _maxDeltaChi2 = 1.000000e+02
+[ DEBUG2 "TestProcessor"] Kaltrack::addAndFit : site discarded! at index : 1504 for type DDCylinderMeasL chi2increment = 5.096916e+02 maxChi2Increment = 1.000000e+02 x = 3.223332e+02 y = -1.918367e+02 z = 7.110254e+02 with CellIDs: 
+[ DEBUG1 "TestProcessor"]  CellID = 36
+[ DEBUG1 "TestProcessor"]  CellID = 100
+[ DEBUG2 "TestProcessor"]  addAndFit : Site passed Chi2 filter step ? 0
+[ DEBUG2 "TestProcessor"] >>>>>>>>>>>  fit(): Number of Outliers : 8
+[ DEBUG2 "TestProcessor"] Perform Smoothing for All Previous Measurement Sites 
+[ DEBUG2 "TestProcessor"] MarlinDDKalTestTrack::smooth() 
+[ DEBUG3 "TestProcessor"] MarlinTrk::createFinalisedLCIOTrack fit failed: fit_status = 7
+[ VERBOSE "TestProcessor"]  Fit failed, trying to fit forward
+[ DEBUG2 "TestProcessor"] MarlinTrk::createFit Start Fit: AddHits: number of hits to fit 8
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: trkhit = 298565 addr: 0x163bd710 ml = 0x14dd6980
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: hit added number of hits for track = 1
+[ DEBUG4 "TestProcessor"] MarlinTrk::createFit ndof_added = 2
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: trkhit = 298604 addr: 0x163bfe10 ml = 0x14dd6c70
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: hit added number of hits for track = 2
+[ DEBUG4 "TestProcessor"] MarlinTrk::createFit ndof_added = 4
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: trkhit = 298639 addr: 0x163c2110 ml = 0x14dd6d40
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: hit added number of hits for track = 3
+[ DEBUG4 "TestProcessor"] MarlinTrk::createFit ndof_added = 6
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: trkhit = 298671 addr: 0x163c4110 ml = 0x14dd6e80
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: hit added number of hits for track = 4
+[ DEBUG4 "TestProcessor"] MarlinTrk::createFit ndof_added = 8
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: trkhit = 298701 addr: 0x163c5f10 ml = 0x14dd6860
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: hit added number of hits for track = 5
+[ DEBUG4 "TestProcessor"] MarlinTrk::createFit ndof_added = 10
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: trkhit = 298731 addr: 0x163c7d10 ml = 0x14dd3e80
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: hit added number of hits for track = 6
+[ DEBUG4 "TestProcessor"] MarlinTrk::createFit ndof_added = 12
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: trkhit = 298761 addr: 0x163c9b10 ml = 0x14dd3f70
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: hit added number of hits for track = 7
+[ DEBUG4 "TestProcessor"] MarlinTrk::createFit ndof_added = 14
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: trkhit = 298791 addr: 0x163cb910 ml = 0x14dd4060
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addHit: hit added number of hits for track = 8
+[ DEBUG4 "TestProcessor"] MarlinTrk::createFit ndof_added = 16
+[ DEBUG2 "TestProcessor"] MarlinDDKalTestTrack::initialise using TrackState: track parameters used for init : 	 D0 2.870330e-02	 Phi :-1.413412e+00	 Omega 4.644974e-03	 Z0 1.188925e+00	 tan(Lambda) 3.303711e-01	 pivot : [4.287782e+02, 1.661620e+01, 2.055541e+02 - r: 4.291000e+02]
+[ DEBUG2 "TestProcessor"] MarlinDDKalTestTrack::fit() called 
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addAndFit called : maxChi2Increment = 1.000000e+02
+[ DEBUG1 "TestProcessor"] Kaltrack::addAndFit :  add site to track at index : 1504 for type DDCylinderMeasL
+[ DEBUG1 "TestProcessor"]  KalTrackFilter::IsAccepted called  !  deltaChi2 = 5.096916e+02 _maxDeltaChi2 = 1.000000e+02
+[ DEBUG2 "TestProcessor"] Kaltrack::addAndFit : site discarded! at index : 1504 for type DDCylinderMeasL chi2increment = 5.096916e+02 maxChi2Increment = 1.000000e+02 x = 3.223332e+02 y = -1.918367e+02 z = 7.110254e+02 with CellIDs: 
+[ DEBUG1 "TestProcessor"]  CellID = 36
+[ DEBUG1 "TestProcessor"]  CellID = 100
+[ DEBUG2 "TestProcessor"]  addAndFit : Site passed Chi2 filter step ? 0
+[ DEBUG2 "TestProcessor"] >>>>>>>>>>>  fit(): Number of Outliers : 1
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addAndFit called : maxChi2Increment = 1.000000e+02
+[ DEBUG1 "TestProcessor"] Kaltrack::addAndFit :  add site to track at index : 1505 for type DDCylinderMeasL
+[ DEBUG1 "TestProcessor"]  KalTrackFilter::IsAccepted called  !  deltaChi2 = 4.981983e+02 _maxDeltaChi2 = 1.000000e+02
+[ DEBUG2 "TestProcessor"] Kaltrack::addAndFit : site discarded! at index : 1505 for type DDCylinderMeasL chi2increment = 4.981983e+02 maxChi2Increment = 1.000000e+02 x = 3.321842e+02 y = -1.867909e+02 z = 7.095093e+02 with CellIDs: 
+[ DEBUG1 "TestProcessor"]  CellID = 164
+[ DEBUG1 "TestProcessor"]  CellID = 228
+[ DEBUG2 "TestProcessor"]  addAndFit : Site passed Chi2 filter step ? 0
+[ DEBUG2 "TestProcessor"] >>>>>>>>>>>  fit(): Number of Outliers : 2
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addAndFit called : maxChi2Increment = 1.000000e+02
+[ DEBUG1 "TestProcessor"] Kaltrack::addAndFit :  add site to track at index : 1506 for type DDCylinderMeasL
+[ DEBUG1 "TestProcessor"]  KalTrackFilter::IsAccepted called  !  deltaChi2 = 6.600962e+02 _maxDeltaChi2 = 1.000000e+02
+[ DEBUG2 "TestProcessor"] Kaltrack::addAndFit : site discarded! at index : 1506 for type DDCylinderMeasL chi2increment = 6.600962e+02 maxChi2Increment = 1.000000e+02 x = 3.438699e+02 y = -1.777636e+02 z = 7.043603e+02 with CellIDs: 
+[ DEBUG1 "TestProcessor"]  CellID = 292
+[ DEBUG1 "TestProcessor"]  CellID = 356
+[ DEBUG2 "TestProcessor"]  addAndFit : Site passed Chi2 filter step ? 0
+[ DEBUG2 "TestProcessor"] >>>>>>>>>>>  fit(): Number of Outliers : 3
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addAndFit called : maxChi2Increment = 1.000000e+02
+[ DEBUG1 "TestProcessor"] Kaltrack::addAndFit :  add site to track at index : 1507 for type DDCylinderMeasL
+[ DEBUG1 "TestProcessor"]  KalTrackFilter::IsAccepted called  !  deltaChi2 = 7.939357e+02 _maxDeltaChi2 = 1.000000e+02
+[ DEBUG2 "TestProcessor"] Kaltrack::addAndFit : site discarded! at index : 1507 for type DDCylinderMeasL chi2increment = 7.939357e+02 maxChi2Increment = 1.000000e+02 x = 3.551999e+02 y = -1.684061e+02 z = 7.005510e+02 with CellIDs: 
+[ DEBUG1 "TestProcessor"]  CellID = 420
+[ DEBUG1 "TestProcessor"]  CellID = 484
+[ DEBUG2 "TestProcessor"]  addAndFit : Site passed Chi2 filter step ? 0
+[ DEBUG2 "TestProcessor"] >>>>>>>>>>>  fit(): Number of Outliers : 4
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addAndFit called : maxChi2Increment = 1.000000e+02
+[ DEBUG1 "TestProcessor"] Kaltrack::addAndFit :  add site to track at index : 1508 for type DDCylinderMeasL
+[ DEBUG1 "TestProcessor"]  KalTrackFilter::IsAccepted called  !  deltaChi2 = 1.174512e+03 _maxDeltaChi2 = 1.000000e+02
+[ DEBUG2 "TestProcessor"] Kaltrack::addAndFit : site discarded! at index : 1508 for type DDCylinderMeasL chi2increment = 1.174512e+03 maxChi2Increment = 1.000000e+02 x = 3.677827e+02 y = -1.549733e+02 z = 6.961366e+02 with CellIDs: 
+[ DEBUG1 "TestProcessor"]  CellID = 548
+[ DEBUG1 "TestProcessor"]  CellID = 612
+[ DEBUG2 "TestProcessor"]  addAndFit : Site passed Chi2 filter step ? 0
+[ DEBUG2 "TestProcessor"] >>>>>>>>>>>  fit(): Number of Outliers : 5
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addAndFit called : maxChi2Increment = 1.000000e+02
+[ DEBUG1 "TestProcessor"] Kaltrack::addAndFit :  add site to track at index : 1509 for type DDCylinderMeasL
+[ DEBUG1 "TestProcessor"]  KalTrackFilter::IsAccepted called  !  deltaChi2 = 1.451469e+03 _maxDeltaChi2 = 1.000000e+02
+[ DEBUG2 "TestProcessor"] Kaltrack::addAndFit : site discarded! at index : 1509 for type DDCylinderMeasL chi2increment = 1.451469e+03 maxChi2Increment = 1.000000e+02 x = 3.796660e+02 y = -1.412789e+02 z = 6.865156e+02 with CellIDs: 
+[ DEBUG1 "TestProcessor"]  CellID = 676
+[ DEBUG1 "TestProcessor"]  CellID = 740
+[ DEBUG2 "TestProcessor"]  addAndFit : Site passed Chi2 filter step ? 0
+[ DEBUG2 "TestProcessor"] >>>>>>>>>>>  fit(): Number of Outliers : 6
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addAndFit called : maxChi2Increment = 1.000000e+02
+[ DEBUG1 "TestProcessor"] Kaltrack::addAndFit :  add site to track at index : 1510 for type DDCylinderMeasL
+[ DEBUG1 "TestProcessor"]  KalTrackFilter::IsAccepted called  !  deltaChi2 = 2.123304e+03 _maxDeltaChi2 = 1.000000e+02
+[ DEBUG2 "TestProcessor"] Kaltrack::addAndFit : site discarded! at index : 1510 for type DDCylinderMeasL chi2increment = 2.123304e+03 maxChi2Increment = 1.000000e+02 x = 3.924694e+02 y = -1.223560e+02 z = 6.800931e+02 with CellIDs: 
+[ DEBUG1 "TestProcessor"]  CellID = 804
+[ DEBUG1 "TestProcessor"]  CellID = 868
+[ DEBUG2 "TestProcessor"]  addAndFit : Site passed Chi2 filter step ? 0
+[ DEBUG2 "TestProcessor"] >>>>>>>>>>>  fit(): Number of Outliers : 7
+[ DEBUG1 "TestProcessor"] MarlinDDKalTestTrack::addAndFit called : maxChi2Increment = 1.000000e+02
+[ DEBUG1 "TestProcessor"] Kaltrack::addAndFit :  add site to track at index : 1511 for type DDCylinderMeasL
+[ DEBUG1 "TestProcessor"]  KalTrackFilter::IsAccepted called  !  deltaChi2 = 3.498964e+03 _maxDeltaChi2 = 1.000000e+02
+[ DEBUG2 "TestProcessor"] Kaltrack::addAndFit : site discarded! at index : 1511 for type DDCylinderMeasL chi2increment = 3.498964e+03 maxChi2Increment = 1.000000e+02 x = 4.058881e+02 y = -9.605870e+01 z = 6.723625e+02 with CellIDs: 
+[ DEBUG1 "TestProcessor"]  CellID = 932
+[ DEBUG1 "TestProcessor"]  CellID = 996
+[ DEBUG2 "TestProcessor"]  addAndFit : Site passed Chi2 filter step ? 0
+[ DEBUG2 "TestProcessor"] >>>>>>>>>>>  fit(): Number of Outliers : 8
+[ DEBUG2 "TestProcessor"] Perform Smoothing for All Previous Measurement Sites 
+[ DEBUG2 "TestProcessor"] MarlinDDKalTestTrack::smooth() 
+[ DEBUG3 "TestProcessor"] MarlinTrk::createFinalisedLCIOTrack fit failed: fit_status = 7
+[ VERBOSE "TestProcessor"]  Fit failed completely, ignoring the subtrack
+[ VERBOSE "TestProcessor"] We found 29 track states
+[ VERBOSE "TestProcessor"] Segment 1:  track length between z1 = -0.0913828  and z2 = 5.22698   is   16.9889
+[ VERBOSE "TestProcessor"] Segment 2:  track length between z1 = 5.22698  and z2 = 5.91396   is   2.19445
+[ VERBOSE "TestProcessor"] Segment 3:  track length between z1 = 5.91396  and z2 = 12.2082   is   19.9971
+[ VERBOSE "TestProcessor"] Segment 4:  track length between z1 = 12.2082  and z2 = 12.8883   is   2.16006
+[ VERBOSE "TestProcessor"] Segment 5:  track length between z1 = 12.8883  and z2 = 19.1593   is   19.9686
+[ VERBOSE "TestProcessor"] Segment 6:  track length between z1 = 19.1593  and z2 = 19.845   is   2.19619
+[ VERBOSE "TestProcessor"] Segment 7:  track length between z1 = 19.845  and z2 = 51.8966   is   102.79
+[ VERBOSE "TestProcessor"] Segment 8:  track length between z1 = 51.8966  and z2 = 52.8479   is   3.01588
+[ VERBOSE "TestProcessor"] Segment 9:  track length between z1 = 52.8479  and z2 = 149.829   is   307.239
+[ VERBOSE "TestProcessor"] Segment 10:  track length between z1 = 149.829  and z2 = 153.812   is   12.6943
+[ VERBOSE "TestProcessor"] Segment 11:  track length between z1 = 153.812  and z2 = 157.566   is   11.9649
+[ VERBOSE "TestProcessor"] Segment 12:  track length between z1 = 157.566  and z2 = 162.54   is   15.8527
+[ VERBOSE "TestProcessor"] Segment 13:  track length between z1 = 162.54  and z2 = 167.554   is   15.983
+[ VERBOSE "TestProcessor"] Segment 14:  track length between z1 = 167.554  and z2 = 173.097   is   17.6659
+[ VERBOSE "TestProcessor"] Segment 15:  track length between z1 = 173.097  and z2 = 178.991   is   18.7892
+[ VERBOSE "TestProcessor"] Segment 16:  track length between z1 = 178.991  and z2 = 185.978   is   22.2725
+[ VERBOSE "TestProcessor"] Segment 17:  track length between z1 = 185.978  and z2 = 194.344   is   26.6666
+[ VERBOSE "TestProcessor"] Segment 18:  track length between z1 = 194.344  and z2 = 206.744   is   39.5312
+[ VERBOSE "TestProcessor"] Segment 19:  track length between z1 = 206.744  and z2 = 239.522   is   104.492
+[ VERBOSE "TestProcessor"] Segment 20:  track length between z1 = 239.522  and z2 = 251.748   is   38.0516
+[ VERBOSE "TestProcessor"] Segment 21:  track length between z1 = 251.748  and z2 = 260.504   is   27.2505
+[ VERBOSE "TestProcessor"] Segment 22:  track length between z1 = 260.504  and z2 = 267.804   is   22.721
+[ VERBOSE "TestProcessor"] Segment 23:  track length between z1 = 267.804  and z2 = 274.057   is   19.4588
+[ VERBOSE "TestProcessor"] Segment 24:  track length between z1 = 274.057  and z2 = 279.093   is   15.6763
+[ VERBOSE "TestProcessor"] Segment 25:  track length between z1 = 279.093  and z2 = 284.102   is   15.5892
+[ VERBOSE "TestProcessor"] Segment 26:  track length between z1 = 284.102  and z2 = 289.075   is   15.4756
+[ VERBOSE "TestProcessor"] Segment 27:  track length between z1 = 289.075  and z2 = 293.292   is   13.1247
+[ VERBOSE "TestProcessor"] Segment 28:  track length between z1 = 293.292  and z2 = 297.546   is   13.2405
+[ VERBOSE "TestProcessor"] Event: 6
+[ VERBOSE "TestProcessor"] PFO: 18
+[ VERBOSE "TestProcessor"] PDG: 211
+[ VERBOSE "TestProcessor"] momentumHM: 0.239062
+[ VERBOSE "TestProcessor"] TOF: 6.77825
+[ VERBOSE "TestProcessor"] trackLength: 943.052
+[ VERBOSE "TestProcessor"] nSegments: 28
+[ VERBOSE "TestProcessor"] nBadZ: 0
+[ VERBOSE "TestProcessor"] beta: 0.464084
+[ VERBOSE "TestProcessor"] mass: 456.294
+[ MESSAGE "TestProcessor"]  ......processing BeamCal
+[ MESSAGE "TestProcessor"] BeamCal has successfully been processed.
+[ VERBOSE "TestProcessor"] 
+[ MESSAGE "TestProcessor"]  ......processing EcalBarrel
+[ MESSAGE "TestProcessor"] EcalBarrel has successfully been processed.
+[ VERBOSE "TestProcessor"] 
+[ MESSAGE "TestProcessor"]  ......processing EcalEndcap
+[ MESSAGE "TestProcessor"] EcalEndcap has successfully been processed.
+[ VERBOSE "TestProcessor"] 
+[ MESSAGE "TestProcessor"]  ......processing EcalPlug
+[ MESSAGE "TestProcessor"] EcalPlug has successfully been processed.
+[ VERBOSE "TestProcessor"] 
+[ MESSAGE "TestProcessor"]  ......processing HcalBarrel
+[ MESSAGE "TestProcessor"] HcalBarrel has successfully been processed.
+[ VERBOSE "TestProcessor"] 
+[ MESSAGE "TestProcessor"]  ......processing HcalEndcap
+[ MESSAGE "TestProcessor"] HcalEndcap has successfully been processed.
+[ VERBOSE "TestProcessor"] 
+[ MESSAGE "TestProcessor"]  ......processing HcalRing
+[ MESSAGE "TestProcessor"] HcalRing has successfully been processed.
+[ VERBOSE "TestProcessor"] 
+[ MESSAGE "TestProcessor"]  ......processing LHCal
+[ MESSAGE "TestProcessor"] LHCal has successfully been processed.
+[ VERBOSE "TestProcessor"] 
+[ MESSAGE "TestProcessor"]  ......processing Lcal
+[ MESSAGE "TestProcessor"] Lcal has successfully been processed.
+[ VERBOSE "TestProcessor"] 
+[ MESSAGE "TestProcessor"]  ......processing YokeBarrel
+[ MESSAGE "TestProcessor"] YokeBarrel has successfully been processed.
+[ VERBOSE "TestProcessor"] 
+[ MESSAGE "TestProcessor"]  ......processing YokeEndcap
+[ MESSAGE "TestProcessor"] YokeEndcap has successfully been processed.
+[ VERBOSE "TestProcessor"] 
+[ MESSAGE "TestProcessor"]  ......processingFTD
+[ MESSAGE "TestProcessor"] FTD has successfully been processed.
+[ VERBOSE "TestProcessor"] 
+[ MESSAGE "TestProcessor"]  ......processingSET
+[ MESSAGE "TestProcessor"] SET has successfully been processed.
+[ VERBOSE "TestProcessor"] 
+[ MESSAGE "TestProcessor"]  ......processingSIT
+[ MESSAGE "TestProcessor"] SIT has successfully been processed.
+[ VERBOSE "Te
