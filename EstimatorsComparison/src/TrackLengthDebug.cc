@@ -57,6 +57,8 @@ void TrackLengthDebug::init(){
     _tree->Branch("trackLengthWinni", &_trackLengthWinni);
     _tree->Branch("trackLengthWinni2", &_trackLengthWinni2);
     _tree->Branch("trackLengthUsingZ", &_trackLengthUsingZ);
+    _tree->Branch("trackLengthUsingZ2", &_trackLengthUsingZ2);
+    _tree->Branch("trackLengthUsingZ3", &_trackLengthUsingZ3);
     _tree->Branch("trackLengthSimUsingZ", &_trackLengthSimUsingZ);
 }
 
@@ -96,6 +98,8 @@ void TrackLengthDebug::processEvent(EVENT::LCEvent * evt){
         _trackLengthWinni = getTrackLengthWinni(track, _bField, _trkSystem);
         _trackLengthWinni2 = getTrackLengthWinni2(track, _bField, _trkSystem);
         _trackLengthUsingZ = getTrackLengthUsingZ(track, _bField, _trkSystem);
+        _trackLengthUsingZ2 = getTrackLengthUsingZ2(pfo, _bField, _trkSystem);
+        _trackLengthUsingZ3 = getTrackLengthUsingZ3(pfo, _bField, _trkSystem);
         _trackLengthSimUsingZ = getTrackLengthSimUsingZ(track, _bField, _trkSystem);
         _tree->Fill();
 

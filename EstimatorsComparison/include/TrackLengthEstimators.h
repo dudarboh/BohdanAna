@@ -47,6 +47,17 @@ double getTrackLengthWinni2(EVENT::Track* track, double bField, MarlinTrk::IMarl
 //Track length using helix formula w/o omega, only dz and tanL (30 January 2023).
 double getTrackLengthUsingZ(EVENT::Track* track, double bField, MarlinTrk::IMarlinTrkSystem* trkSystem);
 
+//Track length using helix formula w/o omega, only dz and tanL (7 March 2023).
+//but it ALWAYS extapolates to the ECAL, if there is a cluster from the latest successful fit segment.
+double getTrackLengthUsingZ2(EVENT::ReconstructedParticle* pfo, double bField, MarlinTrk::IMarlinTrkSystem* trkSystem);
+
+
+//Track length using helix formula w/o omega, only dz and tanL (7 March 2023).
+//but it ALWAYS extapolates to the ECAL, if there is a cluster from the latest successful fit segment.
+//sort ONLY by Z everywhere, w/o rho.
+double getTrackLengthUsingZ3(EVENT::ReconstructedParticle* pfo, double bField, MarlinTrk::IMarlinTrkSystem* trkSystem);
+
+
 //Track length using helix formula w/o omega, only dz and tanL (30 January 2023).
 // but using only momentum information from SimHits ("true level")
 double getTrackLengthSimUsingZ(EVENT::Track* track, double bField, MarlinTrk::IMarlinTrkSystem* trkSystem);

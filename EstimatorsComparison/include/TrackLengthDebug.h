@@ -40,6 +40,8 @@ class TrackLengthDebug : public marlin::Processor{
         double _trackLengthWinni;
         double _trackLengthWinni2;
         double _trackLengthUsingZ;
+        double _trackLengthUsingZ2;
+        double _trackLengthUsingZ3;
         double _trackLengthSimUsingZ;
 
         MarlinTrk::IMarlinTrkSystem* _trkSystem = nullptr;
