@@ -29,6 +29,48 @@ using std::string;
 TrackLengthDebug aTrackLengthDebug;
 
 
+int parseLine(char* line){
+    // This assumes that a digit will be found and the line ends in " Kb".
+    int i = strlen(line);
+    const char* p = line;
+    while (*p <'0' || *p > '9') p++;
+    line[i-3] = '\0';
+    i = atoi(p);
+    return i;
+}
+
+int getVirtualMemoryUsage(){ //Note: this value is in KB!
+    FILE* file = fopen("/proc/self/status", "r");
+    int result = -1;
+    char line[128];
+
+    while (fgets(line, 128, file) != NULL){
+        if (strncmp(line, "VmSize:", 7) == 0){
+            result = parseLine(line);
+            break;
+        }
+    }
+    fclose(file);
+    return result;
+}
+
+
+int getPhysicalMemoryUsage(){ //Note: this value is in KB!
+    FILE* file = fopen("/proc/self/status", "r");
+    int result = -1;
+    char line[128];
+
+    while (fgets(line, 128, file) != NULL){
+        if (strncmp(line, "VmRSS:", 6) == 0){
+            result = parseLine(line);
+            break;
+        }
+    }
+    fclose(file);
+    return result;
+}
+
+
 TrackLengthDebug::TrackLengthDebug() : marlin::Processor("TrackLengthDebug"){
     _description = "Processor that calculates track length with many different methods for comparison. Represents evolution of the track length calculation in iLCSoft";
 }
@@ -65,7 +107,10 @@ void TrackLengthDebug::init(){
 void TrackLengthDebug::processEvent(EVENT::LCEvent * evt){
     ++_nEvent;
     streamlog_out(MESSAGE)<<std::endl<<"==========Event========== "<<_nEvent<<std::endl;
-
+    int vm = getVirtualMemoryUsage();
+    int rm = getPhysicalMemoryUsage();
+    streamlog_out(MESSAGE)<<"VM usage: "<<vm/1000.<<"    PM usage: "<<rm/1000.<<"  MB"<<std::endl;
+    
     LCCollection* pfos = evt->getCollection("PandoraPFOs");
     PIDHandler pidHandler( pfos );
     LCRelationNavigator nav ( evt->getCollection("RecoMCTruthLink") );
