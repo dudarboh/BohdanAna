@@ -3,7 +3,63 @@ import numpy as np
 # ROOT.gStyle.SetPalette(1)
 ROOT.gStyle.SetNumberContours(256)
 ROOT.gStyle.SetOptTitle(1)
-ROOT.gStyle.SetLegendFillColor(0)
+# ROOT.EnableImplicitMT()
+
+def draw_lines():
+    lines = {}
+    pdgs = [211, 321, 2212]
+    m_pdg = {211 : 0.13957039*1000, 321 : 0.493677*1000, 2212 : 0.938272088*1000}
+    for pdg in pdgs:
+        lines[pdg] = ROOT.TLine(0., m_pdg[pdg], 15., m_pdg[pdg])
+        lines[pdg].SetLineColor(2)
+        lines[pdg].SetLineWidth(1)
+        lines[pdg].SetLineStyle(9)
+        lines[pdg].Draw()
+    return lines
+
+df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/track_length/trk_len_comparison/final.root")
+df = df.Filter("tof > 6.").Filter("abs(pdg) == 211 || abs(pdg) == 321 || abs(pdg) == 2212")
+
+# algorithms = ["trackLengthIDR", "trackLengthIDR2", "trackLengthIDR3",
+            #   "trackLengthIDR4", "trackLengthWinni", "trackLengthWinni2",
+            #   "trackLengthUsingZ", "trackLengthUsingZ2", "trackLengthUsingZ3", "trackLengthSimUsingZ"]
+algorithms = ["trackLengthUsingZ", "trackLengthUsingZ2", "trackLengthUsingZ3"]
+
+
+histos = []
+for name in algorithms:
+    df_beta = df.Define("beta", f"{name}/(tof*299.792458)").Filter("beta >= 0 && beta <= 1")
+    df_mass = df_beta.Define("mass", "momentum*sqrt( 1./(beta*beta) - 1.)*1000")
+    h = df_mass.Histo2D((f"h_{name}", f"{name}; momentum [GeV]; Mass [MeV]", 500, 0, 15, 500, -100, 1300.), "momentum","mass")
+    histos.append(h)
+
+for name, h in zip(algorithms, histos):
+    canvas = ROOT.TCanvas(f"{name}")
+    h.Draw("colz")
+    draw_lines()
+    h.SetMinimum(0.1)
+    h.SetMaximum(3000)
+    canvas.SetLogz()
+    canvas.SetGridy(0)
+    canvas.Update()
+    print("wut1")
+    stats = h.FindObject("stats")
+    stats.SetOptStat(10011)
+    stats.SetX1NDC(0.74)
+    stats.SetX2NDC(0.92)
+    stats.SetY1NDC(0.89)
+    stats.SetY2NDC(0.99)
+    print("wut2")
+    palette = h.GetListOfFunctions().FindObject("palette")
+    palette.SetX1NDC(0.93)
+    palette.SetX2NDC(0.95)
+    print("wut3")
+    canvas.Modified()
+    print("wut4")
+    canvas.Update()
+    input("wait")
+
+
 
 def check_uli():
     df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/track_length/trk_len_comparison/trk_len_comparison*.root")
@@ -14,18 +70,7 @@ def check_uli():
     h = df.Histo2D(("h", "; momentum [GeV]; Mass [MeV]", 500, 0, 15, 500, -100, 3000.), "momentum","mass")
     print(h.GetMaximum())
 
-    def draw_lines():
-        lines = {}
-        pdgs = [211, 321, 2212]
-        m_pdg = {211 : 0.13957039*1000, 321 : 0.493677*1000, 2212 : 0.938272088*1000}
-        for pdg in pdgs:
-            lines[pdg] = ROOT.TLine(0., m_pdg[pdg], 15., m_pdg[pdg])
-            lines[pdg].SetLineColor(2)
-            lines[pdg].SetLineWidth(1)
-            lines[pdg].SetLineStyle(9)
-            lines[pdg].Draw()
-        return lines
-
+    
 
     canvas = ROOT.TCanvas("trk_len")
     h.Draw("colz")
@@ -44,7 +89,6 @@ def check_uli():
     # canvas.Print(f"{canvas.GetName()}.png")
 
 def plot_2d(track_length_name):
-    df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/track_length/trk_len_comparison/trk_len_comparison*.root")
     df = df.Filter("tof > 0") # can't be 0 or negative
     df = df.Define("beta", f"{track_length_name}/(tof*299.792458)").Filter("beta >= 0 && beta <= 1")
     df = df.Define("mass", "momentum*sqrt( 1./(beta*beta) - 1.)*1000") # in MeV
@@ -297,12 +341,12 @@ def plot_track_parameters(filename="evt_1_pfo_6"):
     input("wait")
     canvas.Print(f"{filename}_trk_len.png")    
 
-check_uli()
-algorithms = ["trackLengthIDR" ,"trackLengthIDR2" ,"trackLengthIDR3" ,"trackLengthIDR4" ,"trackLengthWinni" ,"trackLengthWinni2" ,"trackLengthUsingZ"]
+# check_uli()
+# algorithms = ["trackLengthIDR" ,"trackLengthIDR2" ,"trackLengthIDR3" ,"trackLengthIDR4" ,"trackLengthWinni" ,"trackLengthWinni2" ,"trackLengthUsingZ"]
 # plot_2d("trackLengthIDR")
 # plot_2d(algorithms[5])
-for alg in algorithms:
-    plot_2d(alg)
+# for alg in algorithms:
+#     plot_2d(alg)
 # filenames = ["evt_1_pfo_6", "evt_1_pfo_12", "evt_2_pfo_1", "evt_3_pfo_11", "evt_3_pfo_19", "evt_6_pfo_10"]
 # for filename in filenames:
 #     plot_track_parameters(filename)

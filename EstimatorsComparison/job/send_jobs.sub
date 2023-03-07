@@ -1,8 +1,7 @@
-project_folder = /afs/desy.de/user/d/dudarboh/analysis/iLCSoft/MarlinReco/Analysis/TOF/TrackLength
+project_folder = /afs/desy.de/user/d/dudarboh/analysis/TrackLength/EstimatorsComparison
 executable = $(project_folder)/job/job.sh
 initialdir = /nfs/dust/ilc/user/dudarboh/jobs
 arguments = $(file) $(ClusterId) $(ProcId) $(job_name) $(project_folder)
-max_materialize = 500
 
 log = ../log/$(ClusterId)_$(ProcId).log
 output = ../out/$(ClusterId)_$(ProcId).out
@@ -13,4 +12,7 @@ request_memory = 1GB
 request_disk = 10KB
 
 job_name=trk_len
+queue file from /afs/desy.de/user/d/dudarboh/analysis/data/REC/250GeV/2f_Z_hadronic_E250_eLpR.txt
+queue file from /afs/desy.de/user/d/dudarboh/analysis/data/REC/250GeV/2f_Z_hadronic_E250_eRpL.txt
+queue file from /afs/desy.de/user/d/dudarboh/analysis/data/REC/250GeV/4f_WW_hadronic_E250_eLpR.txt
 queue file from /afs/desy.de/user/d/dudarboh/analysis/data/REC/250GeV/4f_WW_hadronic_E250_eRpL.txt
