@@ -18,7 +18,7 @@
 #include "TCanvas.h"
 #include "TSystem.h"
 #include "marlinutil/MarlinUtil.h"
-
+#include "marlinutil/CalorimeterHitType.h"
 using namespace TrackLengthDebugUtils;
 using namespace EVENT;
 using namespace UTIL;
@@ -92,24 +92,38 @@ void TrackLengthDebug::init(){
     _tree->Branch("pdg", &_pdg);
     _tree->Branch("momentum", &_momentum);
     _tree->Branch("tof", &_tof);
-    _tree->Branch("trackLengthIDR", &_trackLengthIDR);
-    _tree->Branch("trackLengthIDR2", &_trackLengthIDR2);
-    _tree->Branch("trackLengthIDR3", &_trackLengthIDR3);
-    _tree->Branch("trackLengthIDR4", &_trackLengthIDR4);
-    _tree->Branch("trackLengthWinni", &_trackLengthWinni);
-    _tree->Branch("trackLengthWinni2", &_trackLengthWinni2);
-    _tree->Branch("trackLengthUsingZ", &_trackLengthUsingZ);
-    _tree->Branch("trackLengthUsingZ2", &_trackLengthUsingZ2);
-    _tree->Branch("trackLengthUsingZ3", &_trackLengthUsingZ3);
-    _tree->Branch("trackLengthSimUsingZ", &_trackLengthSimUsingZ);
+    _tree->Branch("tofv2", &_tofv2);
+    _tree->Branch("hitLayer", &_hitLayer);
+    // _tree->Branch("trackLengthIDR", &_trackLengthIDR);
+    // _tree->Branch("trackLengthIDR2", &_trackLengthIDR2);
+    // _tree->Branch("trackLengthIDR3", &_trackLengthIDR3);
+    // _tree->Branch("trackLengthIDR4", &_trackLengthIDR4);
+
+    _tree->Branch("trackLengthSHA1", &_trackLengthSHA1);
+    _tree->Branch("trackLengthSHA2", &_trackLengthSHA2);
+    _tree->Branch("trackLengthSHA3", &_trackLengthSHA3);
+    _tree->Branch("trackLengthSHA4", &_trackLengthSHA4);
+    _tree->Branch("trackLengthSHA5", &_trackLengthSHA5);
+    _tree->Branch("trackLengthSHA6", &_trackLengthSHA6);
+
+    // _tree->Branch("trackLengthWinni", &_trackLengthWinni);
+    // _tree->Branch("trackLengthWinni2", &_trackLengthWinni2);
+    // _tree->Branch("trackLengthUsingZ", &_trackLengthUsingZ);
+    // _tree->Branch("trackLengthUsingZ2", &_trackLengthUsingZ2);
+    // _tree->Branch("trackLengthUsingZ3", &_trackLengthUsingZ3);
+    // _tree->Branch("trackLengthSimUsingZ", &_trackLengthSimUsingZ);
+
+    _tree->Branch("trackLengthIKF1", &_trackLengthIKF1);
+    _tree->Branch("trackLengthIKF2", &_trackLengthIKF2);
+    _tree->Branch("trackLengthIKF3", &_trackLengthIKF3);
 }
 
 void TrackLengthDebug::processEvent(EVENT::LCEvent * evt){
     ++_nEvent;
     streamlog_out(MESSAGE)<<std::endl<<"==========Event========== "<<_nEvent<<std::endl;
-    int vm = getVirtualMemoryUsage();
-    int rm = getPhysicalMemoryUsage();
-    streamlog_out(MESSAGE)<<"VM usage: "<<vm/1000.<<"    PM usage: "<<rm/1000.<<"  MB"<<std::endl;
+    // int vm = getVirtualMemoryUsage();
+    // int rm = getPhysicalMemoryUsage();
+    // streamlog_out(MESSAGE)<<"VM usage: "<<vm/1000.<<"    PM usage: "<<rm/1000.<<"  MB"<<std::endl;
     
     LCCollection* pfos = evt->getCollection("PandoraPFOs");
     PIDHandler pidHandler( pfos );
@@ -131,6 +145,7 @@ void TrackLengthDebug::processEvent(EVENT::LCEvent * evt){
         }
         auto* mc = static_cast<MCParticle*> (objects[max_i]);
         Track* track = pfo->getTracks()[0];
+        Cluster* cluster = pfo->getClusters()[0];
 
         // store this to the TTree
         _pdg = mc->getPDG();
@@ -140,15 +155,55 @@ void TrackLengthDebug::processEvent(EVENT::LCEvent * evt){
         _trackLengthIDR2 = getTrackLengthIDR2(track);
         _trackLengthIDR3 = getTrackLengthIDR3(track);
         _trackLengthIDR4 = getTrackLengthIDR4(track);
+
+        _trackLengthSHA1 = getTrackLengthSHA1(track);
+        _trackLengthSHA2 = getTrackLengthSHA2(track);
+        _trackLengthSHA3 = getTrackLengthSHA3(track);
+        _trackLengthSHA4 = getTrackLengthSHA4(track);
+        _trackLengthSHA5 = getTrackLengthSHA5(track);
+        _trackLengthSHA6 = getTrackLengthSHA6(track);
+
         _trackLengthWinni = getTrackLengthWinni(track, _bField, _trkSystem);
         _trackLengthWinni2 = getTrackLengthWinni2(track, _bField, _trkSystem);
         _trackLengthUsingZ = getTrackLengthUsingZ(track, _bField, _trkSystem);
         _trackLengthUsingZ2 = getTrackLengthUsingZ2(pfo, _bField, _trkSystem);
         _trackLengthUsingZ3 = getTrackLengthUsingZ3(pfo, _bField, _trkSystem);
         _trackLengthSimUsingZ = getTrackLengthSimUsingZ(track, _bField, _trkSystem);
+
+        _trackLengthIKF1 = getTrackLengthIKF1(pfo, _bField, _trkSystem);
+        _trackLengthIKF2 = getTrackLengthIKF2(pfo, _bField, _trkSystem);
+        _trackLengthIKF3 = getTrackLengthIKF3(pfo, _bField, _trkSystem);
+
+        // FILL TIME OF FLIGHT with LATEST track state at Calorimeter
+        const TrackState* tsEcal = nullptr;
+        if (track->getTracks().size() <= 2) tsEcal = track->getTrackState( TrackState::AtCalorimeter );
+        else{
+            Track* lastSubTrack = track->getTracks().back();
+            tsEcal = lastSubTrack->getTrackState( TrackState::AtCalorimeter );
+        }
+        Vector3D trackPosAtEcal ( tsEcal->getReferencePoint() );
+
+        double hitTime = std::numeric_limits<double>::max();
+        double closestDistance = std::numeric_limits<double>::max();
+        for( auto hit : cluster->getCalorimeterHits() ){
+            CHT hitInfo( hit->getType() );
+            bool isECALHit = ( hitInfo.caloID() == CHT::ecal );
+            if (! isECALHit) continue;
+
+            Vector3D hitPos( hit->getPosition() );
+            double dToTrack = (hitPos - trackPosAtEcal).r();
+            if( dToTrack < closestDistance ){
+                closestDistance = dToTrack;
+                hitTime = hit->getTime();
+                _hitLayer = hitInfo.layer();
+            }
+        }
+        if ( hitTime == std::numeric_limits<double>::max() ) _tofv2 = 0.;
+        else  _tofv2 = hitTime - closestDistance/CLHEP::c_light;
+
+
+
         _tree->Fill();
-
-
     }
 }
 

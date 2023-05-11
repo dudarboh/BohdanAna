@@ -69,11 +69,13 @@ void drawPFO(ReconstructedParticle* pfo){
             int layer = 1; // doesn't matter
             int size = 4; // larger point
 
-            unsigned long color = 0x3232a8;
-            if ( (nHits) % 20 == 0){
-                color = 0xfa0730;
-                size = 8;
-            }
+            unsigned long color = 0x000000;
+            if (track == tracks.front()) color = 0x1100ff;
+            else if (track == tracks.back()) color = 0xff0033;
+            // if ( (nHits) % 20 == 0){
+            //     color = 0xfa0730;
+            //     size = 8;
+            // }
             ced_hit_ID(pos[0], pos[1], pos[2], type, layer, size, color, 0 ); // tracker hits
         }
     }
@@ -86,9 +88,28 @@ void drawPFO(ReconstructedParticle* pfo){
             int layer = 1; // doesn't matter
             int size = 6; // larger point
             unsigned long color = 0xbf2659;
-            ced_hit_ID(pos[0], pos[1], pos[2], type, layer, size, color, 0 ); // tracker hits
+            // ced_hit_ID(pos[0], pos[1], pos[2], type, layer, size, color, 0 ); // calorimeter hits
         }
     }
+
+    int type = 0; // point
+    int layer = 1; // doesn't matter
+    int size = 6; // larger point
+
+    const TrackState* tsCalo = track->getTrackState(TrackState::AtCalorimeter);
+    auto pos = tsCalo->getReferencePoint();
+    ced_hit_ID(pos[0], pos[1], pos[2], type, layer, size, 0x1100ff, 0 );
+
+
+    if(tracks.size() > 1){
+        tsCalo = tracks.back()->getTrackState(TrackState::AtCalorimeter);
+        pos = tsCalo->getReferencePoint();
+        ced_hit_ID(pos[0], pos[1], pos[2], type, layer, size, 0xff0033, 0 );
+    }
+
+    // DDMarlinCED::drawHelix( 3.5, mc->getCharge(), recoPos.x(), recoPos.y(), recoPos.z(), recoMom.x(), recoMom.y(), recoMom.z(), 0, 3, 0x0062ff, 0, 2000, 2350, 0);
+
+
 }
 
 void TrackLengthDebug::processEvent(EVENT::LCEvent * evt){
@@ -171,6 +192,7 @@ void TrackLengthDebug::processEvent(EVENT::LCEvent * evt){
         streamlog_out(DEBUG5)<<"Track length using Z: "<<_trackLengthZ<<" mm"<<std::endl;
         streamlog_out(DEBUG5)<<std::endl<<std::endl;
 
+        drawDisplay(this, evt, drawPFO, pfo);
 
         if(std::abs(_trackLengthDefault - _trackLengthZ) > 5. ){
             double cumTrackLengthDefault = 0;
@@ -336,7 +358,7 @@ void TrackLengthDebug::processEvent(EVENT::LCEvent * evt){
             std::cout<<"PDG: "<<_pdg<<"    mom: "<<_momIp.r()<<std::endl;
             std::cout<<"pt: "<<_momIp.rho()<<"    pz: "<<_momIp.z()<<std::endl;
             std::cout<<"mass_default: "<<_massDefault<<"    mass_tanl: "<<_massTanL<<"    mass_z: "<<_massZ<<std::endl;
-            drawDisplay(this, evt, drawPFO, pfo);
+            // drawDisplay(this, evt, drawPFO, pfo);
         }
         _tree->Fill();
 

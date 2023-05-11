@@ -37,6 +37,27 @@ double getTrackLengthIDR3(EVENT::Track* track);
 // and fix phi flip bug
 double getTrackLengthIDR4(EVENT::Track* track);
 
+
+// simple helix approxumation (SHA) option 1 from the thesis
+double getTrackLengthSHA1(EVENT::Track* track);
+
+// simple helix approxumation (SHA) option 2 from the thesis
+double getTrackLengthSHA2(EVENT::Track* track);
+
+// simple helix approxumation (SHA) option 3 from the thesis
+double getTrackLengthSHA3(EVENT::Track* track);
+
+// simple helix approxumation (SHA) option 4 from the thesis
+double getTrackLengthSHA4(EVENT::Track* track);
+
+// simple helix approxumation (SHA) option 5 from the thesis
+double getTrackLengthSHA5(EVENT::Track* track);
+
+// simple helix approxumation (SHA) option 6 from the thesis
+double getTrackLengthSHA6(EVENT::Track* track);
+
+
+
 //Track length using Winni's formula for helix (8 September 2021).
 double getTrackLengthWinni(EVENT::Track* track, double bField, MarlinTrk::IMarlinTrkSystem* trkSystem);
 
@@ -49,6 +70,7 @@ double getTrackLengthUsingZ(EVENT::Track* track, double bField, MarlinTrk::IMarl
 
 //Track length using helix formula w/o omega, only dz and tanL (7 March 2023).
 //but it ALWAYS extapolates to the ECAL, if there is a cluster from the latest successful fit segment.
+//EDIT: this works better than Z3, all IKFs for the thesis are based on this version!
 double getTrackLengthUsingZ2(EVENT::ReconstructedParticle* pfo, double bField, MarlinTrk::IMarlinTrkSystem* trkSystem);
 
 
@@ -62,6 +84,14 @@ double getTrackLengthUsingZ3(EVENT::ReconstructedParticle* pfo, double bField, M
 // but using only momentum information from SimHits ("true level")
 double getTrackLengthSimUsingZ(EVENT::Track* track, double bField, MarlinTrk::IMarlinTrkSystem* trkSystem);
 
+// iterative Kalman Filter (IKF) option 1 from the thesis
+double getTrackLengthIKF1(EVENT::ReconstructedParticle* pfo, double bField, MarlinTrk::IMarlinTrkSystem* trkSystem);
+
+// iterative Kalman Filter (IKF) option 2 from the thesis
+double getTrackLengthIKF2(EVENT::ReconstructedParticle* pfo, double bField, MarlinTrk::IMarlinTrkSystem* trkSystem);
+
+// iterative Kalman Filter (IKF) option 3 from the thesis
+double getTrackLengthIKF3(EVENT::ReconstructedParticle* pfo, double bField, MarlinTrk::IMarlinTrkSystem* trkSystem);
 
 }
 

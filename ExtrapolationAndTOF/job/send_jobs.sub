@@ -1,4 +1,4 @@
-executable = /afs/desy.de/user/d/dudarboh/analysis/TrackLength/HarmonicAndConsistency/job/job.sh
+executable = /afs/desy.de/user/d/dudarboh/analysis/TrackLength/ExtrapolationAndTOF/job/job.sh
 
 initialdir = /nfs/dust/ilc/user/dudarboh/jobs
 arguments = $(file) $(ClusterId) $(ProcId)

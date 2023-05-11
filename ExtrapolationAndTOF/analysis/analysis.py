@@ -6,16 +6,23 @@ ROOT.gStyle.SetOptTitle(1)
 ROOT.gStyle.SetLegendFillColor(0)
 
 
-def plot_2d(n_seg1, n_seg2):
-    df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/track_length/hm/trk_len_hm*.root")
-    df = df.Filter("tof > 0")#.Filter("abs(pdg) == 2212") # can't be 0 or negative
-    df = df.Define("beta", "trackLength/(tof*299.792458)").Filter("beta >= 0 && beta <= 1")
-    df = df.Define("mass", "momentumHM*sqrt( 1./(beta*beta) - 1.)*1000") # in MeV
+df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/track_length/extrapolation/trk_len_*.root")
 
+df = df.Filter("isGoodClosestHitOld == 1 && tofOld > 6")
+df = df.Filter("abs(pdg) == 211 || abs(pdg) == 321 || abs(pdg) == 2212")
+df = df.Define("beta", "trackLengthOld/(tofOld*299.792458)")
+df = df.Filter("beta >= 0 && beta <= 1")
+df = df.Define("mass", "momentumOld*sqrt( 1./(beta*beta) - 1.)*1000") # in MeV
+df = df.Define("time_corr", "(hitTimeOld - tofOld)*1000")
+
+df_barrel = df.Filter("abs(hitClosestOldPos._z) < 2350. ")
+df_endcap = df.Filter("abs(hitClosestOldPos._z) > 2350. ")
+
+def plot_2d(df):
     # not so default binning anymore, but for old plots: 30, 0, 15, 200, -100, 1300.
-
-    df = df.Filter(f"nSegments > {n_seg1} && nSegments < {n_seg2}")
-    h = df.Histo2D(("h", f"{n_seg1} < N segments < {n_seg2}; momentum [GeV]; Mass [MeV]", 500, 0, 15, 500, -100, 1300.), "momentumHM","mass")
+    # df = df.Filter("nSegments > 0 && nSegments < 9999999")
+    # h = df.Histo2D(("h", "Title; momentum [GeV]; Mass [MeV]", 500, 0, 15, 500, -100, 1300.), "momentumOld","mass")
+    h = df.Histo2D(("h", "Title; TOF [ns] ; Mass [MeV]", 500, 20, 100, 500, -100, 1300.), "time_corr","mass")
     print(h.GetMaximum())
 
     def draw_lines():
@@ -31,7 +38,7 @@ def plot_2d(n_seg1, n_seg2):
         return lines
 
 
-    canvas = ROOT.TCanvas(f"{n_seg1}_n_seg_{n_seg2}")
+    canvas = ROOT.TCanvas()
     h.Draw("colz")
     canvas.Update()
     palette = h.GetListOfFunctions().FindObject("palette")
@@ -40,7 +47,6 @@ def plot_2d(n_seg1, n_seg2):
     lines = draw_lines()
     h.SetStats(0)
     h.SetMinimum(0.1)
-    h.SetMaximum(3000)
     canvas.SetLogz()
     canvas.SetGridy(0)
     canvas.Update()
@@ -48,7 +54,6 @@ def plot_2d(n_seg1, n_seg2):
     canvas.Print(f"{canvas.GetName()}.png")
 
 def plot_1d():
-    df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/track_length/hm/trk_len_hm*.root")
     df = df.Filter("tof > 0") # can't be 0 or negative
     df = df.Define("beta", "trackLength/(tof*299.792458)").Filter("beta >= 0 && beta <= 1")
     df = df.Define("massIP", "momentumIP*sqrt( 1./(beta*beta) - 1.)*1000") # in MeV
@@ -104,7 +109,6 @@ def plot_1d():
 
 
 def plot_var():
-    df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/track_length/hm/trk_len_hm*.root")
     df = df.Filter("tof > 0").Define("beta", "trackLength/(tof*299.792458)").Filter("beta >= 0 && beta <= 1")
     h = df.Histo2D(("h", "N Bad Z;N Total segments; N bad z segments", 1000, 0, 1000, 300, 0, 300), "nSegments", "nBadZ")
     canvas = ROOT.TCanvas()
@@ -117,7 +121,6 @@ def plot_var():
 
 
 def check_outliers():
-    df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/track_length/hm/trk_len_hm*.root")
     df = df.Filter("tof > 0").Filter("abs(pdg) == 211") # can't be 0 or negative
     df = df.Define("beta", "trackLength/(tof*299.792458)").Filter("beta >= 0 && beta <= 1")
     df = df.Define("mass", "momentumHM*sqrt( 1./(beta*beta) - 1.)*1000") # in MeV
@@ -138,7 +141,6 @@ def check_outliers():
 
 
 def plot_ptpz():
-    df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/track_length/trk_len.root")
     df = df.Filter("massDefault != 0 && massTanL != 0 && massZ != 0 && abs(pdg) == 321")
     df = df.Define("pt", "hypot(mom_ip._x,mom_ip._y)")
     # Make binning consistent with old plots
@@ -182,7 +184,7 @@ def plot_ptpz():
 # for i in range(100):
 #     plot_2d(n_seg1=i*10, n_seg2=(i+1)*10)
 
-# plot_2d(n_seg1=0, n_seg2=240)
+plot_2d(df_barrel)
 
 # plot_var()
-check_outliers()
+# check_outliers()

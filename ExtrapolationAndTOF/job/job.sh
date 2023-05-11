@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Submit file passes these arguments: $(file) $(ClusterId) $(ProcId) $(job_name), I rename them here as well, just for clarity
-project_folder=/afs/desy.de/user/d/dudarboh/analysis/TrackLength/HarmonicAndConsistency
+project_folder=/afs/desy.de/user/d/dudarboh/analysis/TrackLength/ExtrapolationAndTOF
 
 file=${1}
 cluster_id=${2}

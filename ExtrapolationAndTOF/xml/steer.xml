@@ -4,8 +4,8 @@
 
     <execute>
         <processor name="InitDD4hep" />
-        <processor name="MyTofClosest0ps"/>
-        <processor name="MyFullLDCTracking_MarlinTrk"/>
+        <processor name="MergeTrackerHitsRelations"/>
+        <processor name="MergeClusterHitsRelations"/>
         <processor name="TestProcessor"/>
     </execute>
 
@@ -13,8 +13,8 @@
         <parameter name="LCIOInputFiles" type="StringVec">
             /pnfs/desy.de/ilc/prod/ilc/mc-2020/ild/rec/250-SetA/2f_hadronic_eL_pR/ILD_l5_o1_v02/v02-02/00015161/000/rv02-02.sv02-02.mILD_l5_o1_v02.E250-SetA.I500010.P2f_z_h.eL.pR.n001_209.d_rec_00015161_259.slcio
         </parameter>
-        <parameter name="MaxRecordNumber" type="int">2</parameter>
-        <parameter name="SkipNEvents" type="int">5</parameter>
+        <parameter name="MaxRecordNumber" type="int">0</parameter>
+        <parameter name="SkipNEvents" type="int">0</parameter>
         <parameter name="SupressCheck" type="bool">false</parameter>
         <parameter name="AllowToModifyEvent" type="bool">false</parameter>
         <parameter name="RandomSeed" type="int">1234567890</parameter>
@@ -27,32 +27,20 @@
     </processor>
 
     <processor name="TestProcessor" type="TrackLengthDebug">
-        <parameter name="Verbosity" options="DEBUG0-4,MESSAGE0-4,WARNING0-4,ERROR0-4,SILENT" type="string">DEBUG1</parameter>
+        <parameter name="Verbosity" options="DEBUG0-4,MESSAGE0-4,WARNING0-4,ERROR0-4,SILENT" type="string">DEBUG8</parameter>
         <parameter name="eventDisplay" type="bool">true</parameter>
     </processor>
 
-    <processor name="MyTofClosest0ps" type="TOFEstimators">
-        <parameter name="ReconstructedParticleCollection" type="string" default="PandoraPFOs">PandoraPFOs</parameter>
-        <parameter name="ExtrapolateToEcal" type="bool" default="true">true</parameter>
-        <parameter name="TofMethod" options="closest, frankAvg, frankFit" type="string" default="closest">closest</parameter>
-        <parameter name="TimeResolution" type="double" default="0">0</parameter>
-        <parameter name="Verbosity" options="DEBUG0-4,MESSAGE0-4,WARNING0-4,ERROR0-4,SILENT" type="string">MESSAGE</parameter>
-    </processor>
 
+  <processor name="MergeTrackerHitsRelations" type="MergeCollections">
+    <parameter name="InputCollections" type="StringVec"> VXDTrackerHitRelations TPCTrackerHitRelations SITTrackerHitRelations SETTrackerHitRelations FTDPixelTrackerHitRelations FTDStripTrackerHitRelations </parameter>
+    <parameter name="OutputCollection" type="string"> TrackerHitsRelations </parameter>
+  </processor>
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+  <processor name="MergeClusterHitsRelations" type="MergeCollections">
+    <parameter name="InputCollections" type="StringVec"> EcalBarrelRelationsSimRec EcalEndcapRingRelationsSimRec EcalEndcapsRelationsSimRec </parameter>
+    <parameter name="OutputCollection" type="string"> ClusterHitsRelations </parameter>
+  </processor>
 
 
  <processor name="MyFullLDCTracking_MarlinTrk" type="FullLDCTracking_MarlinTrk">

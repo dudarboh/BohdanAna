@@ -18,6 +18,7 @@
 #include "DDRec/Vector3D.h"
 #include "EVENT/Track.h"
 #include <memory>
+#include "Math/Vector3D.h"
 
 struct Vars{
     double trackLength = 0.;
@@ -25,6 +26,7 @@ struct Vars{
     int nBadPhi = 0;
     int nBadZ = 0;
     int nSegments = 0;
+    IMPL::TrackStateImpl tsCalo;
 };
 
 class TrackLengthDebug : public marlin::Processor, EventDisplayer{
@@ -39,7 +41,8 @@ class TrackLengthDebug : public marlin::Processor, EventDisplayer{
         void init();
         void processEvent(EVENT::LCEvent* evt);
         void end();
-        Vars getTrackLengthUsingZ(EVENT::ReconstructedParticle* pfo, double bField, MarlinTrk::IMarlinTrkSystem* trkSystem);
+        Vars getTrackLengthOld(EVENT::ReconstructedParticle* pfo, double bField, MarlinTrk::IMarlinTrkSystem* trkSystem);
+        Vars getTrackLengthNew(EVENT::ReconstructedParticle* pfo, double bField, MarlinTrk::IMarlinTrkSystem* trkSystem);
 
     private:
         int _nEvent{};
@@ -48,14 +51,19 @@ class TrackLengthDebug : public marlin::Processor, EventDisplayer{
         std::unique_ptr<TFile> _file;
         std::unique_ptr<TTree> _tree;
         int _pdg;
-        double _momentumIP;
-        double _momentumCalo;
-        double _tof;
-        double _momentumHM;
-        double _trackLength;
+        bool _isGoodTrack;
+        int _isGoodClosestHitOld, _isGoodClosestHitNew;
+        double _tofOld, _tofNew;
+        double _momentumOld;
+        double _momentumNew;
+        double _trackLengthOld;
+        double _trackLengthNew;
         int _nBadPhi;
         int _nBadZ;
         int _nSegments;
+        int _nHitsFirstCurl;
+        dd4hep::rec::Vector3D _tsLastCaloPos, _tsFirstCaloPos, _hitClosestOldPos, _hitClosestNewPos;
+        double _hitTimeOld, _hitTimeNew;
         MarlinTrk::IMarlinTrkSystem* _trkSystem = nullptr;
 };
 

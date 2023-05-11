@@ -16,7 +16,7 @@
         <parameter name="SkipNEvents" type="int">0</parameter>
         <parameter name="SupressCheck" type="bool">false</parameter>
         <parameter name="AllowToModifyEvent" type="bool">false</parameter>
-c        <parameter name="RandomSeed" type="int">1234567890</parameter>
+        <parameter name="RandomSeed" type="int">1234567890</parameter>
     </global>
 
     <processor name="InitDD4hep" type="InitializeDD4hep">
