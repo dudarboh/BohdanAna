@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
-project(TrackLengthDebug)
+project(BohdanAna)
 set(CMAKE_CXX_STANDARD 17)
 
 
@@ -12,13 +12,16 @@ message(STATUS "C++ flags are set to: " ${CMAKE_CXX_FLAGS})
 
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
-add_library(${PROJECT_NAME} SHARED ${PROJECT_SOURCE_DIR}/src/TrackLengthDebug.cc ${PROJECT_SOURCE_DIR}/src/TrackLengthEstimators.cc)
+add_library(${PROJECT_NAME} SHARED ${PROJECT_SOURCE_DIR}/src/BohdanAna.cc
+                                    ${PROJECT_SOURCE_DIR}/src/BohdanDrawing.cc
+                                    ${PROJECT_SOURCE_DIR}/src/BohdanUtils.cc
+                                    ${PROJECT_SOURCE_DIR}/src/TOF.cc
+                                    ${PROJECT_SOURCE_DIR}/src/TrackLength.cc)
 
 ### DEPENDENCIES ###
 find_package(Marlin REQUIRED)
 find_package(MarlinUtil REQUIRED)
 find_package(MarlinTrk REQUIRED)
-# find_package(MarlinTrk REQUIRED PATHS /afs/desy.de/user/d/dudarboh/analysis/iLCSoft/MarlinTrk/ NO_DEFAULT_PATH)
 
 FOREACH(pkg Marlin MarlinUtil MarlinTrk)
    include_directories(${${pkg}_INCLUDE_DIRS})

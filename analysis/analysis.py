@@ -272,7 +272,3 @@ def plot_track_parameters(filename="evt_1_pfo_6"):
     canvas.Update()
     input("wait")
     canvas.Print(f"{filename}_trk_len.png")    
-
-# filenames = ["evt_1_pfo_6", "evt_1_pfo_12", "evt_2_pfo_1", "evt_3_pfo_11", "evt_3_pfo_19", "evt_6_pfo_10"]
-# for filename in filenames:
-#     plot_track_parameters(filename)

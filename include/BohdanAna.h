@@ -1,49 +1,24 @@
-#ifndef TrackLengthDebug_h
-#define TrackLengthDebug_h 1
+#ifndef BohdanAna_h
+#define BohdanAna_h 1
 
 #include "marlin/Processor.h"
 #include "MarlinTrk/IMarlinTrkSystem.h"
-#include "EVENT/Track.h"
-#include "IMPL/TrackStateImpl.h"
 #include "TFile.h"
 #include "TTree.h"
-#include "TGraph.h"
-#include "DD4hep/Detector.h"
-#include "EVENT/SimTrackerHit.h"
-#include <string>
-#include <vector>
 #include "EventDisplayer.h"
 
-struct TOFResults{
-    double tof0 = 0.;
-    double tof10 = 0.;
-    double tof20 = 0.;
-    double tof30 = 0.;
-    double tof40 = 0.;
-    double tof50 = 0.;
-    double tof60 = 0.;
-    double tof70 = 0.;
-    double tof80 = 0.;
-    double tof90 = 0.;
-    double tof100 = 0.;
-    int layer = -1;
-    double dToTrack = -1;
-};
-
-
-class TrackLengthDebug : public marlin::Processor, EventDisplayer {
+class BohdanAna : public marlin::Processor, EventDisplayer {
     friend class EventDisplayer;
     public:
-        TrackLengthDebug(const TrackLengthDebug&) = delete;
-        TrackLengthDebug& operator=(const TrackLengthDebug&) = delete;
+        BohdanAna(const BohdanAna&) = delete;
+        BohdanAna& operator=(const BohdanAna&) = delete;
 
-        marlin::Processor* newProcessor() { return new TrackLengthDebug; }
+        marlin::Processor* newProcessor() { return new BohdanAna; }
 
-        TrackLengthDebug();
+        BohdanAna();
         void init();
         void processEvent(EVENT::LCEvent* evt);
         void end();
-        void printout();
     private:
         int _nEvent{};
         double _bField{};
@@ -55,7 +30,7 @@ class TrackLengthDebug : public marlin::Processor, EventDisplayer {
         double _momentumCalo;
         double _momentumHM;
 
-        TOFResults _tofClosest;
+        std::pair<int, double> _tofClosest;
 
         double _trackLengthSHA1;
         double _trackLengthSHA2;

@@ -1,0 +1,19 @@
+#ifndef TOF_h
+#define TOF_h 1
+
+#include "EVENT/CalorimeterHit.h"
+#include "EVENT/Cluster.h"
+#include "DDRec/Vector3D.h"
+
+#include <vector>
+#include <utility>
+
+std::vector<EVENT::CalorimeterHit*> selectFrankEcalHits( EVENT::Cluster* cluster, dd4hep::rec::Vector3D posAtEcal, dd4hep::rec::Vector3D momAtEcal, int maxEcalLayer);
+
+std::pair<int, double> getTofClosest( EVENT::Cluster* cluster, dd4hep::rec::Vector3D posAtEcal, double timeResolution);
+
+double getTofFrankAvg( std::vector<EVENT::CalorimeterHit*> selectedHits, dd4hep::rec::Vector3D posAtEcal, double timeResolution);
+
+double getTofFrankFit( std::vector<EVENT::CalorimeterHit*> selectedHits, dd4hep::rec::Vector3D posAtEcal, double timeResolution);
+
+#endif
