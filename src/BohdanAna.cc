@@ -64,46 +64,46 @@ void BohdanAna::init(){
 
 void BohdanAna::processEvent(EVENT::LCEvent * evt){
     ++_nEvent;
-    streamlog_out(MESSAGE)<<std::endl<<"==========Event========== "<<_nEvent<<std::endl;
+    streamlog_out(MESSAGE)<<"==========Event========== "<<_nEvent<<std::endl;
     // int vm = getVirtualMemoryUsage();
     // int rm = getPhysicalMemoryUsage();
     // streamlog_out(MESSAGE)<<"VM usage: "<<vm/1000.<<"    PM usage: "<<rm/1000.<<"  MB"<<std::endl;
 
     LCCollection* pfos = evt->getCollection("PandoraPFOs");
-    LCRelationNavigator nav ( evt->getCollection("RecoMCTruthLink") );
-
-    auto getMC = [&nav](EVENT::ReconstructedParticle* pfo) -> MCParticle* {
-        const std::vector<LCObject*>& objects = nav.getRelatedToObjects(pfo);
-        const std::vector<float>& weights = nav.getRelatedToWeights(pfo);
-
-        auto getTrackWeight = [](float encodedWeight){ return float( int(encodedWeight) % 10000 ) / 1000.f;};
-        auto getClusterWeight = [](float encodedWeight){ return float( int(encodedWeight) / 10000 ) / 1000.f;};
-
-        int max_i = std::max_element(weights.begin(), weights.end(), [getTrackWeight](float lhs, float rhs){return getTrackWeight(lhs) < getTrackWeight(rhs);}) - weights.begin();
-        if (getTrackWeight(max_i) == 0.f){
-            max_i = std::max_element(weights.begin(), weights.end(), [getClusterWeight](float lhs, float rhs){return getClusterWeight(lhs) < getClusterWeight(rhs);}) - weights.begin();
-        }
-        return static_cast<MCParticle*> (objects[max_i]);
-    };
-
+    LCRelationNavigator pfo2mc ( evt->getCollection("RecoMCTruthLink") );
 
     for (int i=0; i<pfos->getNumberOfElements(); ++i){
-        streamlog_out(DEBUG7)<<std::endl<<"Starting to analyze "<<i+1<<" PFO"<<std::endl;
+        streamlog_out(DEBUG7)<<"Starting to analyze "<<i+1<<" PFO"<<std::endl;
         ReconstructedParticle* pfo = static_cast <ReconstructedParticle*> ( pfos->getElementAt(i) );
         int nClusters = pfo->getClusters().size();
         int nTracks = pfo->getTracks().size();
         // only simple cases for now
-        if( nClusters != 1 || nTracks != 1) continue;
-        Track* track = pfo->getTracks()[0];
-        Cluster* cluster = pfo->getClusters()[0];
+        if( nTracks > 1 || nClusters > 1) continue;
 
-        MCParticle* mc = getMC(pfo);
+        // Do everything mc particle related
+        MCParticle* mc = getMC(pfo, pfo2mc);
+        _pdg = mc->getPDG();
+
+        // // Do everything track related
+        // if (nTracks != 0){
+        //     Track* track = pfo->getTracks()[0];        
+        //     auto tsCalo = getTrackStateAtCalorimeter(track);
+        //     Vector3D trackPosAtcalo( tsCalo->getReferencePoint() );
+
+        // }
+
+        // // Do everything cluster related
+        // if ( nClusters != 0 ){
+        //     Cluster* cluster = pfo->getClusters()[0];
+        //     _tofClosest = getTofClosest(cluster, trackPosAtcalo, 0.);
+        // }
+
+        if (mc->getPDG() == 22){
+            std::cout<<"Time: "<<getTofPhotonTrue(mc)<<std::endl;
+            getchar();
+        }
 
         // Fill all in the TTree
-        auto tsCalo = getTrackStateAtCalorimeter(track);
-        Vector3D trackPosAtcalo( tsCalo->getReferencePoint() );
-        _pdg = mc->getPDG();
-        _tofClosest = getTofClosest(cluster, trackPosAtcalo, 0.);
         // drawDisplay(this, evt, drawPFO, pfo, tsStdReco, tsEasy);
     }
 }

@@ -1,8 +1,12 @@
 #include "BohdanUtils.h"
 #include "UTIL/ILDConf.h"
+#include "marlinutil/GeometryUtil.h"
 
 #include <cstring>
 #include <iomanip>
+
+using dd4hep::rec::LayeredCalorimeterData;
+using dd4hep::DetType;
 
 int parseLine(char* line){
     // This assumes that a digit will be found and the line ends in " Kb".
@@ -91,8 +95,8 @@ EVENT::TrackerHit* getSETHit(EVENT::Track* track){
         return subdet == UTIL::ILDDetID::SET;
     };
     auto it = std::find_if(hits.begin(), hits.end(), isSETHit);
-    if ( it != hits.end() ) return *it;
-    return nullptr;
+    if ( it == hits.end() ) return nullptr;
+    return *it;
 }
 
 const EVENT::TrackState* getTrackStateAtCalorimeter(EVENT::Track* track){
@@ -108,57 +112,32 @@ IMPL::TrackStateImpl getTrackStateAtHit(MarlinTrk::IMarlinTrack* marlinTrack, EV
 }
 
 
-void printTrackStateLong(IMPL::TrackStateImpl ts){
-    std::stringstream tmp;
-    //out << std::scientific << std::setprecision (2) << std::showpos;
-    std::cout << std::noshowpos;
-    std::cout << std::setw(41) << std::setfill('-') << std::right << "-- TrackState ---" << std::setfill('-') << std::setw(29) << "-" << std::endl;
+EVENT::MCParticle* getMC(EVENT::ReconstructedParticle* pfo, UTIL::LCRelationNavigator pfo2mc){
+    const std::vector<EVENT::LCObject*>& objects = pfo2mc.getRelatedToObjects(pfo);
+    const std::vector<float>& weights = pfo2mc.getRelatedToWeights(pfo);
+    if ( objects.empty() ) return nullptr;
 
-    tmp.str("") ;
-    switch( ts.getLocation() ){
-    case EVENT::TrackState::AtOther         :   tmp <<  "AtOther"        ;   break ;
-    case EVENT::TrackState::AtIP            :   tmp <<  "AtIP"           ;   break ;
-    case EVENT::TrackState::AtFirstHit      :   tmp <<  "AtFirstHit"     ;   break ;
-    case EVENT::TrackState::AtLastHit       :   tmp <<  "AtLastHit"      ;   break ;
-    case EVENT::TrackState::AtCalorimeter   :   tmp <<  "AtCalorimeter " ;   break ;
-    case EVENT::TrackState::AtVertex        :   tmp <<  "AtVertex"       ;   break ;
+    auto getTrackWeight = [](float encodedWeight){ return float( int(encodedWeight) % 10000 ) / 1000.f;};
+    auto getClusterWeight = [](float encodedWeight){ return float( int(encodedWeight) / 10000 ) / 1000.f;};
+
+    int max_i = std::max_element(weights.begin(), weights.end(), [getTrackWeight](float lhs, float rhs){return getTrackWeight(lhs) < getTrackWeight(rhs);}) - weights.begin();
+    if (getTrackWeight(max_i) == 0.f){
+        max_i = std::max_element(weights.begin(), weights.end(), [getClusterWeight](float lhs, float rhs){return getClusterWeight(lhs) < getClusterWeight(rhs);}) - weights.begin();
     }
-    std::cout << std::setw(30) << std::setfill(' ') << std::left << "Location" << std::right << std::setw(40) << tmp.str() << std::endl;
-    tmp.str("") ;
-    tmp << std::dec << std::setfill('0') << std::setw(8) << ts.id();
-    std::cout << std::scientific << std::setprecision(6) ;
-    std::cout << std::setw(30) << std::setfill(' ') << std::left << "Id"          << std::right << std::setw(40) << tmp.str() << std::endl;
-    std::cout << std::setw(30) << std::setfill(' ') << std::left << "D0"          << std::right << std::setw(40) << ts.getD0() << std::endl;
-    std::cout << std::setw(30) << std::setfill(' ') << std::left << "Phi"         << std::right << std::setw(40) << ts.getPhi() << std::endl;
-    std::cout << std::setw(30) << std::setfill(' ') << std::left << "Omega"       << std::right << std::setw(40) << ts.getOmega() << std::endl;
-    std::cout << std::setw(30) << std::setfill(' ') << std::left << "Z0"          << std::right << std::setw(40) << ts.getZ0() << std::endl;
-    std::cout << std::setw(30) << std::setfill(' ') << std::left << "Tan Lambda"  << std::right << std::setw(40) << ts.getTanLambda() << std::endl;
-    tmp.str("");
-    tmp  << std::dec << ts.getReferencePoint()[0] << ", " << ts.getReferencePoint()[1]  << ", " << ts.getReferencePoint()[2]; 
-    std::cout << std::setw(30) << std::setfill(' ') << std::left << "ReferencePoint" << std::right << std::setw(40) << tmp.str() << std::endl;
-    std::cout << "Cov matrix:" << std::showpos << std::scientific << std::setprecision(6) << std::setw(15) << std::setfill(' ')  ;
-    // print cov matrix as lower triangle matrix 
-    for( unsigned l=0 , N=ts.getCovMatrix().size(), ncolumns = 1 , nele =1 ; l <N ; ++l , ++nele) {
-    std::cout << ts.getCovMatrix()[l];
-    if(! ( (nele) % ncolumns ) ){ 
-        nele = 0 ;
-        ++ncolumns ;
-        std::cout << std::endl << "             " ;
-    } else {
-        std::cout << ", ";
-    } 
-    }
-    std::cout << std::noshowpos;
-    std::cout<<std::endl;
+    return static_cast<EVENT::MCParticle*> (objects[max_i]);
 }
 
+double getECALBarelRMin(){
+    double cm2mm = 10.;
+    auto ecalBarrelData = MarlinUtil::getLayeredCalorimeterData(( DetType::CALORIMETER | DetType::ELECTROMAGNETIC | DetType::BARREL),
+                                                                ( DetType::AUXILIARY | DetType::FORWARD ) );
 
-void printTrackStateShort(IMPL::TrackStateImpl ts){
-    std::cout<<std::endl;
-    std::cout<<"Location:    "<<ts.getLocation()<<std::endl;
-    std::cout<<"D0 Z0:    "<<ts.getD0()<<"  "<<ts.getZ0()<<std::endl;
-    std::cout<<"Phi:    "<<ts.getPhi()<<std::endl;
-    std::cout<<"Omega:    "<<ts.getOmega()<<std::endl;
-    std::cout<<"TanLambda:    "<<ts.getTanLambda()<<std::endl;
-    std::cout<<"Ref:    "<<ts.getReferencePoint()[0]<<"  "<<ts.getReferencePoint()[1]<<"  "<<ts.getReferencePoint()[2]<<std::endl;
+    return ecalBarrelData->extent[0]*cm2mm; // rmin in mm
+}
+
+double getECALEndcapZMin(){
+    double cm2mm = 10.;
+    auto ecalEndcapData = MarlinUtil::getLayeredCalorimeterData( ( DetType::CALORIMETER | DetType::ELECTROMAGNETIC | DetType::ENDCAP),
+                                                                 ( DetType::AUXILIARY | DetType::FORWARD ) );
+    return ecalEndcapData->extent[2]*cm2mm; // zmin in mm
 }

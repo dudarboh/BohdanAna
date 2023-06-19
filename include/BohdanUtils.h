@@ -4,10 +4,12 @@
 #include "EVENT/ReconstructedParticle.h"
 #include "EVENT/Track.h"
 #include "EVENT/TrackState.h"
+#include "EVENT/MCParticle.h"
 #include "IMPL/TrackStateImpl.h"
 #include "MarlinTrk/IMarlinTrack.h"
-
+#include "UTIL/LCRelationNavigator.h"
 #include "UTIL/PIDHandler.h"
+#include "UTIL/Operators.h" // for debuging <<
 
 #include <string>
 #include <vector>
@@ -28,8 +30,10 @@ const EVENT::TrackState* getTrackStateAtCalorimeter(EVENT::Track* track);
 
 IMPL::TrackStateImpl getTrackStateAtHit(MarlinTrk::IMarlinTrack* marlinTrack, EVENT::TrackerHit* hit);
 
-void printTrackStateLong(IMPL::TrackStateImpl ts);
+EVENT::MCParticle* getMC(EVENT::ReconstructedParticle* pfo, UTIL::LCRelationNavigator pfo2mc);
 
-void printTrackStateShort(IMPL::TrackStateImpl ts);
+double getECALBarelRMin();
+
+double getECALEndcapZMin();
 
 #endif

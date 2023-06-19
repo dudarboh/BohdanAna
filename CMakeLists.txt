@@ -28,4 +28,9 @@ FOREACH(pkg Marlin MarlinUtil MarlinTrk)
    target_link_libraries(${PROJECT_NAME} ${${pkg}_LIBRARIES})
 ENDFOREACH()
 
+# this is fixed in MarlinUtil 1.17.01
+find_package( DD4hep REQUIRED COMPONENTS DDRec)
+INCLUDE_DIRECTORIES( SYSTEM ${DD4hep_INCLUDE_DIRS} )
+target_link_libraries(${PROJECT_NAME} ${DD4hep_COMPONENT_LIBRARIES})
+
 install(TARGETS ${PROJECT_NAME} DESTINATION ${PROJECT_SOURCE_DIR}/lib)

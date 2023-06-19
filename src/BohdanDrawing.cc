@@ -1,6 +1,6 @@
 #include "BohdanDrawing.h"
-
 #include "EVENT/TrackState.h"
+#include "UTIL/Operators.h"
 #include "UTIL/TrackTools.h"
 #include "marlinutil/DDMarlinCED.h"
 
@@ -62,8 +62,5 @@ void drawPFO(EVENT::ReconstructedParticle* pfo, IMPL::TrackStateImpl tsStdReco, 
     };
 
     plotHelixFromTrackState(tsStdReco, 0xfc0505);
-    printTrackStateLong(tsStdReco);
     plotHelixFromTrackState(tsEasy, 0x0905fc);
-    printTrackStateLong(tsEasy);
-
 }
