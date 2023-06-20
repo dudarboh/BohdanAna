@@ -20,13 +20,11 @@ BohdanAna::BohdanAna() : marlin::Processor("BohdanAna"), EventDisplayer(this){
 
 void BohdanAna::init(){
     _bField = MarlinUtil::getBzAtOrigin();
-    std::cout<<"trkSystem1: "<<_trkSystem<<std::endl;
     _trkSystem = MarlinTrk::Factory::createMarlinTrkSystem("DDKalTest", nullptr, "");
     _trkSystem->setOption( MarlinTrk::IMarlinTrkSystem::CFG::useQMS, true);
     _trkSystem->setOption( MarlinTrk::IMarlinTrkSystem::CFG::usedEdx, true);
     _trkSystem->setOption( MarlinTrk::IMarlinTrkSystem::CFG::useSmoothing, true);
     _trkSystem->init();
-    std::cout<<"trkSystem2: "<<_trkSystem<<std::endl;
 
     _file.reset( new TFile("results.root", "RECREATE") );
     _tree.reset( new TTree("treename", "treename") );
@@ -73,42 +71,43 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
     LCRelationNavigator pfo2mc ( evt->getCollection("RecoMCTruthLink") );
 
     for (int i=0; i<pfos->getNumberOfElements(); ++i){
-        streamlog_out(DEBUG7)<<"Starting to analyze "<<i+1<<" PFO"<<std::endl;
+        streamlog_out(DEBUG8)<<"Starting to analyze "<<i+1<<" PFO"<<std::endl;
         resetVariables();
         ReconstructedParticle* pfo = static_cast <ReconstructedParticle*> ( pfos->getElementAt(i) );
         int nTracks = pfo->getTracks().size();
         int nClusters = pfo->getClusters().size();
         // only simple cases
         if( nTracks > 1 || nClusters != 1) continue;
-        Cluster* cluster = pfo->getClusters()[0];
+        Cluster* cluster = pfo->getClusters().at(0);
         MCParticle* mc = getMC(pfo, pfo2mc);
         _pdg = mc->getPDG();
-        for(int j=0; j<3; j++) _mcMom[j] = mc->getMomentum()[j];
+        for(int j=0; j<3; j++) _mcMom.at(j) = mc->getMomentum()[j];
 
         bool isHadron = std::abs(_pdg) == 211 || std::abs(_pdg) == 321 || std::abs(_pdg) == 2212;
         bool isPhoton = std::abs(_pdg) == 22;
         if (isHadron && nTracks == 1){
-            Track* track = pfo->getTracks()[0];
+            Track* track = pfo->getTracks().at(0);
             auto tsCalo = getTrackStateAtCalorimeter( track );
             Vector3D trackPosAtCalo( tsCalo->getReferencePoint() );
             std::array<double, 3> mom = UTIL::getTrackMomentum(tsCalo, _bField);
             Vector3D trackMomAtCalo(mom[0], mom[1], mom[2]);
 
-            for(int j=0; j<3; j++) _recoIpMom[j] = pfo->getMomentum()[j];
-            for(int j=0; j<3; j++) _recoCaloMom[j] = trackMomAtCalo[j];
-            std::cout<<"trkSystem: "<<_trkSystem<<std::endl;
+            for(int j=0; j<3; j++) _recoIpMom.at(j) = pfo->getMomentum()[j];
+            for(int j=0; j<3; j++) _recoCaloMom.at(j) = trackMomAtCalo[j];
 
             std::vector<IMPL::TrackStateImpl> trackStates = getTrackStates(pfo, _bField, _trkSystem);
             _trackLength = getTrackLengthIKF(trackStates, _bField, TrackLengthOption::zedLambda);
 
             _layerClosest = getTofClosest(cluster, trackPosAtCalo, 0.).first;
+
             auto selectedHits = selectFrankEcalHits(cluster, trackPosAtCalo, trackMomAtCalo, 10);
             for (int j = 0; j < 11; j++){
-                _tofClosest[i] = getTofClosest(cluster, trackPosAtCalo, 0.01*j).second;
-                _tofAverage[i] = getTofFrankAvg(selectedHits, trackPosAtCalo, 0.01*j);
-                _tofFit[i] = getTofFrankFit(selectedHits, trackPosAtCalo, 0.01*j);
-                _tofSET[i] = getTofSET(track, 0.01*j);
+                _tofClosest.at(j) = getTofClosest(cluster, trackPosAtCalo, 0.01*j).second;
+                _tofAverage.at(j) = getTofFrankAvg(selectedHits, trackPosAtCalo, 0.01*j);
+                _tofFit.at(j) = getTofFrankFit(selectedHits, trackPosAtCalo, 0.01*j);
+                _tofSET.at(j) = getTofSET(track, 0.01*j);
             }
+
         }
         else if( isPhoton && nTracks == 0 && ( !mc->isDecayedInTracker() ) ) {
             Vector3D photonPosAtCalo = getPhotonAtCalorimeter(mc);
@@ -117,13 +116,15 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
             _layerClosest = getTofClosest(cluster, photonPosAtCalo, 0.).first;
             auto selectedHits = selectFrankEcalHits(cluster, photonPosAtCalo, mom, 10);
             for (int j = 0; j < 11; j++){
-                _tofClosest[i] = getTofClosest(cluster, photonPosAtCalo, 0.01*j).second;
-                _tofAverage[i] = getTofFrankAvg(selectedHits, photonPosAtCalo, 0.01*j);
-                _tofFit[i] = getTofFrankFit(selectedHits, photonPosAtCalo, 0.01*j);
+                _tofClosest.at(j) = getTofClosest(cluster, photonPosAtCalo, 0.01*j).second;
+                _tofAverage.at(j) = getTofFrankAvg(selectedHits, photonPosAtCalo, 0.01*j);
+                _tofFit.at(j) = getTofFrankFit(selectedHits, photonPosAtCalo, 0.01*j);
                 // no track - no SET!
             }
         }
-
+        else{
+            continue;
+        }
         _tree->Fill();
 
         drawCanvas();

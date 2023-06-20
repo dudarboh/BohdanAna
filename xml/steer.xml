@@ -40,5 +40,4 @@
     <parameter name="OutputCollection" type="string"> ClusterHitsRelations </parameter>
   </processor>
 
-
 </marlin>

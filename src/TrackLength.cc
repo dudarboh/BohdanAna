@@ -104,6 +104,7 @@ std::vector<IMPL::TrackStateImpl> getTrackStates(ReconstructedParticle* pfo, dou
 
     const IMPL::TrackStateImpl* tsCalo = static_cast<const IMPL::TrackStateImpl*> (lastGoodRefittedTrack.getTrackState(TrackState::AtCalorimeter) );
     if ( pfo->getClusters().size() > 0 && tsCalo != nullptr ) trackStates.push_back( *(tsCalo) );
+
     return trackStates;
 }
 
