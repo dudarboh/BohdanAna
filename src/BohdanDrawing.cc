@@ -4,6 +4,9 @@
 #include "UTIL/TrackTools.h"
 #include "marlinutil/DDMarlinCED.h"
 
+#include "TCanvas.h"
+#include "TH1F.h"
+#include "TSystem.h"
 
 void drawPFO(EVENT::ReconstructedParticle* pfo, IMPL::TrackStateImpl tsStdReco, IMPL::TrackStateImpl tsEasy){
     std::vector<EVENT::Track*> tracks;
@@ -63,4 +66,16 @@ void drawPFO(EVENT::ReconstructedParticle* pfo, IMPL::TrackStateImpl tsStdReco, 
 
     plotHelixFromTrackState(tsStdReco, 0xfc0505);
     plotHelixFromTrackState(tsEasy, 0x0905fc);
+}
+
+
+void drawCanvas(){
+    TCanvas* canvas = new TCanvas();
+    TH1F* h = new TH1F("h", "title", 10, 0, 10);
+    h->Fill(1);
+    h->Draw("A");
+    canvas->Modified();
+    canvas->Update();
+    gSystem->ProcessEvents();
+    std::cin.get();
 }

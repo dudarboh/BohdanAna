@@ -10,6 +10,7 @@
 #include "UTIL/LCRelationNavigator.h"
 #include "UTIL/PIDHandler.h"
 #include "UTIL/Operators.h" // for debuging <<
+#include "DDRec/Vector3D.h"
 
 #include <string>
 #include <vector>
@@ -35,5 +36,8 @@ EVENT::MCParticle* getMC(EVENT::ReconstructedParticle* pfo, UTIL::LCRelationNavi
 double getECALBarelRMin();
 
 double getECALEndcapZMin();
+
+dd4hep::rec::Vector3D getPhotonAtCalorimeter(EVENT::MCParticle* mc);
+
 
 #endif

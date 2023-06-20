@@ -11,7 +11,7 @@
 using namespace EVENT;
 using dd4hep::rec::Vector3D;
 
-std::vector<IMPL::TrackStateImpl> getTrackStates(ReconstructedParticle* pfo, MarlinTrk::IMarlinTrkSystem* trkSystem, double bField){
+std::vector<IMPL::TrackStateImpl> getTrackStates(ReconstructedParticle* pfo, double bField, MarlinTrk::IMarlinTrkSystem* trkSystem){
     // Refit the track and extract track state at every tracker hit along the track
     std::vector<IMPL::TrackStateImpl> trackStates;
     if ( pfo->getTracks().empty() ) return trackStates;

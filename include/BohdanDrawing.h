@@ -7,5 +7,7 @@
 #include "IMPL/TrackStateImpl.h"
 
 void drawPFO(EVENT::ReconstructedParticle* pfo, IMPL::TrackStateImpl tsStdReco, IMPL::TrackStateImpl tsEasy);
+void drawCanvas();
+
 
 #endif

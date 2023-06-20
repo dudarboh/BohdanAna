@@ -7,6 +7,7 @@
 
 using dd4hep::rec::LayeredCalorimeterData;
 using dd4hep::DetType;
+using dd4hep::rec::Vector3D;
 
 int parseLine(char* line){
     // This assumes that a digit will be found and the line ends in " Kb".
@@ -141,3 +142,64 @@ double getECALEndcapZMin(){
                                                                  ( DetType::AUXILIARY | DetType::FORWARD ) );
     return ecalEndcapData->extent[2]*cm2mm; // zmin in mm
 }
+
+dd4hep::rec::Vector3D getPhotonAtCalorimeter(EVENT::MCParticle* mc){
+    // find intersection point between photon momentum line and ECAL surface planes
+    // https://en.wikipedia.org/wiki/Line%E2%80%93plane_intersection
+
+    // startPos - starting position of the photon (l0)
+    // mom - momentum of the photon (l)
+    Vector3D startPos( mc->getVertex() );
+    Vector3D mom( mc->getMomentum() );
+
+    // rMin - minimal radial distance to the barrel ECAL surface to deduce normal vector n and point at the surface p0.
+    // zMin - minimal longitudinal distance to the endcap ECAL surface to deduce normal vector n and point at the surface p0.
+    double rMin = getECALBarelRMin();
+    double zMin = getECALEndcapZMin();
+
+
+    // ENDCAP plane parameters:
+    int direction = (mom.z() > 0) ? 1 : -1;
+    Vector3D p0Endcap(0, 0, direction*zMin);
+    Vector3D nEndcap = p0Endcap.unit();
+
+    // BARREL plane parameters:
+    Vector3D p0Barrel, nBarrel;
+    int nSides = 8;
+    double step = M_PI/nSides;
+    double phi = mom.phi();
+    // phi is in the range of singularity point [pi, -pi]. Check this first.
+
+    if( phi < (- M_PI + step) || phi > (M_PI - step) ){
+        p0Barrel = Vector3D(rMin, M_PI, M_PI/2., Vector3D::spherical);
+        nBarrel = p0Barrel.unit();
+    }
+    else{
+        double ecalPhi = -M_PI + 2*step;
+        for ( int i=0; i < nSides-1; ++i ){
+            if ( ecalPhi-step <= phi && phi < ecalPhi+step ){
+                p0Barrel = Vector3D(rMin, ecalPhi, M_PI/2., Vector3D::spherical);
+                nBarrel = p0Barrel.unit();
+                break;
+            }
+            else ecalPhi += 2*step;
+        }
+    }
+
+    //find intersection point, but don't divide by zero
+    if ( mom.z() == 0 ){
+        double d = (p0Barrel - startPos).dot(nBarrel)/(mom.dot(nBarrel));
+        return startPos + d*mom;
+    }
+    else if( mom.rho() == 0 ){
+        double d = (p0Endcap - startPos).dot(nEndcap)/(mom.dot(nEndcap));
+        return startPos + d*mom;
+    }
+    //choose closest intersection point to the 0,0,0
+    double dBarrel = (p0Barrel - startPos).dot(nBarrel)/(mom.dot(nBarrel));
+    Vector3D intersectionBarrel = startPos + dBarrel*mom;
+    double dEndcap = (p0Endcap - startPos).dot(nEndcap)/(mom.dot(nEndcap));
+    Vector3D intersectionEndcap = startPos + dEndcap*mom;
+    if ( intersectionBarrel.r() <= intersectionEndcap.r() ) return intersectionBarrel;
+    return intersectionEndcap;
+};

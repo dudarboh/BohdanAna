@@ -41,7 +41,7 @@ std::vector<EVENT::CalorimeterHit*> selectFrankEcalHits( EVENT::Cluster* cluster
 }
 
 
-std::pair<int, double> getTofClosest( EVENT::Cluster* cluster, Vector3D posAtEcal, double timeResolution){
+std::pair<int, double> getTofClosest( EVENT::Cluster* cluster, dd4hep::rec::Vector3D posAtEcal, double timeResolution){
     double hitTime = std::numeric_limits<double>::max();
     double closestDistance = std::numeric_limits<double>::max();
     int layer = -1;
@@ -58,10 +58,10 @@ std::pair<int, double> getTofClosest( EVENT::Cluster* cluster, Vector3D posAtEca
             layer = hitType.layer();
         }
     }
-
-    if ( hitTime == std::numeric_limits<double>::max() ) return {layer, 0.};
+    if ( hitTime == std::numeric_limits<double>::max() ) return {-1, 0.};
     return {layer, RandGauss::shoot(hitTime, timeResolution) - closestDistance/CLHEP::c_light};
 }
+
 
 
 double getTofFrankAvg( std::vector<EVENT::CalorimeterHit*> selectedHits, Vector3D posAtEcal, double timeResolution){
@@ -104,6 +104,7 @@ double getTofFrankFit( std::vector<EVENT::CalorimeterHit*> selectedHits, Vector3
 
 double getTofSET(EVENT::Track* track, double timeResolution){
     EVENT::TrackerHit* setHit = getSETHit(track);
+    if (setHit == nullptr) return 0.;
     auto stripObjects = setHit->getRawHits();
 
     if ( stripObjects.empty() ) return 0.;
@@ -124,75 +125,11 @@ double getTofSET(EVENT::Track* track, double timeResolution){
 double getTofPhotonTrue(EVENT::MCParticle* mc){
     // ignore non photons and those who doesn't have a straight path to the calorimeter.
     if (mc->getPDG() != 22 || mc->isDecayedInTracker()) return 0.;
+
     Vector3D startPos( mc->getVertex() );
-    Vector3D mom( mc->getMomentum() );
-
-    double rMin = getECALBarelRMin();
-    double zMin = getECALEndcapZMin();
-
     //find intersection points between photon momentum line and ECAL surface planes
-    auto getIntersection = [&startPos, &mom, rMin, zMin]() -> Vector3D {
-        // naming conventions according to:
-        // https://en.wikipedia.org/wiki/Line%E2%80%93plane_intersection
-        // ENDCAP plane parameters:
-        int direction = (mom.z() > 0) ? 1 : -1;
-        Vector3D p0Endcap(0, 0, direction*zMin);
-        Vector3D nEndcap = p0Endcap.unit();
+    Vector3D finishPos = getPhotonAtCalorimeter(mc);
 
-        // BARREL plane parameters:
-        Vector3D p0Barrel, nBarrel;
-        int nSides = 8;
-        double step = M_PI/nSides;
-        double phi = mom.phi();
-        // phi is in the range of singularity point [pi, -pi]. Check this first.
-
-        if( phi < (- M_PI + step) || phi > (M_PI - step) ){
-            p0Barrel = Vector3D(rMin, M_PI, M_PI/2., Vector3D::spherical);
-            nBarrel = p0Barrel.unit();
-        }
-        else{
-            double ecalPhi = -M_PI + 2*step;
-            for ( int i=0; i < nSides-1; ++i ){
-                if ( ecalPhi-step <= phi && phi < ecalPhi+step ){
-                    p0Barrel = Vector3D(rMin, ecalPhi, M_PI/2., Vector3D::spherical);
-                    nBarrel = p0Barrel.unit();
-                    break;
-                }
-                else ecalPhi += 2*step;
-            }
-        }
-
-        // line parameters
-        Vector3D l0(startPos);
-        Vector3D l(mom);
-
-
-
-        //intersection point
-        Vector3D p;
-        if ( mom.z() == 0 ){
-            double d = (p0Barrel - l0).dot(nBarrel)/(l.dot(nBarrel));
-            p = l0 + d*l;
-        }
-        else if( mom.rho() == 0 ){
-            double d = (p0Endcap - l0).dot(nEndcap)/(l.dot(nEndcap));
-            p = l0 + d*l;
-        }
-        else{
-            //choose closest intersection point to the 0,0,0
-            double dBarrel = (p0Barrel - l0).dot(nBarrel)/(l.dot(nBarrel));
-            Vector3D pBarrel = l0 + dBarrel*l;
-            double dEndcap = (p0Endcap - l0).dot(nEndcap)/(l.dot(nEndcap));
-            Vector3D pEndcap = l0 + dEndcap*l;
-            if ( pBarrel.r() < pEndcap.r() ) p = pBarrel;
-            else p = pEndcap;
-        }
-        return p;
-    };
-
-    Vector3D finishPos = getIntersection();
-
-    //NOTE: photon might not be created at event_time=0
-
+    //NOTE: photon might not be created at event_time = 0
     return mc->getTime() + (finishPos - startPos).r()/CLHEP::c_light; // in ns
 }

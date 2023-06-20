@@ -6,6 +6,7 @@
 
 #include "marlinutil/GeometryUtil.h"
 #include "UTIL/LCRelationNavigator.h"
+#include "UTIL/TrackTools.h"
 #include "MarlinTrk/Factory.h"
 
 using dd4hep::rec::Vector3D;
@@ -18,47 +19,46 @@ BohdanAna::BohdanAna() : marlin::Processor("BohdanAna"), EventDisplayer(this){
 
 
 void BohdanAna::init(){
-    // DDMarlinCED::init(this);
     _bField = MarlinUtil::getBzAtOrigin();
-
+    std::cout<<"trkSystem1: "<<_trkSystem<<std::endl;
     _trkSystem = MarlinTrk::Factory::createMarlinTrkSystem("DDKalTest", nullptr, "");
     _trkSystem->setOption( MarlinTrk::IMarlinTrkSystem::CFG::useQMS, true);
     _trkSystem->setOption( MarlinTrk::IMarlinTrkSystem::CFG::usedEdx, true);
     _trkSystem->setOption( MarlinTrk::IMarlinTrkSystem::CFG::useSmoothing, true);
     _trkSystem->init();
+    std::cout<<"trkSystem2: "<<_trkSystem<<std::endl;
 
     _file.reset( new TFile("results.root", "RECREATE") );
     _tree.reset( new TTree("treename", "treename") );
 
-    // _tree->Branch("pdg", &_pdg);
-    // _tree->Branch("momentumIP", &_momentumIP);
-    // _tree->Branch("momentumCalo", &_momentumCalo);
-    // _tree->Branch("momentumHM", &_momentumHM);
-    // _tree->Branch("dToTrack", &_tofClosest.dToTrack);
-    // _tree->Branch("layer", &_tofClosest.layer);
-    // _tree->Branch("tofClosest0", &_tofClosest.tof0);
-    // _tree->Branch("tofClosest10", &_tofClosest.tof10);
-    // _tree->Branch("tofClosest20", &_tofClosest.tof20);
-    // _tree->Branch("tofClosest30", &_tofClosest.tof30);
-    // _tree->Branch("tofClosest40", &_tofClosest.tof40);
-    // _tree->Branch("tofClosest50", &_tofClosest.tof50);
-    // _tree->Branch("tofClosest60", &_tofClosest.tof60);
-    // _tree->Branch("tofClosest70", &_tofClosest.tof70);
-    // _tree->Branch("tofClosest80", &_tofClosest.tof80);
-    // _tree->Branch("tofClosest90", &_tofClosest.tof90);
-    // _tree->Branch("tofClosest100", &_tofClosest.tof100);
+    //mc
+    _tree->Branch("pdg", &_pdg);
 
+    //momenta
+    _tree->Branch("mcPx", &(_mcMom[0]) );
+    _tree->Branch("mcPy", &(_mcMom[1]) );
+    _tree->Branch("mcPz", &(_mcMom[2]) );
+    _tree->Branch("recoIpPx", &(_recoIpMom[0]) );
+    _tree->Branch("recoIpPy", &(_recoIpMom[1]) );
+    _tree->Branch("recoIpPz", &(_recoIpMom[2]) );
+    _tree->Branch("recoCaloPx", &(_recoCaloMom[0]) );
+    _tree->Branch("recoCaloPy", &(_recoCaloMom[1]) );
+    _tree->Branch("recoCaloPz", &(_recoCaloMom[2]) );
+    _tree->Branch("harmonicMomToEcal", &_trackLength.harmonicMomToEcal);
+    _tree->Branch("harmonicMomToSET", &_trackLength.harmonicMomToSET);
 
-    // _tree->Branch("trackLengthSHA1", &_trackLengthSHA1);
-    // _tree->Branch("trackLengthSHA2", &_trackLengthSHA2);
-    // _tree->Branch("trackLengthSHA3", &_trackLengthSHA3);
-    // _tree->Branch("trackLengthSHA4", &_trackLengthSHA4);
-    // _tree->Branch("trackLengthSHA5", &_trackLengthSHA5);
-    // _tree->Branch("trackLengthSHA6", &_trackLengthSHA6);
-    // _tree->Branch("trackLengthIKF1", &_trackLengthIKF1);
-    // _tree->Branch("trackLengthIKF2Bug", &_trackLengthIKF2Bug);
-    // _tree->Branch("trackLengthIKF2", &_trackLengthIKF2);
-    // _tree->Branch("trackLengthIKF3", &_trackLengthIKF3);
+    //track lengths
+    _tree->Branch("trackLengthToEcal", &_trackLength.trackLengthToEcal);
+    _tree->Branch("trackLengthToSET", &_trackLength.trackLengthToSET);
+
+    //tofs
+    _tree->Branch("layerClosest", &_layerClosest);
+    for (int i = 0; i < 11; i++){
+        _tree->Branch(( "tofClosest"+std::to_string(i*10) ).c_str(), &( _tofClosest[i]) );
+        _tree->Branch(( "tofAverage"+std::to_string(i*10) ).c_str(), &( _tofAverage[i]) );
+        _tree->Branch(( "tofSET"+std::to_string(i*10) ).c_str(), &( _tofSET[i]) );
+        _tree->Branch(( "tofFit"+std::to_string(i*10) ).c_str(), &( _tofFit[i]) );
+    }
 
 }
 
@@ -74,35 +74,59 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
 
     for (int i=0; i<pfos->getNumberOfElements(); ++i){
         streamlog_out(DEBUG7)<<"Starting to analyze "<<i+1<<" PFO"<<std::endl;
+        resetVariables();
         ReconstructedParticle* pfo = static_cast <ReconstructedParticle*> ( pfos->getElementAt(i) );
-        int nClusters = pfo->getClusters().size();
         int nTracks = pfo->getTracks().size();
-        // only simple cases for now
-        if( nTracks > 1 || nClusters > 1) continue;
-
-        // Do everything mc particle related
+        int nClusters = pfo->getClusters().size();
+        // only simple cases
+        if( nTracks > 1 || nClusters != 1) continue;
+        Cluster* cluster = pfo->getClusters()[0];
         MCParticle* mc = getMC(pfo, pfo2mc);
         _pdg = mc->getPDG();
+        for(int j=0; j<3; j++) _mcMom[j] = mc->getMomentum()[j];
 
-        // // Do everything track related
-        // if (nTracks != 0){
-        //     Track* track = pfo->getTracks()[0];        
-        //     auto tsCalo = getTrackStateAtCalorimeter(track);
-        //     Vector3D trackPosAtcalo( tsCalo->getReferencePoint() );
+        bool isHadron = std::abs(_pdg) == 211 || std::abs(_pdg) == 321 || std::abs(_pdg) == 2212;
+        bool isPhoton = std::abs(_pdg) == 22;
+        if (isHadron && nTracks == 1){
+            Track* track = pfo->getTracks()[0];
+            auto tsCalo = getTrackStateAtCalorimeter( track );
+            Vector3D trackPosAtCalo( tsCalo->getReferencePoint() );
+            std::array<double, 3> mom = UTIL::getTrackMomentum(tsCalo, _bField);
+            Vector3D trackMomAtCalo(mom[0], mom[1], mom[2]);
 
-        // }
+            for(int j=0; j<3; j++) _recoIpMom[j] = pfo->getMomentum()[j];
+            for(int j=0; j<3; j++) _recoCaloMom[j] = trackMomAtCalo[j];
+            std::cout<<"trkSystem: "<<_trkSystem<<std::endl;
 
-        // // Do everything cluster related
-        // if ( nClusters != 0 ){
-        //     Cluster* cluster = pfo->getClusters()[0];
-        //     _tofClosest = getTofClosest(cluster, trackPosAtcalo, 0.);
-        // }
+            std::vector<IMPL::TrackStateImpl> trackStates = getTrackStates(pfo, _bField, _trkSystem);
+            _trackLength = getTrackLengthIKF(trackStates, _bField, TrackLengthOption::zedLambda);
 
-        if (mc->getPDG() == 22){
-            std::cout<<"Time: "<<getTofPhotonTrue(mc)<<std::endl;
-            getchar();
+            _layerClosest = getTofClosest(cluster, trackPosAtCalo, 0.).first;
+            auto selectedHits = selectFrankEcalHits(cluster, trackPosAtCalo, trackMomAtCalo, 10);
+            for (int j = 0; j < 11; j++){
+                _tofClosest[i] = getTofClosest(cluster, trackPosAtCalo, 0.01*j).second;
+                _tofAverage[i] = getTofFrankAvg(selectedHits, trackPosAtCalo, 0.01*j);
+                _tofFit[i] = getTofFrankFit(selectedHits, trackPosAtCalo, 0.01*j);
+                _tofSET[i] = getTofSET(track, 0.01*j);
+            }
+        }
+        else if( isPhoton && nTracks == 0 && ( !mc->isDecayedInTracker() ) ) {
+            Vector3D photonPosAtCalo = getPhotonAtCalorimeter(mc);
+            Vector3D mom( mc->getMomentum() );
+
+            _layerClosest = getTofClosest(cluster, photonPosAtCalo, 0.).first;
+            auto selectedHits = selectFrankEcalHits(cluster, photonPosAtCalo, mom, 10);
+            for (int j = 0; j < 11; j++){
+                _tofClosest[i] = getTofClosest(cluster, photonPosAtCalo, 0.01*j).second;
+                _tofAverage[i] = getTofFrankAvg(selectedHits, photonPosAtCalo, 0.01*j);
+                _tofFit[i] = getTofFrankFit(selectedHits, photonPosAtCalo, 0.01*j);
+                // no track - no SET!
+            }
         }
 
+        _tree->Fill();
+
+        drawCanvas();
         // Fill all in the TTree
         // drawDisplay(this, evt, drawPFO, pfo, tsStdReco, tsEasy);
     }
@@ -110,4 +134,19 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
 
 void BohdanAna::end(){
     _file->Write();
+}
+
+void BohdanAna::resetVariables(){
+    _pdg = 0;
+    _mcMom.fill(0.);
+    _recoIpMom.fill(0.);
+    _recoCaloMom.fill(0.);
+
+    _trackLength = TrackLengthResult();
+
+    _layerClosest = -1;
+    _tofClosest.fill(0.);
+    _tofAverage.fill(0.);
+    _tofSET.fill(0.);
+    _tofFit.fill(0.);
 }

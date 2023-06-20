@@ -6,6 +6,7 @@
 #include "TFile.h"
 #include "TTree.h"
 #include "EventDisplayer.h"
+#include "TrackLength.h"
 
 class BohdanAna : public marlin::Processor, EventDisplayer {
     friend class EventDisplayer;
@@ -19,30 +20,29 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
         void init();
         void processEvent(EVENT::LCEvent* evt);
         void end();
+
+        void resetVariables();
     private:
         int _nEvent{};
         double _bField{};
         
         std::unique_ptr<TFile> _file;
         std::unique_ptr<TTree> _tree;
-        int _pdg;
-        double _momentumIP;
-        double _momentumCalo;
-        double _momentumHM;
 
-        std::pair<int, double> _tofClosest;
+        int _pdg{};
 
-        double _trackLengthSHA1;
-        double _trackLengthSHA2;
-        double _trackLengthSHA3;
-        double _trackLengthSHA4;
-        double _trackLengthSHA5;
-        double _trackLengthSHA6;
+        std::array<double, 3> _mcMom{};
+        std::array<double, 3> _recoIpMom{};
+        std::array<double, 3> _recoCaloMom{};
 
-        double _trackLengthIKF1;
-        double _trackLengthIKF2Bug;
-        double _trackLengthIKF2;
-        double _trackLengthIKF3;
+        TrackLengthResult _trackLength; // only latest and greatest for now, with HM momenta
+
+        //each element per time resolution from 0 to 100 ps
+        int _layerClosest = -1;
+        std::array<double, 11> _tofClosest{};
+        std::array<double, 11> _tofAverage{};
+        std::array<double, 11> _tofSET{};
+        std::array<double, 11> _tofFit{};
 
         MarlinTrk::IMarlinTrkSystem* _trkSystem = nullptr;
 };
