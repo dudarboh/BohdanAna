@@ -4,9 +4,12 @@
 #include "UTIL/TrackTools.h"
 #include "marlinutil/DDMarlinCED.h"
 
-#include "TCanvas.h"
+
+#include "TF1.h"
 #include "TH1F.h"
-#include "TSystem.h"
+#include "TApplication.h"
+#include "TCanvas.h"
+#include "TRootCanvas.h"
 
 void drawPFO(EVENT::ReconstructedParticle* pfo, IMPL::TrackStateImpl tsStdReco, IMPL::TrackStateImpl tsEasy){
     std::vector<EVENT::Track*> tracks;
@@ -69,13 +72,31 @@ void drawPFO(EVENT::ReconstructedParticle* pfo, IMPL::TrackStateImpl tsStdReco, 
 }
 
 
+void drawFTDSimHits(EVENT::LCEvent* evt){
+    EVENT::LCCollection* hits = evt->getCollection("FTDCollection");
+
+    for (int i=0; i < hits->getNumberOfElements(); i++) {
+        SimTrackerHit* hit = static_cast<EVENT::SimTrackerHit*>(hits->getElementAt(i));
+        auto pos = hit->getPosition();
+        int type = 0; // point
+        int size = 4; // larger point
+        unsigned long color = 0x000000;
+        ced_hit(pos[0], pos[1], pos[2], type, size, color);
+    }
+}
+
 void drawCanvas(){
-    TCanvas* canvas = new TCanvas();
-    TH1F* h = new TH1F("h", "title", 10, 0, 10);
-    h->Fill(1);
-    h->Draw("A");
-    canvas->Modified();
-    canvas->Update();
-    gSystem->ProcessEvents();
-    std::cin.get();
+    int argcDummy;
+    char** argvDummy;
+    TApplication app("app", &argcDummy, argvDummy);
+    TCanvas* c = new TCanvas("c", "Something", 0, 0, 800, 600);
+    TF1 *f1 = new TF1("f1","sin(x)", -5, 5);
+    f1->SetLineColor(kBlue+1);
+    f1->SetTitle("My graph;x; sin(x)");
+    f1->Draw();
+    c->Modified(); c->Update();
+    TRootCanvas *rc = (TRootCanvas *)c->GetCanvasImp();
+    rc->Connect("CloseWindow()", "TApplication", gApplication, "Terminate()");
+    app.Run(true);
+    std::cout<<"Wow UwU"<<std::endl;
 }

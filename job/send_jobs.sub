@@ -1,4 +1,4 @@
-project_folder = /afs/desy.de/user/d/dudarboh/analysis/TrackLength
+project_folder = /afs/desy.de/user/d/dudarboh/analysis/BohdanAna
 executable = $(project_folder)/job/job.sh
 initialdir = /nfs/dust/ilc/user/dudarboh/jobs
 arguments = $(file) $(ClusterId) $(ProcId) $(job_name) $(project_folder)

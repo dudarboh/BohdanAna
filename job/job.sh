@@ -9,8 +9,9 @@ project_folder=${5}
 
 # Usually I just need some version of ilcsoft with one additional lib
 # source /cvmfs/ilc.desy.de/sw/x86_64_gcc82_centos7/v02-02-03/init_ilcsoft.sh
-source /cvmfs/ilc.desy.de/key4hep/setup.sh &&
-export MARLIN_DLL=$MARLIN_DLL:${project_folder}/lib/libTrackLengthDebug.so
+# source /cvmfs/ilc.desy.de/key4hep/setup.sh &&
+source /cvmfs/sw-nightlies.hsf.org/key4hep/setup.sh &&
+export MARLIN_DLL=$MARLIN_DLL:${project_folder}/lib/libBohdanAna.so
 
 mkdir ${cluster_id}_${proc_id} && cd ${cluster_id}_${proc_id}
 

@@ -127,10 +127,11 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
         }
         _tree->Fill();
 
-        drawCanvas();
+        // drawCanvas();
         // Fill all in the TTree
         // drawDisplay(this, evt, drawPFO, pfo, tsStdReco, tsEasy);
     }
+    // drawDisplay(this, evt, drawFTDSimHits, evt);
 }
 
 void BohdanAna::end(){
