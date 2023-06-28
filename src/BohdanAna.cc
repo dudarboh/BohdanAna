@@ -108,6 +108,7 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
                 _tofSET.at(j) = getTofSET(track, 0.01*j);
             }
 
+            plotCanvas(cluster, trackPosAtCalo, trackMomAtCalo, mc);
         }
         else if( isPhoton && nTracks == 0 && ( !mc->isDecayedInTracker() ) ) {
             Vector3D photonPosAtCalo = getPhotonAtCalorimeter(mc);
@@ -127,7 +128,6 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
         }
         _tree->Fill();
 
-        // drawCanvas();
         // Fill all in the TTree
         // drawDisplay(this, evt, drawPFO, pfo, tsStdReco, tsEasy);
     }
@@ -136,6 +136,7 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
 
 void BohdanAna::end(){
     _file->Write();
+    _application.Run(true);
 }
 
 void BohdanAna::resetVariables(){

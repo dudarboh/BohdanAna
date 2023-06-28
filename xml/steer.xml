@@ -21,12 +21,12 @@
 
     <processor name="InitDD4hep" type="InitializeDD4hep">
         <parameter name="DD4hepXMLFile" type="string">
-            /cvmfs/ilc.desy.de/sw/x86_64_gcc82_centos7/v02-02-03/lcgeo/v00-16-07/ILD/compact/ILD_l5_o1_v02/ILD_l5_o1_v02.xml
+            /cvmfs/sw-nightlies.hsf.org/key4hep/releases/2023-06-22/x86_64-centos7-gcc12.2.0-opt/lcgeo/7aaf7274322557c0bcbb51fa19953605641e850a=develop-mhca72/share/lcgeo/compact/ILD/compact/ILD_l5_o1_v02/ILD_l5_o1_v02.xml
         </parameter>
     </processor>
 
     <processor name="BohdanAna" type="BohdanAna">
-        <parameter name="Verbosity" options="DEBUG0-4,MESSAGE0-4,WARNING0-4,ERROR0-4,SILENT" type="string">DEBUG8</parameter>
+        <parameter name="Verbosity" options="DEBUG0-4,MESSAGE0-4,WARNING0-4,ERROR0-4,SILENT" type="string">MESSAGE</parameter>
         <parameter name="eventDisplay" type="bool">true</parameter>
     </processor>
 

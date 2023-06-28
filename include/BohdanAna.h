@@ -5,8 +5,11 @@
 #include "MarlinTrk/IMarlinTrkSystem.h"
 #include "TFile.h"
 #include "TTree.h"
+#include "TApplication.h"
 #include "EventDisplayer.h"
 #include "TrackLength.h"
+
+
 
 class BohdanAna : public marlin::Processor, EventDisplayer {
     friend class EventDisplayer;
@@ -45,6 +48,7 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
         std::array<double, 11> _tofFit{};
 
         MarlinTrk::IMarlinTrkSystem* _trkSystem = nullptr;
+        TApplication _application = TApplication("app", 0, nullptr);
 };
 
 #endif

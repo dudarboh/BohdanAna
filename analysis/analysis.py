@@ -1,12 +1,23 @@
 import ROOT
 import numpy as np
-# ROOT.gStyle.SetPalette(1)
-ROOT.gStyle.SetNumberContours(256)
-ROOT.gStyle.SetOptTitle(0)
-# ROOT.EnableImplicitMT()
+ROOT.EnableImplicitMT()
 
+class Algorithm:
+    def __init__(self, name, momentum, track_length, tof):
+        self.name = name
+        self.mom = momentum
+        self.len = track_length
+        self.tof = tof
 
 colors = [ROOT.TColor.GetColor('#ff7f00') ,ROOT.TColor.GetColor('#984ea3') ,ROOT.TColor.GetColor('#4daf4a') ,ROOT.TColor.GetColor('#377eb8') ,ROOT.TColor.GetColor('#e41a1c')]
+
+algoClosest0 = Algorithm("Closest 0 ps", "harmonicMomToEcal", "trackLengthToEcal", "tofClosest0")
+algoClosest30 = Algorithm("Closest 30 ps", "harmonicMomToEcal", "trackLengthToEcal", "tofClosest30")
+algoSET50 = Algorithm("SET 50 ps", "harmonicMomToSET", "trackLengthToSET", "tofSET50")
+algoAverage100 = Algorithm("Average 100 ps", "harmonicMomToEcal", "trackLengthToEcal", "tofAverage100")
+# algorithms = [algoClosest0, algoClosest30, algoSET50, algoAverage100]
+algorithms = [algoClosest30, algoSET50, algoAverage100]
+
 
 def draw_lines():
     lines = {}
@@ -21,90 +32,45 @@ def draw_lines():
     return lines
 
 
-def draw_lines_1d():
-    lines = {}
-    pdgs = [211, 321, 2212]
-    m_pdg = {211 : 0.13957039*1000, 321 : 0.493677*1000, 2212 : 0.938272088*1000}
-    for pdg in pdgs:
-        lines[pdg] = ROOT.TLine(m_pdg[pdg], 0., m_pdg[pdg], 500000)
-        lines[pdg].SetLineColor(7)
-        lines[pdg].SetLineWidth(3)
-        lines[pdg].SetLineStyle(9)
-        lines[pdg].Draw()
-    return lines
+df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna.root")
+df = df.Filter("tofClosest0 > 6.").Filter("abs(pdg) == 211 || abs(pdg) == 321 || abs(pdg) == 2212")
 
-df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/track_length/trk_len_comparison/bug_fix2.root")
-print(df.Count().GetValue())
-df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/track_length/trk_len_comparison/final3.root")
-print(df.Count().GetValue())
-df = df.Filter("tofv2 > 6.").Filter("abs(pdg) == 211 || abs(pdg) == 321 || abs(pdg) == 2212")
+histos1d = []
+histos2d = []
+for alg in algorithms:
+    df_beta = df.Define("beta", f"{alg.len}/({alg.tof}*299.792458)").Filter("beta >= 0 && beta <= 1")
+    df_mass = df_beta.Define("mass", f"{alg.mom}*sqrt( 1./(beta*beta) - 1.)*1000")
 
-# algorithms = ["trackLengthIDR", "trackLengthIDR2", "trackLengthIDR3",
-            #   "trackLengthIDR4", "trackLengthWinni", "trackLengthWinni2",
-            #   "trackLengthUsingZ", "trackLengthUsingZ2", "trackLengthUsingZ3", "trackLengthSimUsingZ"]
-# algorithms = ["trackLengthUsingZ2", "trackLengthUsingZ3"]
-# algorithms = ["trackLengthSHA1" ,"trackLengthSHA2" ,"trackLengthSHA3" ,"trackLengthSHA4" ,"trackLengthSHA5" ,"trackLengthSHA6", "trackLengthIKF1" ,"trackLengthIKF2" ,"trackLengthIKF3"]
-algorithms = ["trackLengthIKF2"]
+    h1 = df_mass.Histo1D((f"{alg.name}_1d", f"{alg.name}; mass [MeV]; N entries", 2000, 0, 1100), "mass")
+    histos1d.append(h1)
+
+    h1 = df_mass.Histo1D((f"{alg.name}_1d", f"{alg.name}; mass [MeV]; N entries", 2000, 0, 1100), "mass")
+    histos2d.append(h2)
+
+    h3 = df_mass.Histo2D((f"{alg.name}_2d", f"{alg.name}; momentum [GeV]; Mass [MeV]", 500, 0, 15, 500, -100, 1300.), f"{alg.mom}","mass")
 
 
-#PLOT 2D
-histos = []
-for name in algorithms:
-    df_beta = df.Define("beta", f"{name}/(tofv2*299.792458)").Filter("beta >= 0 && beta <= 1")
-    df_mass = df_beta.Define("mass", "momentum*sqrt( 1./(beta*beta) - 1.)*1000")
-    h = df_mass.Histo2D((f"h_{name}", f"{name}; momentum [GeV]; Mass [MeV]", 500, 0, 15, 500, -100, 1300.), "momentum","mass")
-    histos.append(h)
-
-for name, h in zip(algorithms, histos):
-    canvas = ROOT.TCanvas(f"{name}")
-    h.Draw("colz")
-    lines = draw_lines()
-    h.SetMinimum(0.1)
-    h.SetMaximum(10000)
-    canvas.SetLogz()
-    canvas.SetGridx(0)
-    canvas.SetGridy(0)
-    canvas.Update()
-    # h.SetStats(0)
-    stats = h.FindObject("stats")
-    stats.SetOptStat(110010)
-    stats.SetX1NDC(0.74)
-    stats.SetX2NDC(0.92)
-    stats.SetY1NDC(0.89)
-    stats.SetY2NDC(0.99)
-    palette = h.GetListOfFunctions().FindObject("palette")
-    palette.SetX1NDC(0.93)
-    palette.SetX2NDC(0.95)
-    canvas.Modified()
-    canvas.Update()
-    input("wait")
-
-#PLOT 1D
-histos = []
-for name in algorithms:
-    df_beta = df.Define("beta", f"{name}/(tofClosest0*299.792458)").Filter("beta >= 0 && beta <= 1")
-    df_mass = df_beta.Define("mass", "momentumHM*sqrt( 1./(beta*beta) - 1.)*1000")
-    h = df_mass.Histo1D((f"h_{name}", f"{name}; Mass [MeV]; N entries", 2000, 0, 1100.), "mass")
-    histos.append(h)
-
-maxy = 0
-canvas = ROOT.TCanvas("mass_1d")
-for i, (name, h) in enumerate(zip(algorithms, histos)):
-    if i == 0:
-        h.Draw()
-        lines = draw_lines_1d()
-        canvas.SetGridx(0)
-        canvas.SetGridy(0)
-        h.SetStats(0)
-    else:
-        h.Draw("same")
-    h.SetLineColor(colors[i])
-    maxy = max(maxy, h.GetMaximum())
-
-histos[0].SetMaximum( 1.05*maxy)
-canvas.BuildLegend()
-canvas.Update()
-input("wait")
+# h.Draw("colz")
+# ROOT.gStyle.SetPalette(ROOT.kBird)
+# lines = draw_lines()
+# h.SetMinimum(0.1)
+# h.SetMaximum(10000)
+# canvas.SetLogz()
+# canvas.SetRightMargin(0.16)
+# canvas.Update()
+# # # h.SetStats(0)
+# # stats = h.FindObject("stats")
+# # stats.SetOptStat(110010)
+# # stats.SetX1NDC(0.74)
+# # stats.SetX2NDC(0.92)
+# # stats.SetY1NDC(0.89)
+# # stats.SetY2NDC(0.99)
+# palette = h.GetListOfFunctions().FindObject("palette")
+# palette.SetX1NDC(0.86)
+# palette.SetX2NDC(0.9)
+# canvas.Modified()
+# canvas.Update()
+# input("wait")
 
 
 
