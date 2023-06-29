@@ -11,7 +11,7 @@
 #include "TStyle.h"
 
 TStyle* getMyStyle();
-void displayPFO(EVENT::ReconstructedParticle* pfo, IMPL::TrackStateImpl tsStdReco, IMPL::TrackStateImpl tsEasy);
+void displayPFO(EVENT::ReconstructedParticle* pfo);
 void displayFTDSimHits(EVENT::LCEvent* evt);
 void plotCanvas(EVENT::Cluster* cluster, dd4hep::rec::Vector3D posAtEcal, dd4hep::rec::Vector3D momAtEcal, EVENT::MCParticle* mc);
 
