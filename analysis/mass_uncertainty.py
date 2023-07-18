@@ -1,169 +1,110 @@
 import numpy as np
 import ROOT
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import matplotlib.lines as mlines
 
-def get_mass(momentum, tof, track_length):
-    speed_of_light = 299.792458 # mm / ns
-    beta = track_length/(tof*speed_of_light)
-    return momentum*np.sqrt( 1/(beta*beta) - 1) # GeV
-
-
-def old_python_plot():
-    p = 1.7
-    l0 = 2000. # mm
-    t0 = 7.12057 # ns
-    m0 = 493.677
-
-    t_lim = l0/c
-    t = np.arange(t_lim, 10., 0.00001)
-
-    l_lim = t0*c
-    l = np.arange(2000., l_lim, 0.1)
-
-    # vs t
-    # beta = l0/(t*c)
-    # m = p/beta * np.sqrt(1. - beta**2) * 1000.
-    # plt.plot(t*1000 - t0*1000, m - m0)
-    # plt.xlabel(r'$t - t_{true}$, [ps]')
-
-    # vs l
-    beta = l/(t0*c)
-    m = p/beta * np.sqrt(1. - beta**2) * 1000.
-    plt.plot(l - l0, m - m0)
-    plt.xlabel(r'$l - l_{true}$, [mm]')
+plt.rcParams.update({'font.size':18, 'text.usetex':True})
 
 
-    plt.ylabel(r"$m - m_{true}$, [MeV]")
-    plt.grid(True)
-    plt.show()
+
+SPEED_OF_LIGHT = 299.792458 # mm / ns
+
+def get_mass(true_mass, momentum, track_length, relative_momentum_resolution, relative_length_resolution, tof_resolution):
+    '''Return mass of the particle in momentum bins for the plot'''
+
+    # Deduce true TOF
+    tof = track_length/SPEED_OF_LIGHT * np.sqrt( 1 + true_mass*true_mass/(momentum*momentum) ) # ns
+
+    # smear everything
+    smeared_momentum = momentum*(1. + relative_momentum_resolution)
+    smeared_track_length = track_length*(1. + relative_length_resolution)
+    smeared_tof = tof + tof_resolution
+
+    smeared_beta = smeared_track_length/(smeared_tof*SPEED_OF_LIGHT)
+    mass = smeared_momentum*np.sqrt( 1/(smeared_beta*smeared_beta) - 1) # GeV
+
+    return np.nan_to_num(mass, nan=-0.1)
 
 
-def dm_vs_dl():
-    c = ROOT.TCanvas()
+# We always work in momentum bins
+momentum = np.arange(0.1, 8, 0.01)
 
-    colors = [ROOT.TColor.GetColor('#fc9272'), ROOT.TColor.GetColor('#de2d26')]
+particles = {}
+particles['pion'] = {'mass' : 0.13957039, 'color': '#1b9e77'}
+particles['kaon'] = {'mass' : 0.493677, 'color': '#d95f02'}
+particles['proton'] = {'mass' : 0.93827208816, 'color': '#7570b3'}
 
-    # Assume pion/kaon particle with momentum (1 -- 10 GeV) and track_length 2 m.
-    speed_of_light = 299.792458 # mm / ns
-    mass = 0.13957039 # GeV
-    # mass = 0.493677 # GeV
-    momentum = np.arange(0.1, 8, 0.01) # GeV
-    track_length = 2000 # mm
+band_names = ['true', 'dp', 'dp+dl', 'total']
+band_sides = ['plus', 'minus']
 
-    # Deduce TOF
-    tof = track_length/speed_of_light * np.sqrt( 1 + mass*mass/(momentum*momentum) ) # ns
+# STAR DATA from the paper https://arxiv.org/abs/nucl-ex/0308022
+# track_length = 3200. # mm at eta = 1.
+# relative_momentum_resolution = 0.013
+# relative_length_resolution = 0.002
+# tof_resolution = 0.100 # ns
 
+# $ \ell = 3200 \ \mathrm{mm}$
+# text= r''' \textbf{STAR aparatus}
+# $ \Delta p/p = 0.013 $
+# $ \Delta \ell / \ell = 0.002 $
+# $ \Delta \mathrm{TOF} = 100 \ \mathrm{ps} $'''
 
-    # Reconstruct mass back, using +- 5,10% of the track_length
-    vary_track_length = np.array([mod*track_length for mod in [0.99, 0.995, 1., 1.005, 1.01]]) # mm
+# ILD roughly
+track_length = 2000. # mm
+relative_momentum_resolution = 0.013
+relative_length_resolution = 0.002
+tof_resolution = 0.020 # ns
 
-    reco_mass = {}
-    gr = {'-10' : ROOT.TGraph(), '-5' : ROOT.TGraph(), '0' : ROOT.TGraph(), '+5' : ROOT.TGraph(), '+10' : ROOT.TGraph()}
+# $ \ell = 2000 \ \mathrm{mm}$
+text= r''' \textbf{STAR aparatus}
+\textbf{modern timing}
+$ \Delta p/p = 0.013 $
+$ \Delta \ell / \ell = 0.002 $
+$ \Delta \mathrm{TOF} = 20 \ \mathrm{ps} $'''
 
-    m = {}
-    m['-10'] = get_mass(momentum, tof, vary_track_length[0])
-    m['-5'] = get_mass(momentum, tof, vary_track_length[1])
-    m['0'] = get_mass(momentum, tof, vary_track_length[2])
-    m['+5'] = get_mass(momentum, tof, vary_track_length[3])
-    m['+10'] = get_mass(momentum, tof, vary_track_length[4])
+#pions
+mass_bands = {}
 
-    n_points = len(momentum)
-    for key, mass in m.items():
-        counter = 0
-        for i, (x, y) in enumerate(zip(momentum, mass)):
-            if np.isnan(y):
-                continue
-            gr[key].SetPoint(counter, x, y*1000)
-            counter += 1
-
-    gr['0'].Draw('AL')
-    gr['0'].SetLineWidth(5)
-
-    gr['-5'].Draw('L same')
-    gr['-5'].SetLineWidth(5)
-    gr['-5'].SetLineColor(colors[0])
-    gr['+5'].Draw('L same')
-    gr['+5'].SetLineWidth(5)
-    gr['+5'].SetLineColor(colors[0])
-
-    gr['-10'].Draw('L same')
-    gr['-10'].SetLineWidth(5)
-    gr['-10'].SetLineColor(colors[1])
-    gr['+10'].Draw('L same')
-    gr['+10'].SetLineWidth(5)
-    gr['+10'].SetLineColor(colors[1])
-
-    gr['0'].GetYaxis().SetRangeUser(0, 600)
-    gr['0'].SetTitle("True track length (2 m); momentum (GeV); mass (MeV)")
-    gr['+5'].SetTitle("#pm 0.5 % (#pm 10 mm)")
-    gr['+10'].SetTitle("#pm 1 % (#pm 20 mm)")
-
-    c.BuildLegend()
-    c.Update()
-    input("wait")
+for name in particles:
+    mass_bands[name, 'true'] = get_mass(particles[name]['mass'], momentum, track_length, 0., 0., 0.)
+    mass_bands[name, 'up_dpdl'] = get_mass(particles[name]['mass'], momentum, track_length, relative_momentum_resolution, -relative_length_resolution, 0.)
+    mass_bands[name, 'down_dpdl'] = get_mass(particles[name]['mass'], momentum, track_length, -relative_momentum_resolution, relative_length_resolution, 0.)
+    mass_bands[name, 'up_total'] = get_mass(particles[name]['mass'], momentum, track_length, relative_momentum_resolution, -relative_length_resolution, tof_resolution)
+    mass_bands[name, 'down_total'] = get_mass(particles[name]['mass'], momentum, track_length, -relative_momentum_resolution, relative_length_resolution, -tof_resolution)
 
 
-def dm_vs_dt():
-    c = ROOT.TCanvas()
+fig, ax = plt.subplots(figsize=(8, 8))
 
-    colors = [ROOT.TColor.GetColor('#fc9272'), ROOT.TColor.GetColor('#de2d26')]
+ax.plot(momentum, mass_bands['pion', 'true'], color=particles['pion']['color'], label="$m_{\pi, \mathrm{true}}$")
+ax.fill_between(momentum, mass_bands['pion', 'down_dpdl'], mass_bands['pion', 'up_dpdl'], color=particles['pion']['color'], hatch='////', label="$m_{\pi}(p \pm \Delta p, \ell \pm \Delta \ell, \mathrm{TOF})$", alpha=0.2)
+ax.fill_between(momentum, mass_bands['pion', 'down_total'], mass_bands['pion', 'up_total'], color=particles['pion']['color'], hatch='....', label="$m_{\pi}(p \pm \Delta p, \ell \pm \Delta \ell, \mathrm{TOF} \pm \Delta \mathrm{TOF})$", alpha=0.2)
 
-    # Assume pion/kaon particle with momentum (1 -- 10 GeV) and track_length 2 m.
-    speed_of_light = 299.792458 # mm / ns
-    mass = 0.13957039 # GeV
-    # mass = 0.493677 # GeV
-    momentum = np.arange(0.1, 8, 0.01) # GeV
+ax.plot(momentum, mass_bands['kaon', 'true'], color=particles['kaon']['color'], label="$m_{\kaon, \mathrm{true}}$")
+ax.fill_between(momentum, mass_bands['kaon', 'down_dpdl'], mass_bands['kaon', 'up_dpdl'], color=particles['kaon']['color'], hatch='////', label="$m_{\kaon}(p \pm \Delta p, \ell \pm \Delta \ell, \mathrm{TOF})$", alpha=0.2)
+ax.fill_between(momentum, mass_bands['kaon', 'down_total'], mass_bands['kaon', 'up_total'], color=particles['kaon']['color'], hatch='....', label="$m_{\kaon}(p \pm \Delta p, \ell \pm \Delta \ell, \mathrm{TOF} \pm \Delta \mathrm{TOF})$", alpha=0.2)
 
-    tof = 6 # ns
+ax.plot(momentum, mass_bands['proton', 'true'], color=particles['proton']['color'], label="$m_{\proton, \mathrm{true}}$")
+ax.fill_between(momentum, mass_bands['proton', 'down_dpdl'], mass_bands['proton', 'up_dpdl'], color=particles['proton']['color'], hatch='////', label="$m_{\proton}(p \pm \Delta p, \ell \pm \Delta \ell, \mathrm{TOF})$", alpha=0.2)
+ax.fill_between(momentum, mass_bands['proton', 'down_total'], mass_bands['proton', 'up_total'], color=particles['proton']['color'], hatch='....', label="$m_{\proton}(p \pm \Delta p, \ell \pm \Delta \ell, \mathrm{TOF} \pm \Delta \mathrm{TOF})$", alpha=0.2)
 
-    # Deduce TOF
-    track_length = momentum*speed_of_light*tof * np.sqrt( 1 /(mass*mass + momentum*momentum) ) # mm
+ax.set_xlabel('Momentum ($\mathrm{GeV}/c$)')
+ax.set_ylabel('Mass ($\mathrm{GeV}/c^{2}$)')
+ax.set_title('')
+ax.set_xlim(0.0, 5.1)
+ax.xaxis.set_ticks(np.arange(0, 5.1, 1))
+ax.set_ylim(0.0, 1.7)
+ax.yaxis.set_ticks(np.arange(0.0, 1.7, 0.2))
+ax.grid()
 
-    # Reconstruct mass back, using +- 5,10% of the track_length
-    vary_tof = np.array([mod*tof for mod in [0.99, 0.995, 1., 1.005, 1.01]]) # ns
+pion_legend = mpatches.Patch(color=particles['pion']['color'], label='$\pi^{\pm}$')
+kaon_legend = mpatches.Patch(color=particles['kaon']['color'], label='$K^{\pm}$')
+proton_legend = mpatches.Patch(color=particles['proton']['color'], label='$p$')
 
-    reco_mass = {}
-    gr = {'-10' : ROOT.TGraph(), '-5' : ROOT.TGraph(), '0' : ROOT.TGraph(), '+5' : ROOT.TGraph(), '+10' : ROOT.TGraph()}
+true_legend = mlines.Line2D([], [], color='black', label='true mass')
+dpdl_legend = mpatches.Patch(hatch='////', label='$\pm \Delta \ell$', fill=False)
+total_legend = mpatches.Patch(hatch='....', label='$\pm \Delta \ell, \pm \Delta \mathrm{TOF}$', fill=False)
 
-    m = {}
-    m['-10'] = get_mass(momentum, vary_tof[0], track_length)
-    m['-5'] = get_mass(momentum, vary_tof[1], track_length)
-    m['0'] = get_mass(momentum, vary_tof[2], track_length)
-    m['+5'] = get_mass(momentum, vary_tof[3], track_length)
-    m['+10'] = get_mass(momentum, vary_tof[4], track_length)
-
-    n_points = len(momentum)
-    for key, mass in m.items():
-        counter = 0
-        for i, (x, y) in enumerate(zip(momentum, mass)):
-            if np.isnan(y):
-                continue
-            gr[key].SetPoint(counter, x, y*1000)
-            counter += 1
-
-    gr['0'].Draw('AL')
-    gr['0'].SetLineWidth(5)
-
-    gr['-5'].Draw('L same')
-    gr['-5'].SetLineWidth(5)
-    gr['-5'].SetLineColor(colors[0])
-    gr['+5'].Draw('L same')
-    gr['+5'].SetLineWidth(5)
-    gr['+5'].SetLineColor(colors[0])
-
-    gr['-10'].Draw('L same')
-    gr['-10'].SetLineWidth(5)
-    gr['-10'].SetLineColor(colors[1])
-    gr['+10'].Draw('L same')
-    gr['+10'].SetLineWidth(5)
-    gr['+10'].SetLineColor(colors[1])
-
-    gr['0'].GetYaxis().SetRangeUser(0, 600)
-    gr['0'].SetTitle(f"True TOF ({tof} ns); momentum (GeV); mass (MeV)")
-    text = f"#pm 0.5 % (#pm {5*tof} ps)"
-    gr['+5'].SetTitle(text)
-    text = f"#pm 1 % (#pm {10*tof} ps)"
-    gr['+10'].SetTitle(text)
-
-    c.BuildLegend()
-    c.Update()
-    input("wait")
+ax.legend(handles=[pion_legend, kaon_legend, proton_legend, true_legend, dpdl_legend, total_legend], ncol=2)
+ax.text(0.2, 1.2, text, backgroundcolor='white', linespacing=1.5, bbox=dict(facecolor='none', edgecolor='black', pad=.5, boxstyle='round'))
+plt.show()
