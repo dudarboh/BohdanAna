@@ -26,85 +26,123 @@ def get_mass(true_mass, momentum, track_length, relative_momentum_resolution, re
 
     return np.nan_to_num(mass, nan=-0.1)
 
+def get_mass_plot():
+    # We always work in momentum bins
+    momentum = np.arange(0.1, 8, 0.01)
 
-# We always work in momentum bins
-momentum = np.arange(0.1, 8, 0.01)
+    particles = {}
+    particles['pion'] = {'mass' : 0.13957039, 'color': '#1b9e77'}
+    particles['kaon'] = {'mass' : 0.493677, 'color': '#d95f02'}
+    particles['proton'] = {'mass' : 0.93827208816, 'color': '#7570b3'}
 
-particles = {}
-particles['pion'] = {'mass' : 0.13957039, 'color': '#1b9e77'}
-particles['kaon'] = {'mass' : 0.493677, 'color': '#d95f02'}
-particles['proton'] = {'mass' : 0.93827208816, 'color': '#7570b3'}
+    band_names = ['true', 'dp', 'dp+dl', 'total']
+    band_sides = ['plus', 'minus']
 
-band_names = ['true', 'dp', 'dp+dl', 'total']
-band_sides = ['plus', 'minus']
+    # # STAR DATA from the paper https://arxiv.org/abs/nucl-ex/0308022
+    # track_length = 2200. # mm at eta = 1.
+    # relative_momentum_resolution = 0.013
+    # relative_length_resolution = 0.002
+    # tof_resolution = 0.100 # ns
 
-# STAR DATA from the paper https://arxiv.org/abs/nucl-ex/0308022
-# track_length = 3200. # mm at eta = 1.
-# relative_momentum_resolution = 0.013
-# relative_length_resolution = 0.002
-# tof_resolution = 0.100 # ns
+    # text= r''' \textbf{STAR apparatus}
+    # $ L = 2200 \ \mathrm{mm}$
+    # $ \Delta p/p = 0.013 $
+    # $ \Delta L / L = 0.002 $
+    # $ \Delta T = 100 \ \mathrm{ps} $'''
 
-# $ \ell = 3200 \ \mathrm{mm}$
-# text= r''' \textbf{STAR aparatus}
-# $ \Delta p/p = 0.013 $
-# $ \Delta \ell / \ell = 0.002 $
-# $ \Delta \mathrm{TOF} = 100 \ \mathrm{ps} $'''
+    # ILD roughly or STAR with modern timing
+    track_length = 2200. # mm
+    relative_momentum_resolution = 0.013
+    relative_length_resolution = 0.002
+    tof_resolution = 0.020 # ns
 
-# ILD roughly
-track_length = 2000. # mm
-relative_momentum_resolution = 0.013
-relative_length_resolution = 0.002
-tof_resolution = 0.020 # ns
-
-# $ \ell = 2000 \ \mathrm{mm}$
-text= r''' \textbf{STAR aparatus}
-\textbf{modern timing}
-$ \Delta p/p = 0.013 $
-$ \Delta \ell / \ell = 0.002 $
-$ \Delta \mathrm{TOF} = 20 \ \mathrm{ps} $'''
-
-#pions
-mass_bands = {}
-
-for name in particles:
-    mass_bands[name, 'true'] = get_mass(particles[name]['mass'], momentum, track_length, 0., 0., 0.)
-    mass_bands[name, 'up_dpdl'] = get_mass(particles[name]['mass'], momentum, track_length, relative_momentum_resolution, -relative_length_resolution, 0.)
-    mass_bands[name, 'down_dpdl'] = get_mass(particles[name]['mass'], momentum, track_length, -relative_momentum_resolution, relative_length_resolution, 0.)
-    mass_bands[name, 'up_total'] = get_mass(particles[name]['mass'], momentum, track_length, relative_momentum_resolution, -relative_length_resolution, tof_resolution)
-    mass_bands[name, 'down_total'] = get_mass(particles[name]['mass'], momentum, track_length, -relative_momentum_resolution, relative_length_resolution, -tof_resolution)
+    text= r''' \textbf{STAR apparatus}
+    \textbf{modern timing}
+    $ L = 2200 \ \mathrm{mm}$
+    $ \Delta p/p = 0.013 $
+    $ \Delta L / L = 0.002 $
+    $ \Delta T = 20 \ \mathrm{ps} $'''
 
 
-fig, ax = plt.subplots(figsize=(8, 8))
+    #pions
+    mass_bands = {}
 
-ax.plot(momentum, mass_bands['pion', 'true'], color=particles['pion']['color'], label="$m_{\pi, \mathrm{true}}$")
-ax.fill_between(momentum, mass_bands['pion', 'down_dpdl'], mass_bands['pion', 'up_dpdl'], color=particles['pion']['color'], hatch='////', label="$m_{\pi}(p \pm \Delta p, \ell \pm \Delta \ell, \mathrm{TOF})$", alpha=0.2)
-ax.fill_between(momentum, mass_bands['pion', 'down_total'], mass_bands['pion', 'up_total'], color=particles['pion']['color'], hatch='....', label="$m_{\pi}(p \pm \Delta p, \ell \pm \Delta \ell, \mathrm{TOF} \pm \Delta \mathrm{TOF})$", alpha=0.2)
+    for name in particles:
+        mass_bands[name, 'true'] = get_mass(particles[name]['mass'], momentum, track_length, 0., 0., 0.)
+        mass_bands[name, 'up_dpdl'] = get_mass(particles[name]['mass'], momentum, track_length, relative_momentum_resolution, -relative_length_resolution, 0.)
+        mass_bands[name, 'down_dpdl'] = get_mass(particles[name]['mass'], momentum, track_length, -relative_momentum_resolution, relative_length_resolution, 0.)
+        mass_bands[name, 'up_total'] = get_mass(particles[name]['mass'], momentum, track_length, relative_momentum_resolution, -relative_length_resolution, tof_resolution)
+        mass_bands[name, 'down_total'] = get_mass(particles[name]['mass'], momentum, track_length, -relative_momentum_resolution, relative_length_resolution, -tof_resolution)
 
-ax.plot(momentum, mass_bands['kaon', 'true'], color=particles['kaon']['color'], label="$m_{\kaon, \mathrm{true}}$")
-ax.fill_between(momentum, mass_bands['kaon', 'down_dpdl'], mass_bands['kaon', 'up_dpdl'], color=particles['kaon']['color'], hatch='////', label="$m_{\kaon}(p \pm \Delta p, \ell \pm \Delta \ell, \mathrm{TOF})$", alpha=0.2)
-ax.fill_between(momentum, mass_bands['kaon', 'down_total'], mass_bands['kaon', 'up_total'], color=particles['kaon']['color'], hatch='....', label="$m_{\kaon}(p \pm \Delta p, \ell \pm \Delta \ell, \mathrm{TOF} \pm \Delta \mathrm{TOF})$", alpha=0.2)
 
-ax.plot(momentum, mass_bands['proton', 'true'], color=particles['proton']['color'], label="$m_{\proton, \mathrm{true}}$")
-ax.fill_between(momentum, mass_bands['proton', 'down_dpdl'], mass_bands['proton', 'up_dpdl'], color=particles['proton']['color'], hatch='////', label="$m_{\proton}(p \pm \Delta p, \ell \pm \Delta \ell, \mathrm{TOF})$", alpha=0.2)
-ax.fill_between(momentum, mass_bands['proton', 'down_total'], mass_bands['proton', 'up_total'], color=particles['proton']['color'], hatch='....', label="$m_{\proton}(p \pm \Delta p, \ell \pm \Delta \ell, \mathrm{TOF} \pm \Delta \mathrm{TOF})$", alpha=0.2)
+    fig, ax = plt.subplots(figsize=(8, 8))
 
-ax.set_xlabel('Momentum ($\mathrm{GeV}/c$)')
-ax.set_ylabel('Mass ($\mathrm{GeV}/c^{2}$)')
-ax.set_title('')
-ax.set_xlim(0.0, 5.1)
-ax.xaxis.set_ticks(np.arange(0, 5.1, 1))
-ax.set_ylim(0.0, 1.7)
-ax.yaxis.set_ticks(np.arange(0.0, 1.7, 0.2))
-ax.grid()
+    ax.plot(momentum, mass_bands['pion', 'true'], color=particles['pion']['color'], label="$m_{\pi, \mathrm{true}}$")
+    ax.fill_between(momentum, mass_bands['pion', 'down_dpdl'], mass_bands['pion', 'up_dpdl'], color=particles['pion']['color'], hatch='////', label="$m_{\pi}(p \pm \Delta p, \ell \pm \Delta \ell, \mathrm{TOF})$", alpha=0.2)
+    ax.fill_between(momentum, mass_bands['pion', 'down_total'], mass_bands['pion', 'up_total'], color=particles['pion']['color'], hatch='....', label="$m_{\pi}(p \pm \Delta p, \ell \pm \Delta \ell, \mathrm{TOF} \pm \Delta \mathrm{TOF})$", alpha=0.2)
 
-pion_legend = mpatches.Patch(color=particles['pion']['color'], label='$\pi^{\pm}$')
-kaon_legend = mpatches.Patch(color=particles['kaon']['color'], label='$K^{\pm}$')
-proton_legend = mpatches.Patch(color=particles['proton']['color'], label='$p$')
+    ax.plot(momentum, mass_bands['kaon', 'true'], color=particles['kaon']['color'], label="$m_{\kaon, \mathrm{true}}$")
+    ax.fill_between(momentum, mass_bands['kaon', 'down_dpdl'], mass_bands['kaon', 'up_dpdl'], color=particles['kaon']['color'], hatch='////', label="$m_{\kaon}(p \pm \Delta p, \ell \pm \Delta \ell, \mathrm{TOF})$", alpha=0.2)
+    ax.fill_between(momentum, mass_bands['kaon', 'down_total'], mass_bands['kaon', 'up_total'], color=particles['kaon']['color'], hatch='....', label="$m_{\kaon}(p \pm \Delta p, \ell \pm \Delta \ell, \mathrm{TOF} \pm \Delta \mathrm{TOF})$", alpha=0.2)
 
-true_legend = mlines.Line2D([], [], color='black', label='true mass')
-dpdl_legend = mpatches.Patch(hatch='////', label='$\pm \Delta \ell$', fill=False)
-total_legend = mpatches.Patch(hatch='....', label='$\pm \Delta \ell, \pm \Delta \mathrm{TOF}$', fill=False)
+    ax.plot(momentum, mass_bands['proton', 'true'], color=particles['proton']['color'], label="$m_{\proton, \mathrm{true}}$")
+    ax.fill_between(momentum, mass_bands['proton', 'down_dpdl'], mass_bands['proton', 'up_dpdl'], color=particles['proton']['color'], hatch='////', label="$m_{\proton}(p \pm \Delta p, \ell \pm \Delta \ell, \mathrm{TOF})$", alpha=0.2)
+    ax.fill_between(momentum, mass_bands['proton', 'down_total'], mass_bands['proton', 'up_total'], color=particles['proton']['color'], hatch='....', label="$m_{\proton}(p \pm \Delta p, \ell \pm \Delta \ell, \mathrm{TOF} \pm \Delta \mathrm{TOF})$", alpha=0.2)
 
-ax.legend(handles=[pion_legend, kaon_legend, proton_legend, true_legend, dpdl_legend, total_legend], ncol=2)
-ax.text(0.2, 1.2, text, backgroundcolor='white', linespacing=1.5, bbox=dict(facecolor='none', edgecolor='black', pad=.5, boxstyle='round'))
-plt.show()
+    ax.set_xlabel('Momentum ($\mathrm{GeV}/c$)')
+    ax.set_ylabel('Mass ($\mathrm{GeV}/c^{2}$)')
+    ax.set_title('')
+    ax.set_xlim(0.0, 5.1)
+    ax.xaxis.set_ticks(np.arange(0, 5.1, 1))
+    ax.set_ylim(0.0, 1.7)
+    ax.yaxis.set_ticks(np.arange(0.0, 1.7, 0.2))
+    ax.grid()
+
+    pion_legend = mpatches.Patch(color=particles['pion']['color'], label='$\pi^{\pm}$')
+    kaon_legend = mpatches.Patch(color=particles['kaon']['color'], label='$K^{\pm}$')
+    proton_legend = mpatches.Patch(color=particles['proton']['color'], label='$p$')
+
+    true_legend = mlines.Line2D([], [], color='black', label='true mass')
+    dpdl_legend = mpatches.Patch(hatch='////', label='$\Delta L$', fill=False)
+    total_legend = mpatches.Patch(hatch='....', label='$\Delta L \oplus \Delta T$', fill=False)
+
+    ax.legend(handles=[pion_legend, kaon_legend, proton_legend, true_legend, dpdl_legend, total_legend], ncol=2)
+    ax.text(0.2, 1.1, text, linespacing=1.5, bbox=dict(facecolor='white', edgecolor='black', pad=.5, boxstyle='round'))
+    plt.show()
+
+def mass_vs_dt():
+    momentum = 4 # GeV
+    track_length = 3200. # mm
+    tof_resolution = np.arange(-0.100, 0.100, 0.001) # ns
+    mass = get_mass(0.493677, momentum, track_length, 0., 0., tof_resolution)
+    mass[mass < 0] = 0
+    fig, ax = plt.subplots(figsize=(8, 8))
+
+    ax.plot(tof_resolution*1000, mass, color='#d95f02')
+
+    ax.set_xlabel('$\Delta T (\mathrm{ps})$')
+    ax.set_ylabel('Mass ($\mathrm{GeV}/c^{2}$)')
+    ax.set_xlim(-100, 100)
+    # ax.xaxis.set_ticks(np.arange(-0.1, 0.1, 0.01))
+    ax.set_ylim(-0.1, 1.0)
+    ax.yaxis.set_ticks(np.arange(-0.1, 1.0, 0.1))
+    ax.grid()
+
+    text= r''' \textbf{Kaon}
+    $ p = 4 \ \mathrm{GeV / c}$    
+    $ L = 3200 \ \mathrm{mm}$'''
+
+    # pion_legend = mpatches.Patch(color=particles['pion']['color'], label='$\pi^{\pm}$')
+    # kaon_legend = mpatches.Patch(color=particles['kaon']['color'], label='$K^{\pm}$')
+    # proton_legend = mpatches.Patch(color=particles['proton']['color'], label='$p$')
+
+    # true_legend = mlines.Line2D([], [], color='black', label='true mass')
+    # dpdl_legend = mpatches.Patch(hatch='////', label='$\Delta L$', fill=False)
+    # total_legend = mpatches.Patch(hatch='....', label='$\Delta L \oplus \Delta T$', fill=False)
+
+    # ax.legend(handles=[pion_legend, kaon_legend, proton_legend, true_legend, dpdl_legend, total_legend], ncol=2)
+    ax.text(-75, 0.7, text, linespacing=1.5, bbox=dict(facecolor='white', edgecolor='black', pad=.5, boxstyle='round'))
+    plt.show()
+
+get_mass_plot()
+# mass_vs_dt()
