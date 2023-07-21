@@ -11,7 +11,7 @@
 #include "UTIL/PIDHandler.h"
 #include "UTIL/Operators.h" // for debuging <<
 #include "DDRec/Vector3D.h"
-
+#include "EVENT/SimTrackerHit.h"
 #include <string>
 #include <vector>
 
@@ -38,6 +38,8 @@ double getECALBarelRMin();
 double getECALEndcapZMin();
 
 dd4hep::rec::Vector3D getPhotonAtCalorimeter(EVENT::MCParticle* mc);
+
+EVENT::SimTrackerHit* getSimTrackerHit(EVENT::TrackerHit* hit, UTIL::LCRelationNavigator navToSimTrackerHits);
 
 
 #endif

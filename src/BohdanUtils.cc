@@ -203,3 +203,15 @@ dd4hep::rec::Vector3D getPhotonAtCalorimeter(EVENT::MCParticle* mc){
     if ( intersectionBarrel.r() <= intersectionEndcap.r() ) return intersectionBarrel;
     return intersectionEndcap;
 };
+
+EVENT::SimTrackerHit* getSimTrackerHit(EVENT::TrackerHit* hit, UTIL::LCRelationNavigator navToSimTrackerHits){
+    // I merge all tracker hit relation collections in the steering file. ENSURE this happens!
+    // Otherwise I need to check every possible tracker hit relation collection, which makes this code x10 longer.
+    // In case collection doesn't exist, merging is still happens (I think..) with a warning, which is good.
+    if (navToSimTrackerHits.getRelatedToObjects(hit).empty()) return nullptr;
+    
+    const std::vector<float>& weights = navToSimTrackerHits.getRelatedToWeights(hit);
+    int max_i = std::max_element(weights.begin(), weights.end()) - weights.begin();
+    EVENT::SimTrackerHit* simHit = static_cast<EVENT::SimTrackerHit*> (navToSimTrackerHits.getRelatedToObjects(hit)[max_i]);
+    return simHit;
+}

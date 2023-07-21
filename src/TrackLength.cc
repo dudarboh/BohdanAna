@@ -11,9 +11,9 @@
 using namespace EVENT;
 using dd4hep::rec::Vector3D;
 
-std::vector<IMPL::TrackStateImpl> getTrackStates(ReconstructedParticle* pfo, double bField, MarlinTrk::IMarlinTrkSystem* trkSystem){
+std::vector<HitState> getTrackStates(ReconstructedParticle* pfo, double bField, MarlinTrk::IMarlinTrkSystem* trkSystem, UTIL::LCRelationNavigator navToSimTrackerHits){
     // Refit the track and extract track state at every tracker hit along the track
-    std::vector<IMPL::TrackStateImpl> trackStates;
+    std::vector<HitState> trackStates;
     if ( pfo->getTracks().empty() ) return trackStates;
     std::vector<Track*> subTracks = getSubTracks( pfo->getTracks()[0] );
 
@@ -85,26 +85,40 @@ std::vector<IMPL::TrackStateImpl> getTrackStates(ReconstructedParticle* pfo, dou
 
         int nHitsInFit = hitsInFit.size();
         // if first successfully fitted subTrack add IP track state
-        if ( trackStates.empty() ) trackStates.push_back(*(static_cast<const IMPL::TrackStateImpl*> (refittedTrack.getTrackState(TrackState::AtIP)) ));
-
+        if ( trackStates.empty() ){
+            HitState state;
+            state.ts = *(static_cast<const IMPL::TrackStateImpl*> (refittedTrack.getTrackState(TrackState::AtIP)) );
+            // no hit/simhit for the extrapolated track state at the IP
+            trackStates.push_back(state);
+        }
         // NOTE: although we use z to understand subTrack's direction, subTrack's hits are still sorted by rho
         if (loopForward){
             for( int j=0; j<nHitsInFit; ++j ){
-                IMPL::TrackStateImpl ts = getTrackStateAtHit(marlinTrk.get(), hitsInFit[j].first);
-                trackStates.push_back(ts);
+                HitState state;
+                state.ts = getTrackStateAtHit(marlinTrk.get(), hitsInFit[j].first);
+                state.hit = hitsInFit[j].first;
+                state.simHit = getSimTrackerHit(state.hit, navToSimTrackerHits);
+                trackStates.push_back(state);
             }
         }
         else{
             for( int j=nHitsInFit-1; j>=0; --j ){
-                IMPL::TrackStateImpl ts = getTrackStateAtHit(marlinTrk.get(), hitsInFit[j].first);
-                trackStates.push_back(ts);
+                HitState state;
+                state.ts = getTrackStateAtHit(marlinTrk.get(), hitsInFit[j].first);
+                state.hit = hitsInFit[j].first;
+                state.simHit = getSimTrackerHit(state.hit, navToSimTrackerHits);
+                trackStates.push_back(state);
             }
         }
     }
 
     const IMPL::TrackStateImpl* tsCalo = static_cast<const IMPL::TrackStateImpl*> (lastGoodRefittedTrack.getTrackState(TrackState::AtCalorimeter) );
-    if ( pfo->getClusters().size() > 0 && tsCalo != nullptr ) trackStates.push_back( *(tsCalo) );
-
+    if ( pfo->getClusters().size() > 0 && tsCalo != nullptr ){
+        HitState state;
+        state.ts = *(tsCalo);
+        // no hit/simhit for the extrapolated track state at the ECAL
+        trackStates.push_back( state );
+    }
     return trackStates;
 }
 

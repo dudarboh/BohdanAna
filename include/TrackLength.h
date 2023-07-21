@@ -2,11 +2,13 @@
 #define TrackLength_h 1
 
 #include "EVENT/ReconstructedParticle.h"
+#include "EVENT/SimTrackerHit.h"
 #include "IMPL/TrackStateImpl.h"
 #include "MarlinTrk/IMarlinTrkSystem.h"
 #include "DDRec/Vector3D.h"
 #include "EVENT/Track.h"
 #include <vector>
+#include "UTIL/LCRelationNavigator.h"
 
 enum class TrackLengthOption{
     phiLambda,
@@ -21,6 +23,12 @@ struct TrackLengthResult{
     double harmonicMomToEcal{};
 };
 
+struct HitState{
+    // Struct which contains a combination of the simulated, reconstructed tracker hit and the track state of the track at this reconstructed hit position
+    IMPL::TrackStateImpl ts;
+    EVENT::TrackerHit* hit = nullptr;
+    EVENT::SimTrackerHit* simHit = nullptr;
+};
 
 template <typename TrackStateLike>
 double getHelixLength(const TrackStateLike* ts1, const TrackStateLike* ts2, int location, TrackLengthOption option){
@@ -66,7 +74,7 @@ double getHelixLength(dd4hep::rec::Vector3D p_start, double z_start, double z_en
 double getTrackLengthSHA(EVENT::Track* track, int location, TrackLengthOption option);
 
 
-std::vector<IMPL::TrackStateImpl> getTrackStates(EVENT::ReconstructedParticle* pfo, double bField, MarlinTrk::IMarlinTrkSystem* trkSystem);
+std::vector<HitState> getTrackStates(EVENT::ReconstructedParticle* pfo, double bField, MarlinTrk::IMarlinTrkSystem* trkSystem, UTIL::LCRelationNavigator navToSimTrackerHits);
 
 // iterative Kalman Filter (IKF)
 TrackLengthResult getTrackLengthIKF(std::vector<IMPL::TrackStateImpl> trackStates, double bField, TrackLengthOption option);

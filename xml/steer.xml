@@ -4,7 +4,9 @@
 
     <execute>
         <processor name="InitDD4hep" />
+        <processor name="MergeTrackerHitsRelations"/>
         <processor name="BohdanAna"/>
+        
     </execute>
 
     <global>

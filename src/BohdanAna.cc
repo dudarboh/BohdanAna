@@ -69,6 +69,7 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
 
     LCCollection* pfos = evt->getCollection("PandoraPFOs");
     LCRelationNavigator pfo2mc ( evt->getCollection("RecoMCTruthLink") );
+    LCRelationNavigator navToSimTrackerHits( evt->getCollection("TrackerHitsRelations") );
 
     for (int i=0; i<pfos->getNumberOfElements(); ++i){
         streamlog_out(DEBUG8)<<"Starting to analyze "<<i+1<<" PFO"<<std::endl;
@@ -95,7 +96,11 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
             for(int j=0; j<3; j++) _recoIpMom.at(j) = pfo->getMomentum()[j];
             for(int j=0; j<3; j++) _recoCaloMom.at(j) = trackMomAtCalo[j];
 
-            std::vector<IMPL::TrackStateImpl> trackStates = getTrackStates(pfo, _bField, _trkSystem);
+            std::vector<HitState> trackHitStates = getTrackStates(pfo, _bField, _trkSystem, navToSimTrackerHits);
+            std::vector<IMPL::TrackStateImpl> trackStates;
+            for(auto& hitState: trackHitStates){
+                trackStates.push_back(hitState.ts);
+            }
             _trackLength = getTrackLengthIKF(trackStates, _bField, TrackLengthOption::zedLambda);
 
             _layerClosest = getTofClosest(cluster, trackPosAtCalo, 0.).first;
@@ -109,7 +114,7 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
             }
 
             // plotCanvas(cluster, trackPosAtCalo, trackMomAtCalo, mc);
-
+            plotTrackParams(trackHitStates, pfo, mc, _bField);
         }
         else if( isPhoton && nTracks == 0 && ( !mc->isDecayedInTracker() ) ) {
             Vector3D photonPosAtCalo = getPhotonAtCalorimeter(mc);
@@ -130,9 +135,8 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
         _tree->Fill();
 
         // Fill all in the TTree
-        drawDisplay(this, evt, displayPFO, pfo);
+        // drawDisplay(this, evt, displayPFO, pfo);
     }
-    // drawDisplay(this, evt, drawFTDSimHits, evt);
 }
 
 void BohdanAna::end(){
