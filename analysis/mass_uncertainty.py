@@ -112,37 +112,75 @@ def get_mass_plot():
 
 def mass_vs_dt():
     momentum = 4 # GeV
-    track_length = 3200. # mm
+    track_length = 2000. # mm
     tof_resolution = np.arange(-0.100, 0.100, 0.001) # ns
-    mass = get_mass(0.493677, momentum, track_length, 0., 0., tof_resolution)
-    mass[mass < 0] = 0
-    fig, ax = plt.subplots(figsize=(8, 8))
 
-    ax.plot(tof_resolution*1000, mass, color='#d95f02')
+    particles = {}
+    particles['pion'] = {'mass' : 0.13957039, 'color': '#1b9e77'}
+    particles['kaon'] = {'mass' : 0.493677, 'color': '#d95f02'}
+    particles['proton'] = {'mass' : 0.93827208816, 'color': '#7570b3'}
+
+    fig, ax = plt.subplots(figsize=(8, 8))
+    for name in particles:
+        mass = get_mass(particles[name]['mass'], momentum, track_length, 0., 0., tof_resolution)
+        mass[mass < 0] = 0
+
+        ax.plot(tof_resolution*1000, mass, color=particles[name]['color'])
 
     ax.set_xlabel('$\Delta T (\mathrm{ps})$')
     ax.set_ylabel('Mass ($\mathrm{GeV}/c^{2}$)')
     ax.set_xlim(-100, 100)
-    # ax.xaxis.set_ticks(np.arange(-0.1, 0.1, 0.01))
-    ax.set_ylim(-0.1, 1.0)
-    ax.yaxis.set_ticks(np.arange(-0.1, 1.0, 0.1))
+    ax.set_ylim(-0.1, 1.2)
+    ax.yaxis.set_ticks(np.arange(-0.1, 1.2, 0.1))
     ax.grid()
 
-    text= r''' \textbf{Kaon}
-    $ p = 4 \ \mathrm{GeV / c}$    
-    $ L = 3200 \ \mathrm{mm}$'''
+    text= r'''$ p = 4 \ \mathrm{GeV / c}$    
+    $ L = 2000 \ \mathrm{mm}$'''
 
-    # pion_legend = mpatches.Patch(color=particles['pion']['color'], label='$\pi^{\pm}$')
-    # kaon_legend = mpatches.Patch(color=particles['kaon']['color'], label='$K^{\pm}$')
-    # proton_legend = mpatches.Patch(color=particles['proton']['color'], label='$p$')
+    pion_legend = mpatches.Patch(color=particles['pion']['color'], label='$\pi^{\pm}$')
+    kaon_legend = mpatches.Patch(color=particles['kaon']['color'], label='$K^{\pm}$')
+    proton_legend = mpatches.Patch(color=particles['proton']['color'], label='$p$')
 
-    # true_legend = mlines.Line2D([], [], color='black', label='true mass')
-    # dpdl_legend = mpatches.Patch(hatch='////', label='$\Delta L$', fill=False)
-    # total_legend = mpatches.Patch(hatch='....', label='$\Delta L \oplus \Delta T$', fill=False)
-
-    # ax.legend(handles=[pion_legend, kaon_legend, proton_legend, true_legend, dpdl_legend, total_legend], ncol=2)
-    ax.text(-75, 0.7, text, linespacing=1.5, bbox=dict(facecolor='white', edgecolor='black', pad=.5, boxstyle='round'))
+    ax.legend(handles=[proton_legend, kaon_legend, pion_legend])
+    ax.text(30, 0.1, text, linespacing=1.5, bbox=dict(facecolor='white', edgecolor='black', pad=.5, boxstyle='round'))
     plt.show()
 
+
+def mass_vs_dl():
+    momentum = 4 # GeV
+    track_length = 2000. # mm
+    len_resolution = np.arange(-30, 30, 0.1) # mm
+
+    particles = {}
+    particles['pion'] = {'mass' : 0.13957039, 'color': '#1b9e77'}
+    particles['kaon'] = {'mass' : 0.493677, 'color': '#d95f02'}
+    particles['proton'] = {'mass' : 0.93827208816, 'color': '#7570b3'}
+
+    fig, ax = plt.subplots(figsize=(8, 8))
+    for name in particles:
+        mass = get_mass(particles[name]['mass'], momentum, track_length, 0., len_resolution/track_length, 0.)
+        mass[mass < 0] = 0
+
+        ax.plot(len_resolution, mass, color=particles[name]['color'])
+
+    ax.set_xlabel('$\Delta L (\mathrm{mm})$')
+    ax.set_ylabel('Mass ($\mathrm{GeV}/c^{2}$)')
+    ax.set_xlim(-30, 30)
+    ax.set_ylim(-0.1, 1.2)
+    ax.yaxis.set_ticks(np.arange(-0.1, 1.2, 0.1))
+    ax.grid()
+
+    text= r'''$ p = 4 \ \mathrm{GeV / c}$    
+    $ L = 2000 \ \mathrm{mm}$'''
+
+    pion_legend = mpatches.Patch(color=particles['pion']['color'], label='$\pi^{\pm}$')
+    kaon_legend = mpatches.Patch(color=particles['kaon']['color'], label='$K^{\pm}$')
+    proton_legend = mpatches.Patch(color=particles['proton']['color'], label='$p$')
+
+    ax.legend(handles=[proton_legend, kaon_legend, pion_legend])
+    ax.text(-25, 0.1, text, linespacing=1.5, bbox=dict(facecolor='white', edgecolor='black', pad=.5, boxstyle='round'))
+    plt.show()
+
+
 get_mass_plot()
-# mass_vs_dt()
+# mass_vs_dl()

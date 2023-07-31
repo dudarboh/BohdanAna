@@ -11,11 +11,13 @@
 #include "TLatex.h"
 #include "TROOT.h"
 #include "TGraph.h"
+#include "TMultiGraph.h"
 #include "TGraphErrors.h"
 #include "TSystem.h"
 #include "TCanvas.h"
 #include "TLegend.h"
 #include "TGaxis.h"
+#include "TColor.h"
 #include "CLHEP/Random/Randomize.h"
 #include "CLHEP/Units/PhysicalConstants.h"
 
@@ -350,7 +352,9 @@ void plotECALTimes(EVENT::Cluster* cluster, Vector3D posAtEcal, Vector3D momAtEc
 
 void plotTrackParams(std::vector<HitState> trackHitStates, EVENT::ReconstructedParticle* pfo, EVENT::MCParticle* mc, double bField){
     // DEBUG output
-    std::cout<<"PDG: "<<mc->getPDG()<<std::endl;
+    int pdg = std::abs( mc->getPDG() );
+    std::cout<<"PDG: "<<pdg<<std::endl;
+
     Vector3D mcMom(mc->getMomentum());
     std::cout<<"Momentum: "<<mcMom.r()<<" ( "<<mcMom.rho()<<", "<<mcMom.z()<<")"<<std::endl;
 
@@ -376,7 +380,7 @@ void plotTrackParams(std::vector<HitState> trackHitStates, EVENT::ReconstructedP
             bottom = b;
         }
     };
-    Margin margin(0.175, 0.175, 0.08, 0.13);
+    Margin margin(0.175, 0.175, 0.08, 0.15);
     myStyle->SetPadTopMargin(margin.top); // ILD 0.08
     myStyle->SetPadBottomMargin(margin.bottom); // ILD 0.18
     myStyle->SetPadLeftMargin(margin.left); // ILD 0.17
@@ -389,41 +393,49 @@ void plotTrackParams(std::vector<HitState> trackHitStates, EVENT::ReconstructedP
     c.SetGridx(true);
     std::vector<double> z, omega, tanL, trueZ, trueOmega, trueTanL;
     for(auto hitState : trackHitStates){
-        auto ts = hitState.ts;
         auto simHit = hitState.simHit;
-        z.push_back( ts.getReferencePoint()[2] + ts.getZ0() );
+        auto ts = hitState.ts;
+        if (simHit == nullptr) continue;
+        z.push_back( std::abs(ts.getReferencePoint()[2] + ts.getZ0()) );
         omega.push_back( std::abs(ts.getOmega()) );
         tanL.push_back( std::abs(ts.getTanLambda()) );
 
-        if (simHit == nullptr) continue;
-        trueZ.push_back( simHit->getPosition()[2] );
+        trueZ.push_back( std::abs(simHit->getPosition()[2]) );
         Vector3D mom(simHit->getMomentum());
-        std::cout<<mom<<std::endl;
         trueOmega.push_back( pt2omega(mom.rho()) );
-        trueTanL.push_back( mom.z()/mom.rho() );
-
+        trueTanL.push_back( std::abs(mom.z())/mom.rho() );
     }
     TGraph grOmega( z.size(), z.data(), omega.data());
     TGraph grTrueOmega( trueZ.size(), trueZ.data(), trueOmega.data());
-    grOmega.GetXaxis()->SetTitle("z (mm)");
-    grOmega.GetYaxis()->SetTitle("#Omega (1/mm)");
-    grOmega.GetYaxis()->SetTitleOffset(1.5);
-    grOmega.GetXaxis()->CenterTitle(true);
-    grOmega.GetYaxis()->CenterTitle(true);
-    grOmega.Draw("AL");
+    TGraph grTanL( z.size(), z.data(), tanL.data());
+    TGraph grTrueTanL( trueZ.size(), trueZ.data(), trueTanL.data());
+
+
+
+    grOmega.SetLineColor(TColor::GetColor("#377eb8"));
     grOmega.SetLineWidth(5);
-    grTrueOmega.Draw("L");
-    grTrueOmega.SetLineColor(2);
+    grTrueOmega.SetLineColor(TColor::GetColor("#e41a1c"));
     grTrueOmega.SetLineWidth(5);
-    // grOmega.SetMarkerStyle(1);
+    TMultiGraph mg;
+    mg.Add(&grOmega);
+    mg.Add(&grTrueOmega);
+    mg.GetXaxis()->SetNoExponent(true);
+    mg.GetXaxis()->SetTitle("z (mm)");
+    mg.GetXaxis()->SetNdivisions(508);
+    mg.GetYaxis()->SetTitle("#Omega (1/mm)");
+    mg.GetYaxis()->SetTitleOffset(1.5);
+    mg.GetXaxis()->CenterTitle(true);
+    mg.GetYaxis()->CenterTitle(true);
+    mg.Draw("AL");
     c.Update();
-    grOmega.GetYaxis()->SetRangeUser(0.99*c.GetUymin(), 1.01*c.GetUymax());
+    double range = c.GetUymax() - c.GetUymin();
+    mg.GetYaxis()->SetRangeUser(c.GetUymin() - 0.5*range, c.GetUymax() + 0.5*range);
     c.Modified(); c.Update();
 
     // draw an axis on the right side
     auto axis = TGaxis(c.GetUxmax(),c.GetUymax(), c.GetUxmax(), c.GetUymin(), omega2pt(c.GetUymax()), omega2pt(c.GetUymin()), 510, "L-");
-    axis.SetTitle("p_{T} (GeV / c)");
-    axis.SetTitleOffset(1.3);
+    axis.SetTitle("p_{T} (GeV/c)");
+    axis.SetTitleOffset(1.5);
     axis.CenterTitle(true);
     axis.SetTitleColor(1);
     axis.SetTitleFont(42);
@@ -439,14 +451,81 @@ void plotTrackParams(std::vector<HitState> trackHitStates, EVENT::ReconstructedP
     axis.Draw();
 
     TLegend legend = TLegend(0.52, 0.755, 0.765, 0.895);
+    legend.SetHeader(Form("PDG: %d", pdg));
     legend.AddEntry(&grOmega, "Reconstructed", "l");
     legend.AddEntry(&grTrueOmega, "True", "l");
     legend.Draw();
     c.Modified(); c.Update();
-    // c.SaveAs( Form("./plots/steps/%d_step1.png", picture_counter) );
-    while ( !gSystem->ProcessEvents() ){
-        gSystem->Sleep(5);
-    }
+    c.SaveAs( Form("./plots/track_params/pdg_%d_pt_%2.0f_pz_%2.0f_omega.png", pdg, mcMom.rho()*1000, mcMom.z()*1000) );
+    // while ( !gSystem->ProcessEvents() ){
+    //     gSystem->Sleep(5);
+    // }
+
+
+    // COPYPASTE for TanL
+    TCanvas c2 = TCanvas("c2", "Track parameters evolution through the track", 600/(1. - margin.left - margin.right), 600/(1. - margin.top - margin.bottom));
+    c2.SetGridx(true);
+
+    grTanL.SetLineColor(TColor::GetColor("#377eb8"));
+    grTanL.SetLineWidth(5);
+    grTrueTanL.SetLineColor(TColor::GetColor("#e41a1c"));
+    grTrueTanL.SetLineWidth(5);
+    TMultiGraph mg2;
+    mg2.Add(&grTanL);
+    mg2.Add(&grTrueTanL);
+    mg2.GetXaxis()->SetTitle("z (mm)");
+    mg2.GetXaxis()->SetNdivisions(508);
+    mg2.GetXaxis()->SetNoExponent(true);
+    mg2.GetYaxis()->SetTitle("tan #lambda");
+    mg2.GetYaxis()->SetTitleOffset(1.5);
+    mg2.GetXaxis()->CenterTitle(true);
+    mg2.GetYaxis()->CenterTitle(true);
+    mg2.Draw("AL");
+    c2.Update();
+    double range2 = c2.GetUymax() - c2.GetUymin();
+    mg2.GetYaxis()->SetRangeUser(c2.GetUymin() - 0.5*range2, c2.GetUymax() + 0.5*range2);
+    c2.Modified(); c2.Update();
+
+    // draw an axis on the right side
+    auto axis2 = TGaxis(c2.GetUxmax(),c2.GetUymax(), c2.GetUxmax(), c2.GetUymin(), tanL2theta(c2.GetUymax()), tanL2theta(c2.GetUymin()), 510, "L-");
+    axis2.SetMaxDigits(2);
+    axis2.SetTitle("#theta (#circ)");
+    axis2.SetTitleOffset(1.5);
+    axis2.CenterTitle(true);
+    axis2.SetTitleColor(1);
+    axis2.SetTitleFont(42);
+    axis2.SetTitleSize(0.06); // ILD 0.07
+    // For the axis labels:
+    axis2.SetLabelColor(1);
+    axis2.SetLabelFont(42);
+    axis2.SetLabelOffset(0.007); // ILD 0.015
+    axis2.SetLabelSize(0.05); // ILD 0.06
+
+    // For the axis:
+    axis2.SetTickLength(0.03);
+    axis2.Draw();
+
+    TLegend legend2 = TLegend(0.52, 0.755, 0.765, 0.895);
+    legend2.SetHeader(Form("PDG: %d", pdg));
+    legend2.AddEntry(&grTanL, "Reconstructed", "l");
+    legend2.AddEntry(&grTrueTanL, "True", "l");
+    legend2.Draw();
+    c2.Modified(); c2.Update();
+    c2.SaveAs( Form("./plots/track_params/pdg_%d_pt_%2.0f_pz_%2.0f_tanl.png", pdg, mcMom.rho()*1000, mcMom.z()*1000) );
+    // while ( !gSystem->ProcessEvents() ){
+    //     gSystem->Sleep(5);
+    // }
+    picture_counter++;
+
+
+
+
+
+
+
+
+
+
 
 }    
 
