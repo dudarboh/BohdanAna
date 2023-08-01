@@ -31,7 +31,7 @@ const EVENT::TrackState* getTrackStateAtCalorimeter(EVENT::Track* track);
 
 IMPL::TrackStateImpl getTrackStateAtHit(MarlinTrk::IMarlinTrack* marlinTrack, EVENT::TrackerHit* hit);
 
-EVENT::MCParticle* getMC(EVENT::ReconstructedParticle* pfo, UTIL::LCRelationNavigator pfo2mc);
+EVENT::MCParticle* getMC(EVENT::ReconstructedParticle* pfo, const UTIL::LCRelationNavigator& pfo2mc);
 
 double getECALBarelRMin();
 
@@ -39,7 +39,7 @@ double getECALEndcapZMin();
 
 dd4hep::rec::Vector3D getPhotonAtCalorimeter(EVENT::MCParticle* mc);
 
-EVENT::SimTrackerHit* getSimTrackerHit(EVENT::TrackerHit* hit, UTIL::LCRelationNavigator navToSimTrackerHits);
+EVENT::SimTrackerHit* getSimTrackerHit(EVENT::TrackerHit* hit, const UTIL::LCRelationNavigator& navToSimTrackerHits);
 
 
 #endif

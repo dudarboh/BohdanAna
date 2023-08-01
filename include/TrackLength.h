@@ -74,10 +74,10 @@ double getHelixLength(dd4hep::rec::Vector3D p_start, double z_start, double z_en
 double getTrackLengthSHA(EVENT::Track* track, int location, TrackLengthOption option);
 
 
-std::vector<HitState> getTrackStates(EVENT::ReconstructedParticle* pfo, double bField, MarlinTrk::IMarlinTrkSystem* trkSystem, UTIL::LCRelationNavigator navToSimTrackerHits);
+std::vector<HitState> getTrackStates(EVENT::ReconstructedParticle* pfo, double bField, MarlinTrk::IMarlinTrkSystem* trkSystem, const UTIL::LCRelationNavigator& navToSimTrackerHits);
 
 // iterative Kalman Filter (IKF)
-TrackLengthResult getTrackLengthIKF(std::vector<IMPL::TrackStateImpl> trackStates, double bField, TrackLengthOption option);
+TrackLengthResult getTrackLengthIKF(const std::vector<IMPL::TrackStateImpl>& trackStates, double bField, TrackLengthOption option);
 
 
 ////////////////////////////////////////////////////////////////

@@ -42,12 +42,29 @@ void BohdanAna::init(){
     _tree->Branch("recoCaloPx", &(_recoCaloMom[0]) );
     _tree->Branch("recoCaloPy", &(_recoCaloMom[1]) );
     _tree->Branch("recoCaloPz", &(_recoCaloMom[2]) );
-    _tree->Branch("harmonicMomToEcal", &_trackLength.harmonicMomToEcal);
-    _tree->Branch("harmonicMomToSET", &_trackLength.harmonicMomToSET);
 
     //track lengths
-    _tree->Branch("trackLengthToEcal", &_trackLength.trackLengthToEcal);
-    _tree->Branch("trackLengthToSET", &_trackLength.trackLengthToSET);
+    _tree->Branch("trackLengthToEcal_SHA_phiLambda_IP", &_trackLength_SHA_phiLambda_IP);
+    _tree->Branch("trackLengthToEcal_SHA_phiZed_IP", &_trackLength_SHA_phiZed_IP);
+    _tree->Branch("trackLengthToEcal_SHA_zedLambda_IP", &_trackLength_SHA_zedLambda_IP);
+    _tree->Branch("trackLengthToEcal_SHA_phiLambda_ECAL", &_trackLength_SHA_phiLambda_ECAL);
+    _tree->Branch("trackLengthToEcal_SHA_phiZed_ECAL", &_trackLength_SHA_phiZed_ECAL);
+    _tree->Branch("trackLengthToEcal_SHA_zedLambda_ECAL", &_trackLength_SHA_zedLambda_ECAL);
+
+    _tree->Branch("trackLengthToEcal_IKF_phiLambda", &_trackLength_IKF_phiLambda.trackLengthToEcal);
+    _tree->Branch("trackLengthToSET_IKF_phiLambda", &_trackLength_IKF_phiLambda.trackLengthToSET);
+    _tree->Branch("harmonicMomToEcal_IKF_phiLambda", &_trackLength_IKF_phiLambda.harmonicMomToEcal);
+    _tree->Branch("harmonicMomToSET_IKF_phiLambda", &_trackLength_IKF_phiLambda.harmonicMomToSET);
+
+    _tree->Branch("trackLengthToEcal_IKF_phiZed", &_trackLength_IKF_phiZed.trackLengthToEcal);
+    _tree->Branch("trackLengthToSET_IKF_phiZed", &_trackLength_IKF_phiZed.trackLengthToSET);
+    _tree->Branch("harmonicMomToEcal_IKF_phiZed", &_trackLength_IKF_phiZed.harmonicMomToEcal);
+    _tree->Branch("harmonicMomToSET_IKF_phiZed", &_trackLength_IKF_phiZed.harmonicMomToSET);
+
+    _tree->Branch("trackLengthToEcal_IKF_zedLambda", &_trackLength_IKF_zedLambda.trackLengthToEcal);
+    _tree->Branch("trackLengthToSET_IKF_zedLambda", &_trackLength_IKF_zedLambda.trackLengthToSET);
+    _tree->Branch("harmonicMomToEcal_IKF_zedLambda", &_trackLength_IKF_zedLambda.harmonicMomToEcal);
+    _tree->Branch("harmonicMomToSET_IKF_zedLambda", &_trackLength_IKF_zedLambda.harmonicMomToSET);
 
     //tofs
     _tree->Branch("layerClosest", &_layerClosest);
@@ -96,16 +113,32 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
             for(int j=0; j<3; j++) _recoIpMom.at(j) = pfo->getMomentum()[j];
             for(int j=0; j<3; j++) _recoCaloMom.at(j) = trackMomAtCalo[j];
 
+            streamlog_out(DEBUG8)<<"getTrackStates()"<<std::endl;
             std::vector<HitState> trackHitStates = getTrackStates(pfo, _bField, _trkSystem, navToSimTrackerHits);
             std::vector<IMPL::TrackStateImpl> trackStates;
             for(auto& hitState: trackHitStates){
                 trackStates.push_back(hitState.ts);
             }
-            _trackLength = getTrackLengthIKF(trackStates, _bField, TrackLengthOption::zedLambda);
 
+            streamlog_out(DEBUG8)<<"getTrackLengthSHA(AtIP)"<<std::endl;
+            _trackLength_SHA_phiLambda_IP = getTrackLengthSHA(track, TrackState::AtIP, TrackLengthOption::phiLambda);
+            _trackLength_SHA_phiZed_IP = getTrackLengthSHA(track, TrackState::AtIP, TrackLengthOption::phiZed);
+            _trackLength_SHA_zedLambda_IP = getTrackLengthSHA(track, TrackState::AtIP, TrackLengthOption::zedLambda);
+            streamlog_out(DEBUG8)<<"getTrackLengthSHA(AtCalorimeter)"<<std::endl;
+            _trackLength_SHA_phiLambda_ECAL = getTrackLengthSHA(track, TrackState::AtCalorimeter, TrackLengthOption::phiLambda);
+            _trackLength_SHA_phiZed_ECAL = getTrackLengthSHA(track, TrackState::AtCalorimeter, TrackLengthOption::phiZed);
+            _trackLength_SHA_zedLambda_ECAL = getTrackLengthSHA(track, TrackState::AtCalorimeter, TrackLengthOption::zedLambda);
+            streamlog_out(DEBUG8)<<"getTrackLengthIKF()"<<std::endl;
+            _trackLength_IKF_phiLambda = getTrackLengthIKF(trackStates, _bField, TrackLengthOption::phiLambda);
+            _trackLength_IKF_phiZed = getTrackLengthIKF(trackStates, _bField, TrackLengthOption::phiZed);
+            _trackLength_IKF_zedLambda = getTrackLengthIKF(trackStates, _bField, TrackLengthOption::zedLambda);
+
+            streamlog_out(DEBUG8)<<"getTofClosest()"<<std::endl;
             _layerClosest = getTofClosest(cluster, trackPosAtCalo, 0.).first;
 
+            streamlog_out(DEBUG8)<<"selectFrankEcalHits()"<<std::endl;
             auto selectedHits = selectFrankEcalHits(cluster, trackPosAtCalo, trackMomAtCalo, 10);
+            streamlog_out(DEBUG8)<<"Calculating TOFs for all resolutions"<<std::endl;
             for (int j = 0; j < 11; j++){
                 _tofClosest.at(j) = getTofClosest(cluster, trackPosAtCalo, 0.01*j).second;
                 _tofAverage.at(j) = getTofFrankAvg(selectedHits, trackPosAtCalo, 0.01*j);
@@ -114,14 +147,17 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
             }
 
             // plotCanvas(cluster, trackPosAtCalo, trackMomAtCalo, mc);
-            plotTrackParams(trackHitStates, pfo, mc, _bField);
+            // plotTrackParams(trackHitStates, pfo, mc, _bField);
         }
         else if( isPhoton && nTracks == 0 && ( !mc->isDecayedInTracker() ) ) {
+            streamlog_out(DEBUG8)<<"Photon stuff"<<std::endl;
+
             Vector3D photonPosAtCalo = getPhotonAtCalorimeter(mc);
             Vector3D mom( mc->getMomentum() );
 
             _layerClosest = getTofClosest(cluster, photonPosAtCalo, 0.).first;
             auto selectedHits = selectFrankEcalHits(cluster, photonPosAtCalo, mom, 10);
+            streamlog_out(DEBUG8)<<"Calculating TOFs for all resolutions"<<std::endl;
             for (int j = 0; j < 11; j++){
                 _tofClosest.at(j) = getTofClosest(cluster, photonPosAtCalo, 0.01*j).second;
                 _tofAverage.at(j) = getTofFrankAvg(selectedHits, photonPosAtCalo, 0.01*j);
@@ -141,7 +177,7 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
 
 void BohdanAna::end(){
     _file->Write();
-    _application.Run(true);
+    // _application.Run(true);
 }
 
 void BohdanAna::resetVariables(){
@@ -150,7 +186,15 @@ void BohdanAna::resetVariables(){
     _recoIpMom.fill(0.);
     _recoCaloMom.fill(0.);
 
-    _trackLength = TrackLengthResult();
+    _trackLength_SHA_phiLambda_IP = 0.;
+    _trackLength_SHA_phiZed_IP = 0.;
+    _trackLength_SHA_zedLambda_IP = 0.;
+    _trackLength_SHA_phiLambda_ECAL = 0.;
+    _trackLength_SHA_phiZed_ECAL = 0.;
+    _trackLength_SHA_zedLambda_ECAL = 0.;
+    _trackLength_IKF_phiLambda = TrackLengthResult();
+    _trackLength_IKF_phiZed = TrackLengthResult();
+    _trackLength_IKF_zedLambda = TrackLengthResult();
 
     _layerClosest = -1;
     _tofClosest.fill(0.);

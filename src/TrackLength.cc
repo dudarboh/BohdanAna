@@ -11,7 +11,7 @@
 using namespace EVENT;
 using dd4hep::rec::Vector3D;
 
-std::vector<HitState> getTrackStates(ReconstructedParticle* pfo, double bField, MarlinTrk::IMarlinTrkSystem* trkSystem, UTIL::LCRelationNavigator navToSimTrackerHits){
+std::vector<HitState> getTrackStates(ReconstructedParticle* pfo, double bField, MarlinTrk::IMarlinTrkSystem* trkSystem, const UTIL::LCRelationNavigator& navToSimTrackerHits){
     // Refit the track and extract track state at every tracker hit along the track
     std::vector<HitState> trackStates;
     if ( pfo->getTracks().empty() ) return trackStates;
@@ -24,11 +24,11 @@ std::vector<HitState> getTrackStates(ReconstructedParticle* pfo, double bField, 
         return posA.rho() < posB.rho();
     };
 
-    streamlog_out(DEBUG8)<<"PFOs track has "<<subTracks.size()<<" subTracks."<<std::endl;
+    streamlog_out(DEBUG7)<<"PFOs track has "<<subTracks.size()<<" subTracks."<<std::endl;
     for(size_t i=0; i<subTracks.size(); ++i){
         std::vector <TrackerHit*> hits = subTracks[i]->getTrackerHits();
 
-        streamlog_out(DEBUG8)<<"Subtrack "<<i+1<<" has "<<hits.size()<<" hits."<<std::endl;
+        streamlog_out(DEBUG7)<<"Subtrack "<<i+1<<" has "<<hits.size()<<" hits."<<std::endl;
         std::sort(hits.begin(), hits.end(), sortByRho);
 
         // setup initial dummy covariance matrix
@@ -49,7 +49,7 @@ std::vector<HitState> getTrackStates(ReconstructedParticle* pfo, double bField, 
         int errorFit = MarlinTrk::createFinalisedLCIOTrack(marlinTrk.get(), hits, &refittedTrack, MarlinTrk::IMarlinTrack::backward, &preFit, bField, maxChi2PerHit);
         //if fit fails, try also fit forward
         if (errorFit != 0){
-            streamlog_out(DEBUG8)<<"Fit backward fails! Trying to fit forward for "<<i+1<<" subTrack in this PFO!"<<std::endl;
+            streamlog_out(DEBUG7)<<"Fit backward fails! Trying to fit forward for "<<i+1<<" subTrack in this PFO!"<<std::endl;
             marlinTrk.reset( trkSystem->createTrack() );
             errorFit = MarlinTrk::createFinalisedLCIOTrack(marlinTrk.get(), hits, &refittedTrack, MarlinTrk::IMarlinTrack::forward, &preFit, bField, maxChi2PerHit);
         }
@@ -71,16 +71,16 @@ std::vector<HitState> getTrackStates(ReconstructedParticle* pfo, double bField, 
         // OPTIMIZE: 10 mm is just a round number. With very small z difference it is more robust to use rho, to be sure z difference is not caused by tpc Z resolution or multiple scattering
         if ( std::abs(zLast - zFirst) > 10. ){
             if ( zLast < zFirst ) loopForward = false;
-            streamlog_out(DEBUG8)<<"Using Z to define loop direction over subTrack hits."<<std::endl;
-            streamlog_out(DEBUG8)<<"subTrack "<<i+1<<" zFirst: "<<hitsInFit.front().first->getPosition()[2]<<" zLast: "<<hitsInFit.back().first->getPosition()[2]<<" loop forward: "<<loopForward<<std::endl;
+            streamlog_out(DEBUG7)<<"Using Z to define loop direction over subTrack hits."<<std::endl;
+            streamlog_out(DEBUG7)<<"subTrack "<<i+1<<" zFirst: "<<hitsInFit.front().first->getPosition()[2]<<" zLast: "<<hitsInFit.back().first->getPosition()[2]<<" loop forward: "<<loopForward<<std::endl;
         }
         else{
             double rhoFirst = std::hypot( hitsInFit.front().first->getPosition()[0], hitsInFit.front().first->getPosition()[1] );
             double rhoLast = std::hypot( hitsInFit.back().first->getPosition()[0], hitsInFit.back().first->getPosition()[1] );
             if ( rhoLast < rhoFirst ) loopForward = false;
-            streamlog_out(DEBUG8)<<"Track is very perpendicular (dz < 10 mm). Using rho to define loop direction over subTrack hits."<<std::endl;
-            streamlog_out(DEBUG8)<<"subTrack "<<i+1<<" zFirst: "<<hitsInFit.front().first->getPosition()[2]<<" zLast: "<<hitsInFit.back().first->getPosition()[2]<<std::endl;
-            streamlog_out(DEBUG8)<<"subTrack "<<i+1<<" rhoFirst: "<<rhoFirst<<" rhoLast: "<<rhoLast<<" loop forward: "<<loopForward<<std::endl;
+            streamlog_out(DEBUG7)<<"Track is very perpendicular (dz < 10 mm). Using rho to define loop direction over subTrack hits."<<std::endl;
+            streamlog_out(DEBUG7)<<"subTrack "<<i+1<<" zFirst: "<<hitsInFit.front().first->getPosition()[2]<<" zLast: "<<hitsInFit.back().first->getPosition()[2]<<std::endl;
+            streamlog_out(DEBUG7)<<"subTrack "<<i+1<<" rhoFirst: "<<rhoFirst<<" rhoLast: "<<rhoLast<<" loop forward: "<<loopForward<<std::endl;
         }
 
         int nHitsInFit = hitsInFit.size();
@@ -136,7 +136,7 @@ double getTrackLengthSHA(Track* track, int location=TrackState::AtCalorimeter, T
 }
 
 
-TrackLengthResult getTrackLengthIKF(std::vector<IMPL::TrackStateImpl> trackStates, double bField, TrackLengthOption option){
+TrackLengthResult getTrackLengthIKF(const std::vector<IMPL::TrackStateImpl>& trackStates, double bField, TrackLengthOption option){
     TrackLengthResult result;
     int nTrackStates = trackStates.size();
     if (nTrackStates <= 1) return result;
@@ -156,7 +156,7 @@ TrackLengthResult getTrackLengthIKF(std::vector<IMPL::TrackStateImpl> trackState
     result.trackLengthToEcal = result.trackLengthToSET + lastArcLength;
     result.harmonicMomToEcal = result.harmonicMomToSET + lastArcLength/lastMom.r2();
 
-    // don't forget to properly calculate harmonic momentum!
+    // don't forget to do the last step to properly calculate harmonic momentum!
     result.harmonicMomToSET = std::sqrt(result.trackLengthToSET/result.harmonicMomToSET);
     result.harmonicMomToEcal = std::sqrt(result.trackLengthToEcal/result.harmonicMomToEcal);
 

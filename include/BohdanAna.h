@@ -38,7 +38,16 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
         std::array<double, 3> _recoIpMom{};
         std::array<double, 3> _recoCaloMom{};
 
-        TrackLengthResult _trackLength; // only latest and greatest for now, with HM momenta
+        double _trackLength_SHA_phiLambda_IP;
+        double _trackLength_SHA_phiZed_IP;
+        double _trackLength_SHA_zedLambda_IP;
+        double _trackLength_SHA_phiLambda_ECAL;
+        double _trackLength_SHA_phiZed_ECAL;
+        double _trackLength_SHA_zedLambda_ECAL;
+        TrackLengthResult _trackLength_IKF_phiLambda;
+        TrackLengthResult _trackLength_IKF_phiZed;
+        TrackLengthResult _trackLength_IKF_zedLambda;
+
 
         //each element per time resolution from 0 to 100 ps
         int _layerClosest = -1;

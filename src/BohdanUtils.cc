@@ -113,7 +113,7 @@ IMPL::TrackStateImpl getTrackStateAtHit(MarlinTrk::IMarlinTrack* marlinTrack, EV
 }
 
 
-EVENT::MCParticle* getMC(EVENT::ReconstructedParticle* pfo, UTIL::LCRelationNavigator pfo2mc){
+EVENT::MCParticle* getMC(EVENT::ReconstructedParticle* pfo, const UTIL::LCRelationNavigator& pfo2mc){
     const std::vector<EVENT::LCObject*>& objects = pfo2mc.getRelatedToObjects(pfo);
     const std::vector<float>& weights = pfo2mc.getRelatedToWeights(pfo);
     if ( objects.empty() ) return nullptr;
@@ -204,7 +204,7 @@ dd4hep::rec::Vector3D getPhotonAtCalorimeter(EVENT::MCParticle* mc){
     return intersectionEndcap;
 };
 
-EVENT::SimTrackerHit* getSimTrackerHit(EVENT::TrackerHit* hit, UTIL::LCRelationNavigator navToSimTrackerHits){
+EVENT::SimTrackerHit* getSimTrackerHit(EVENT::TrackerHit* hit, const UTIL::LCRelationNavigator& navToSimTrackerHits){
     // I merge all tracker hit relation collections in the steering file. ENSURE this happens!
     // Otherwise I need to check every possible tracker hit relation collection, which makes this code x10 longer.
     // In case collection doesn't exist, merging is still happens (I think..) with a warning, which is good.

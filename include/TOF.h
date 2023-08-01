@@ -14,9 +14,9 @@ std::vector<EVENT::CalorimeterHit*> selectFrankEcalHits( EVENT::Cluster* cluster
 
 std::pair<int, double> getTofClosest( EVENT::Cluster* cluster, dd4hep::rec::Vector3D posAtEcal, double timeResolution);
 
-double getTofFrankAvg( std::vector<EVENT::CalorimeterHit*> selectedHits, dd4hep::rec::Vector3D posAtEcal, double timeResolution);
+double getTofFrankAvg( const std::vector<EVENT::CalorimeterHit*>& selectedHits, dd4hep::rec::Vector3D posAtEcal, double timeResolution);
 
-double getTofFrankFit( std::vector<EVENT::CalorimeterHit*> selectedHits, dd4hep::rec::Vector3D posAtEcal, double timeResolution);
+double getTofFrankFit( const std::vector<EVENT::CalorimeterHit*>& selectedHits, dd4hep::rec::Vector3D posAtEcal, double timeResolution);
 
 double getTofSET(EVENT::Track* track, double timeResolution);
 

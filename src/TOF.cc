@@ -64,7 +64,7 @@ std::pair<int, double> getTofClosest( EVENT::Cluster* cluster, dd4hep::rec::Vect
 
 
 
-double getTofFrankAvg( std::vector<EVENT::CalorimeterHit*> selectedHits, Vector3D posAtEcal, double timeResolution){
+double getTofFrankAvg( const std::vector<EVENT::CalorimeterHit*>& selectedHits, Vector3D posAtEcal, double timeResolution){
     double tof = 0.;
     if ( selectedHits.empty() ) return tof;
 
@@ -77,7 +77,7 @@ double getTofFrankAvg( std::vector<EVENT::CalorimeterHit*> selectedHits, Vector3
 }
 
 
-double getTofFrankFit( std::vector<EVENT::CalorimeterHit*> selectedHits, Vector3D posAtEcal, double timeResolution){
+double getTofFrankFit( const std::vector<EVENT::CalorimeterHit*>& selectedHits, Vector3D posAtEcal, double timeResolution){
     double tof = 0.;
     if ( selectedHits.empty() ) return tof;
     else if ( selectedHits.size() == 1 ){

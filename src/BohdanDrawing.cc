@@ -350,7 +350,7 @@ void plotECALTimes(EVENT::Cluster* cluster, Vector3D posAtEcal, Vector3D momAtEc
 
 }
 
-void plotTrackParams(std::vector<HitState> trackHitStates, EVENT::ReconstructedParticle* pfo, EVENT::MCParticle* mc, double bField){
+void plotTrackParams(const std::vector<HitState>& trackHitStates, EVENT::ReconstructedParticle* pfo, EVENT::MCParticle* mc, double bField){
     // DEBUG output
     int pdg = std::abs( mc->getPDG() );
     std::cout<<"PDG: "<<pdg<<std::endl;
