@@ -4,7 +4,7 @@ executable = $(project_folder)/job/job.sh
 initialdir = /nfs/dust/ilc/user/dudarboh/jobs
 arguments = $(file) $(Process) $(project_folder)
 
-log = ../log/BohdanAna.log
+log = ../log/log.$(Process)
 output = ../log/out.$(Process)
 error = ../log/err.$(Process)
 
