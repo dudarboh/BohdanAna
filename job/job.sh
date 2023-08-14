@@ -11,7 +11,7 @@ project_folder=${3}
 source /cvmfs/sw-nightlies.hsf.org/key4hep/setup.sh &&
 export MARLIN_DLL=$MARLIN_DLL:${project_folder}/lib/libBohdanAna.so
 
-mkdir ${process} && cd ${process}
+mkdir job_${process} && cd job_${process}
 
 # cp ${1} .
 # use copied file locally, not the one from cvmfs! Previously it caused a lot of jobs to crash. But now it seems fine...
@@ -20,4 +20,4 @@ mkdir ${process} && cd ${process}
 Marlin ${project_folder}/xml/steer.xml --global.LCIOInputFiles="${file}"
 # # Marlin sometimes seg. faults after successful finish so don't do &&...
 mv *.root ../../final/${process}.root
-cd .. && rm -r ${process}
+cd .. && rm -r job_${process}
