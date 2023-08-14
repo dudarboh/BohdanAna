@@ -33,6 +33,7 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
         std::unique_ptr<TTree> _tree;
 
         int _pdg{};
+        double _dEdx{};
 
         std::array<double, 3> _mcMom{};
         std::array<double, 3> _recoIpMom{};

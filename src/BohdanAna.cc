@@ -32,6 +32,10 @@ void BohdanAna::init(){
     //mc
     _tree->Branch("pdg", &_pdg);
 
+    //dEdx
+    _tree->Branch("dEdx", &_dEdx);
+
+
     //momenta
     _tree->Branch("mcPx", &(_mcMom[0]) );
     _tree->Branch("mcPy", &(_mcMom[1]) );
@@ -105,6 +109,8 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
         bool isPhoton = std::abs(_pdg) == 22;
         if (isHadron && nTracks == 1){
             Track* track = pfo->getTracks().at(0);
+            _dEdx = track->getdEdx();
+
             auto tsCalo = getTrackStateAtCalorimeter( track );
             Vector3D trackPosAtCalo( tsCalo->getReferencePoint() );
             std::array<double, 3> mom = UTIL::getTrackMomentum(tsCalo, _bField);
@@ -182,6 +188,7 @@ void BohdanAna::end(){
 
 void BohdanAna::resetVariables(){
     _pdg = 0;
+    _dEdx = 0.;
     _mcMom.fill(0.);
     _recoIpMom.fill(0.);
     _recoCaloMom.fill(0.);

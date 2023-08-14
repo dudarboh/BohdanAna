@@ -5,15 +5,15 @@
     <execute>
         <processor name="InitDD4hep" />
         <processor name="MergeTrackerHitsRelations"/>
+        <processor name="Correct_dEdx"/>
         <processor name="BohdanAna"/>
-        
     </execute>
 
     <global>
         <parameter name="LCIOInputFiles" type="StringVec">
             /pnfs/desy.de/ilc/prod/ilc/mc-2020/ild/rec/250-SetA/2f_hadronic_eL_pR/ILD_l5_o1_v02/v02-02/00015161/000/rv02-02.sv02-02.mILD_l5_o1_v02.E250-SetA.I500010.P2f_z_h.eL.pR.n001_209.d_rec_00015161_259.slcio
         </parameter>
-        <parameter name="MaxRecordNumber" type="int">0</parameter>
+        <parameter name="MaxRecordNumber" type="int">10</parameter>
         <parameter name="SkipNEvents" type="int">0</parameter>
         <parameter name="SupressCheck" type="bool">false</parameter>
         <parameter name="AllowToModifyEvent" type="bool">false</parameter>
@@ -23,7 +23,6 @@
 
     <processor name="InitDD4hep" type="InitializeDD4hep">
         <parameter name="DD4hepXMLFile" type="string">
-        
             /cvmfs/sw-nightlies.hsf.org/key4hep/releases/2023-07-22/x86_64-centos7-gcc12.2.0-opt/k4geo/1c08affe597cf3b1c10c4e81cdbc95ab9e4a4d23=develop-q7e4mj/share/k4geo/compact/ILD/compact/ILD_l5_o1_v02/ILD_l5_o1_v02.xml
         </parameter>
     </processor>
@@ -33,14 +32,25 @@
         <parameter name="eventDisplay" type="bool">true</parameter>
     </processor>
 
-  <processor name="MergeTrackerHitsRelations" type="MergeCollections">
+    <processor name="MergeTrackerHitsRelations" type="MergeCollections">
     <parameter name="InputCollections" type="StringVec"> VXDTrackerHitRelations TPCTrackerHitRelations SITTrackerHitRelations SETTrackerHitRelations FTDPixelTrackerHitRelations FTDStripTrackerHitRelations </parameter>
     <parameter name="OutputCollection" type="string"> TrackerHitsRelations </parameter>
-  </processor>
+    </processor>
 
-  <processor name="MergeClusterHitsRelations" type="MergeCollections">
+    <processor name="MergeClusterHitsRelations" type="MergeCollections">
     <parameter name="InputCollections" type="StringVec"> EcalBarrelRelationsSimRec EcalEndcapRingRelationsSimRec EcalEndcapsRelationsSimRec </parameter>
     <parameter name="OutputCollection" type="string"> ClusterHitsRelations </parameter>
-  </processor>
+    </processor>
+
+    <processor name="Correct_dEdx" type="AngularCorrection_dEdxProcessor">
+        <!--parameter for new angular correction dedx= uncorrected_dedx  / f, with f= pol3(lambda)-->
+        <!-- Parameters for 2020 DST (and all generated with v02-02 and v02-02-01 -->
+        <parameter name="AngularCorrectionParameters" type="FloatVec"> 0.970205 0.0007506 4.41781e-8 5.8222e-8 </parameter>
+        <!--LDC track collection name-->
+        <parameter name="LDCTrackCollection" type="string" lcioInType="Track">MarlinTrkTracks </parameter>
+        <!--parameters used in the outdated angular correction outdated_dedx= uncorrected_dedx / f, with f = 1. / ( 1.0+[1]*cos(theta)*cos(theta)/[0] )-->
+    </processor>
+
+
 
 </marlin>
