@@ -21,7 +21,7 @@ def draw_lines():
         lines[pdg].Draw()
     return lines
 
-df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna2.root")
+df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna.root")
 df = df.Filter("tofClosest0 > 6.").Filter("abs(pdg) == 211 || abs(pdg) == 321 || abs(pdg) == 2212")
 
 # algorithms = ["trackLengthToEcal_IKF_zedLambda",

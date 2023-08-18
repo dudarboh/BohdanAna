@@ -26,44 +26,47 @@ def get_separation_power(mu1, mu2, sigma1, sigma2, mu1_error=0, mu2_error=0):
     return sep_power, sep_power_error
 
 
-df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna2.root")
+df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna.root")
 df = df.Filter("tofClosest0 > 6.")
 
 #linear binning
+n_mom_bins = 50
+min_x = 0
+max_x = 20
 # n_mom_bins = 30
 # min_x = 0
 # max_x = 15
 
 #log binning
-n_mom_bins = 50
-min_x = -1 # 0.1 GeV
-max_x = 1.3 # ~ 20 GeV
-x_bins = np.array( [ 10**(min_x + (max_x-min_x)*i/n_mom_bins ) for i in range(n_mom_bins+1) ] )
+# n_mom_bins = 50
+# min_x = -1 # 0.1 GeV
+# max_x = 1.3 # ~ 20 GeV
+# x_bins = np.array( [ 10**(min_x + (max_x-min_x)*i/n_mom_bins ) for i in range(n_mom_bins+1) ] )
 
 
 def get_sep_power_graph(df, tof_column="tofClosest0"):
     df_total = df.Define("beta", f"trackLengthToEcal_IKF_zedLambda/({tof_column}*299.792458)")\
                 .Filter("beta >= 0 && beta <= 1")\
                 .Define("mass", "harmonicMomToEcal_IKF_zedLambda*sqrt( 1./(beta*beta) - 1.)*1000")
-    h_2d_total = df_total.Histo2D(("h_total", "All; momentum [GeV]; Mass [MeV]", n_mom_bins, x_bins, 500, -100, 1300.), "harmonicMomToEcal_IKF_zedLambda","mass")
+    h_2d_total = df_total.Histo2D(("h_total", "All; momentum [GeV]; Mass [MeV]", n_mom_bins, min_x, max_x, 1000, 0, 6000), "harmonicMomToEcal_IKF_zedLambda","mass")
 
     df_pion = df.Filter("abs(pdg) == 211")\
                 .Define("beta", f"trackLengthToEcal_IKF_zedLambda/({tof_column}*299.792458)")\
                 .Filter("beta >= 0 && beta <= 1")\
                 .Define("mass", "harmonicMomToEcal_IKF_zedLambda*sqrt( 1./(beta*beta) - 1.)*1000")
-    h_2d_pion = df_pion.Histo2D(("h_pion", "#pi; momentum [GeV]; Mass [MeV]", n_mom_bins, x_bins, 500, -100, 1300.), "harmonicMomToEcal_IKF_zedLambda","mass")
+    h_2d_pion = df_pion.Histo2D(("h_pion", "#pi; momentum [GeV]; Mass [MeV]", n_mom_bins, min_x, max_x, 1000, 0, 6000), "harmonicMomToEcal_IKF_zedLambda","mass")
 
     df_kaon = df.Filter("abs(pdg) == 321")\
                 .Define("beta", f"trackLengthToEcal_IKF_zedLambda/({tof_column}*299.792458)")\
                 .Filter("beta >= 0 && beta <= 1")\
                 .Define("mass", "harmonicMomToEcal_IKF_zedLambda*sqrt( 1./(beta*beta) - 1.)*1000")
-    h_2d_kaon = df_kaon.Histo2D(("h_kaon", "K; momentum [GeV]; Mass [MeV]", n_mom_bins, x_bins, 500, -100, 1300.), "harmonicMomToEcal_IKF_zedLambda","mass")
+    h_2d_kaon = df_kaon.Histo2D(("h_kaon", "K; momentum [GeV]; Mass [MeV]", n_mom_bins, min_x, max_x, 1000, 0, 6000), "harmonicMomToEcal_IKF_zedLambda","mass")
 
     df_proton = df.Filter("abs(pdg) == 2212")\
                 .Define("beta", f"trackLengthToEcal_IKF_zedLambda/({tof_column}*299.792458)")\
                 .Filter("beta >= 0 && beta <= 1")\
                 .Define("mass", "harmonicMomToEcal_IKF_zedLambda*sqrt( 1./(beta*beta) - 1.)*1000")
-    h_2d_proton = df_proton.Histo2D(("h_proton", "proton; momentum [GeV]; Mass [MeV]", n_mom_bins, x_bins, 500, -100, 1300.), "harmonicMomToEcal_IKF_zedLambda","mass")
+    h_2d_proton = df_proton.Histo2D(("h_proton", "proton; momentum [GeV]; Mass [MeV]", n_mom_bins, min_x, max_x, 1000, 0, 6000), "harmonicMomToEcal_IKF_zedLambda","mass")
 
     # DRAW FANCY 2D plot
     # ROOT.gStyle.SetPadRightMargin(0.12)
@@ -106,8 +109,8 @@ def get_sep_power_graph(df, tof_column="tofClosest0"):
     ### Calculate Sep. Power and plot Graphs ###
     gr_sp_pik = ROOT.TGraph()
     gr_sp_kp = ROOT.TGraph()
-    gr_sp_pik.SetTitle("#pi / K; momentum (GeV); Separation power")
-    gr_sp_kp.SetTitle("K / p; momentum (GeV); Separation power")
+    gr_sp_pik.SetTitle("; momentum [GeV]; #pi/K separation power")
+    gr_sp_kp.SetTitle("; momentum [GeV]; K/p separation power")
 
     for i in range(1, n_mom_bins+1):
         x = h_pion_mean.GetBinCenter(i)
@@ -129,16 +132,19 @@ def get_sep_power_graph(df, tof_column="tofClosest0"):
     # gr_sp_kp.Draw("PLsame")
     # gr_sp_kp.SetLineColor(4)
     # canvas2.Update()
-    return gr_sp_pik
-    input("wait")
+    # input("wait")
+    return gr_sp_kp
 
 canvas = ROOT.TCanvas("c",
                         "",
                         int(600/(1. - ROOT.gStyle.GetPadLeftMargin() - ROOT.gStyle.GetPadRightMargin())),
                         int(600/(1. - ROOT.gStyle.GetPadTopMargin() - ROOT.gStyle.GetPadBottomMargin())) )
+canvas.SetGridx(True)
+canvas.SetGridy(True)
+
 gr_sp={}
-colors = ["#690000", "#850e0f", "#a21d19", "#c02b25", "#df3831", "#ff463d"]
-colors = [ ROOT.TColor.GetColor(c) for c in colors]
+colors = ["#03045e","#023e8a","#0077b6","#0096c7","#00b4d8","#48cae4"]
+colors = [ ROOT.TColor.GetColor(c) for c in colors[::-1]]
 
 legend = ROOT.TLegend()
 for i, res in enumerate( [0, 10, 30, 50, 70, 90] ):
@@ -148,7 +154,7 @@ for i, res in enumerate( [0, 10, 30, 50, 70, 90] ):
     gr_sp[res].SetLineWidth(4)
     legend.AddEntry(gr_sp[res], f"{res} ps","l")
 
-gr_sp[0].GetXaxis().SetRangeUser(0, 15)
+gr_sp[0].GetXaxis().SetRangeUser(0, 19)
 gr_sp[0].GetYaxis().SetRangeUser(0, 12)
 legend.Draw()
 canvas.Update()

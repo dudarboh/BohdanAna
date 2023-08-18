@@ -6,7 +6,7 @@ ROOT.EnableImplicitMT()
 colors = ['#1b9e77', '#d95f02', '#7570b3']
 colors = [ ROOT.TColor.GetColor(c) for c in colors]
 
-df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna2.root")
+df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna.root")
 df = df.Filter("tofClosest0 > 6.").Define("mom", "sqrt(recoIpPx*recoIpPx + recoIpPy*recoIpPy + recoIpPz*recoIpPz)")
 
 df_pion = df.Filter("abs(pdg) == 211")

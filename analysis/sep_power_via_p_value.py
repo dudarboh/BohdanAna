@@ -22,7 +22,7 @@ def get_p_value(h1, h2):
     n_signal = h1.GetEntries()
     n_background = h2.GetEntries()
 
-    for cut in range(1, 3000):
+    for cut in range(1, h1.GetXaxis().GetNbins()):
         eff = h1.Integral(0, cut)/n_signal
         mis_id = h2.Integral(0, cut)/n_background
 
@@ -44,7 +44,7 @@ def get_p_value(h1, h2):
 
 
 # df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/dEdx/final.root")
-df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna2.root")
+df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna.root")
 df = df.Filter("tofClosest0 > 6.")
 n_mom_bins = 70
 n_mass_bins = 3000
@@ -101,8 +101,8 @@ def get_sep_power_graph(df, tof_column="tofClosest0"):
 
     gr_sp_pik = ROOT.TGraph()
     gr_sp_kp = ROOT.TGraph()
-    gr_sp_pik.SetTitle(f"{tof_column}; momentum [GeV]; #pi/K separation power")
-    gr_sp_kp.SetTitle("title; momentum [GeV]; K/p separation power")
+    gr_sp_pik.SetTitle("; momentum [GeV]; #pi/K separation power")
+    gr_sp_kp.SetTitle("; momentum [GeV]; K/p separation power")
     # gr_sp_pik.SetPoint(0, 0, 0)
     # gr_sp_kp.SetPoint(0, 0, 0)
 
@@ -112,8 +112,8 @@ def get_sep_power_graph(df, tof_column="tofClosest0"):
         h_proj_proton = h_2d_proton.ProjectionY("h_proton_projection", i, i)
 
         print(f"Computing for momentum range: {round(h_2d_total.GetXaxis().GetBinLowEdge(i), 2)} to {round(h_2d_total.GetXaxis().GetBinLowEdge(i+1), 2)}")
-        gr_sp_pik.SetPoint(i, h_2d_total.GetXaxis().GetBinCenter(i), get_p_value(h_proj_pion, h_proj_kaon) )
-        gr_sp_kp.SetPoint(i, h_2d_total.GetXaxis().GetBinCenter(i), get_p_value(h_proj_kaon, h_proj_proton))
+        gr_sp_pik.SetPoint(i-1, h_2d_total.GetXaxis().GetBinCenter(i), get_p_value(h_proj_pion, h_proj_kaon) )
+        gr_sp_kp.SetPoint(i-1, h_2d_total.GetXaxis().GetBinCenter(i), get_p_value(h_proj_kaon, h_proj_proton))
 
         # h_proj_pion.Draw()
         # h_proj_pion.SetLineColor(colors[0])
@@ -128,7 +128,7 @@ def get_sep_power_graph(df, tof_column="tofClosest0"):
     #                         "",
     #                         int(600/(1. - ROOT.gStyle.GetPadLeftMargin() - ROOT.gStyle.GetPadRightMargin())),
     #                         int(600/(1. - ROOT.gStyle.GetPadTopMargin() - ROOT.gStyle.GetPadBottomMargin())) )
-    return gr_sp_kp
+    return gr_sp_pik
     # gr_sp_pik.Draw("APL")
     # gr_sp_kp.Draw("PLsame")
     # gr_sp_kp.SetLineColor(4)
@@ -155,10 +155,15 @@ colors = [ ROOT.TColor.GetColor(c) for c in colors[::-1]]
 legend = ROOT.TLegend()
 for i, res in enumerate( [0, 10, 30, 50, 70, 90] ):
     gr_sp[res] = get_sep_power_graph(df, tof_column=f"tofClosest{int(res)}")
-    gr_sp[res].Draw("AL" if i == 0 else "Lsame")
+    gr_sp[res].Draw("ALP" if i == 0 else "LPsame")
     gr_sp[res].SetLineColor(colors[i])
+    gr_sp[res].SetMarkerColor(colors[i])
     gr_sp[res].SetLineWidth(4)
-    legend.AddEntry(gr_sp[res], f"{res} ps","l")
+    gr_sp[res].SetMarkerStyle(20)
+    if i == 0:
+        legend.AddEntry(gr_sp[res], "perfect TOF resolution","lp")
+    else:
+        legend.AddEntry(gr_sp[res], f"{res} ps","lp")
 
 gr_sp[0].GetXaxis().SetRangeUser(0, 19)
 gr_sp[0].GetYaxis().SetRangeUser(0, 6)
