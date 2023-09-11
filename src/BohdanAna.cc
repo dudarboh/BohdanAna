@@ -47,6 +47,9 @@ void BohdanAna::init(){
     _tree->Branch("recoCaloPx", &(_recoCaloMom[0]) );
     _tree->Branch("recoCaloPy", &(_recoCaloMom[1]) );
     _tree->Branch("recoCaloPz", &(_recoCaloMom[2]) );
+    _tree->Branch("recoCaloX", &(_recoCaloPos[0]) );
+    _tree->Branch("recoCaloY", &(_recoCaloPos[1]) );
+    _tree->Branch("recoCaloZ", &(_recoCaloPos[2]) );
 
     //track lengths
     _tree->Branch("trackLengthToEcal_SHA_phiLambda_IP", &_trackLength_SHA_phiLambda_IP);
@@ -141,6 +144,7 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
             Vector3D trackMomAtCalo(mom[0], mom[1], mom[2]);
 
             for(int j=0; j<3; j++) _recoIpMom.at(j) = pfo->getMomentum()[j];
+            for(int j=0; j<3; j++) _recoCaloPos.at(j) = trackPosAtCalo[j];
             for(int j=0; j<3; j++) _recoCaloMom.at(j) = trackMomAtCalo[j];
 
             streamlog_out(DEBUG8)<<"getTrackStates()"<<std::endl;
@@ -215,6 +219,7 @@ void BohdanAna::resetVariables(){
     _dEdx = 0.;
     _mcMom.fill(0.);
     _recoIpMom.fill(0.);
+    _recoCaloPos.fill(0.);
     _recoCaloMom.fill(0.);
 
     _trackLength_SHA_phiLambda_IP = 0.;

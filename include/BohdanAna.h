@@ -37,6 +37,7 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
 
         std::array<double, 3> _mcMom{};
         std::array<double, 3> _recoIpMom{};
+        std::array<double, 3> _recoCaloPos{};
         std::array<double, 3> _recoCaloMom{};
 
         double _trackLength_SHA_phiLambda_IP{};
