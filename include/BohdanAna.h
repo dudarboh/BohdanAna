@@ -57,6 +57,14 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
         std::array<double, 11> _tofSET{};
         std::array<double, 11> _tofFit{};
 
+        int _nHits;
+        std::vector<double> _xHit;
+        std::vector<double> _yHit;
+        std::vector<double> _zHit;
+        std::vector<double> _tHit;
+        std::vector<int> _layerHit;
+        std::vector<double> _energyHit;
+
         MarlinTrk::IMarlinTrkSystem* _trkSystem = nullptr;
         TApplication _application = TApplication("app", 0, nullptr);
 };

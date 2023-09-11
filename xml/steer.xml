@@ -29,7 +29,7 @@
 
     <processor name="BohdanAna" type="BohdanAna">
         <parameter name="Verbosity" options="DEBUG0-4,MESSAGE0-4,WARNING0-4,ERROR0-4,SILENT" type="string">MESSAGE</parameter>
-        <parameter name="eventDisplay" type="bool">true</parameter>
+        <parameter name="eventDisplay" type="bool">false</parameter>
     </processor>
 
     <processor name="MergeTrackerHitsRelations" type="MergeCollections">

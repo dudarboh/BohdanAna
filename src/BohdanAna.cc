@@ -5,6 +5,7 @@
 #include "TrackLength.h"
 
 #include "marlinutil/GeometryUtil.h"
+#include "marlinutil/CalorimeterHitType.h"
 #include "UTIL/LCRelationNavigator.h"
 #include "UTIL/TrackTools.h"
 #include "MarlinTrk/Factory.h"
@@ -79,6 +80,14 @@ void BohdanAna::init(){
         _tree->Branch(( "tofFit"+std::to_string(i*10) ).c_str(), &( _tofFit[i]) );
     }
 
+    _tree->Branch("nHits", &_nHits);
+    _tree->Branch("xHit", &_xHit);
+    _tree->Branch("yHit", &_yHit);
+    _tree->Branch("zHit", &_zHit);
+    _tree->Branch("tHit", &_tHit);
+    _tree->Branch("layerHit", &_layerHit);
+    _tree->Branch("energyHit", &_energyHit);
+
 }
 
 void BohdanAna::processEvent(EVENT::LCEvent * evt){
@@ -107,6 +116,21 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
 
         bool isHadron = std::abs(_pdg) == 211 || std::abs(_pdg) == 321 || std::abs(_pdg) == 2212;
         bool isPhoton = std::abs(_pdg) == 22;
+
+        for (const auto& hit:cluster->getCalorimeterHits()){
+            //Count only ECAL hits
+            CHT hitType( hit->getType() );
+            bool isEcal = (hitType.caloID() == CHT::ecal);
+            if (!isEcal) continue;
+            _xHit.push_back(hit->getPosition()[0]);
+            _yHit.push_back(hit->getPosition()[1]);
+            _zHit.push_back(hit->getPosition()[2]);
+            _tHit.push_back(hit->getTime());
+            _layerHit.push_back( hitType.layer() );
+            _energyHit.push_back( hit->getEnergy() );
+        }
+        _nHits = _tHit.size();
+
         if (isHadron && nTracks == 1){
             Track* track = pfo->getTracks().at(0);
             _dEdx = track->getdEdx();
@@ -208,4 +232,12 @@ void BohdanAna::resetVariables(){
     _tofAverage.fill(0.);
     _tofSET.fill(0.);
     _tofFit.fill(0.);
+
+    _nHits = 0;
+    _xHit.clear();
+    _yHit.clear();
+    _zHit.clear();
+    _tHit.clear();
+    _layerHit.clear();
+    _energyHit.clear();
 }
