@@ -3,10 +3,29 @@ import numpy as np
 ROOT.gStyle.SetPalette(ROOT.kBird)
 ROOT.gStyle.SetNumberContours(256)
 ROOT.gStyle.SetOptTitle(0)
-# ROOT.EnableImplicitMT()
+ROOT.EnableImplicitMT()
 
 
 code='''
+#include "Math/Vector3D.h"
+#include <random>
+using namespace ROOT::Math;
+using namespace ROOT::VecOps;
+using std::cout, std::endl, std::stringstream, std::vector, std::string, std::runtime_error;
+
+// in mm/ns
+#define SPEED_OF_LIGHT 299.792458
+// const double rInner = 1804.8;
+
+// smearing generator and distributions
+std::default_random_engine gen;
+std::normal_distribution gaus100(0., 0.1);
+
+RVec <XYZVector> hitPos(const RVec<double>& x, const RVec<double>& y, const RVec<double>& z){
+    auto constructHit = [](double x, double y, double z) { return XYZVector(x, y, z); };
+    return Map(x, y, z, constructHit);
+}
+
 
 RVec <double> dToImpact(const RVec<XYZVector>& hits, const XYZVector& rImpact){
     auto getDistance = [&](const XYZVector& hit) { return (hit - rImpact).R(); };
@@ -14,10 +33,10 @@ RVec <double> dToImpact(const RVec<XYZVector>& hits, const XYZVector& rImpact){
 }
 
 
-RVec <double> dToLine(const RVec <XYZVector>& hits, const XYZVector& vtx, const XYZVector& p){
+RVec <double> dToLine(const RVec <XYZVector>& hits, const XYZVector& p0, const XYZVector& p){
     RVec <double> distance;
     for (const auto& hit:hits){
-        double d = (hit - vtx).Cross(p.Unit()).R();
+        double d = (hit - p0).Cross(p.Unit()).R();
         distance.push_back(d);
     }
     return distance;
@@ -27,24 +46,35 @@ RVec <bool> selectHits(const RVec<double>& dToLine, const RVec<int>& layer_hit, 
     int nHits = dToLine.size();
     RVec <bool> selected(nHits);
 
-    if(!only_closest){
-        for (int i=0; i < nHits; ++i)
-            if (dToLine[i] < cyl_cut && layer_hit[i] < n_layers)
-                selected[i] = true;
-        return selected;
+    if(only_closest){
+        std::map<int, std::vector< std::pair<int, double> > > layer2hit;
+        for (int i=0; i < nHits; ++i){
+            if( dToLine[i] < cyl_cut ){
+                layer2hit[ layer_hit[i] ].push_back( { i, dToLine[i] } );
+            }
+        }
+
+        for (int layer=0; layer<n_layers; ++layer){
+            if ( layer2hit[layer].empty() ) continue;
+            int idx = (*std::min_element( layer2hit[layer].begin(), layer2hit[layer].end(), [](const auto& l, const auto& r) { return l.second < r.second; })).first;
+            selected[idx] = true;
+        }
     }
-
-    for (int layer=0; layer<n_layers; ++layer){
-        map<int, double> layer_hits;
-        for (int i=0; i < nHits; ++i)
-            if(dToLine[i] < cyl_cut && layer_hit[i] == layer)
-                layer_hits[i] = dToLine[i];
-
-        int min_idx =(*min_element(layer_hits.begin(), layer_hits.end(),
-                        [](const auto& l, const auto& r) { return l.second < r.second; }) ).first ;
-        selected[min_idx] = true;
+    else{
+        for (int i=0; i < nHits; ++i) selected[i] = dToLine[i] < cyl_cut && layer_hit[i] < n_layers;
     }
     return selected;
+}
+
+/////////////////////////////////TOFS////////////////////////////////
+RVec <double> smearTime(const RVec <double>& times){
+    auto smear = [&](double time){ return time + gaus100(gen); };
+    return Map(times, smear);
+}
+
+double tofClosest(const RVec<double>& tHit, const RVec<double>& dToImpact){
+    int min_idx = std::min_element(dToImpact.begin(), dToImpact.end()) - dToImpact.begin();
+    return tHit[min_idx] - dToImpact[min_idx]/SPEED_OF_LIGHT;
 }
 
 double tofAvg(const RVec <double>& tofHit, const RVec<double>& dToImpact){
@@ -61,89 +91,44 @@ ROOT.gInterpreter.Declare(code)
 colors = [ROOT.TColor.GetColor('#1b9e77'), ROOT.TColor.GetColor('#d95f02'), ROOT.TColor.GetColor('#7570b3'), ROOT.TColor.GetColor('#e7298a')]
 
 df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna.root")
-df = df.Filter("tofClosest0 > 6.").Filter("abs(pdg) == 211 || abs(pdg) == 321 || abs(pdg) == 2212")
-df = df.Define("")
+df = df.Filter("if (rdfentry_ % 1000 == 0){ std::cout << rdfentry_ << std::endl; } return true;")
+df = df.Filter("tofClosest0 > 6. && nHits > 0").Filter("abs(pdg) == 211 || abs(pdg) == 321 || abs(pdg) == 2212")
+df = df.Define("rImpact", "ROOT::Math::XYZVector(recoCaloX, recoCaloY, recoCaloZ)")\
+       .Define("momImpact", "ROOT::Math::XYZVector(recoCaloPx, recoCaloPy, recoCaloPz)")\
+       .Define("hitPos", "hitPos(xHit, yHit, zHit)")\
+       .Define("dToImpact", "dToImpact(hitPos, rImpact)")\
+       .Define("dToLine", "dToLine(hitPos, rImpact, momImpact)")\
+       .Define("tHitSmeared", "smearTime(tHit)")\
+       .Define("trueTOF", "tofClosest(tHit, dToImpact)")
 
+df = df.Define("defaultSelect", "selectHits(dToLine, layerHit, true, 10, 9999.)")\
+       .Define("tof_default", "tofAvg(tHitSmeared[defaultSelect], dToImpact[defaultSelect])")\
+       .Define("select_cut5", "selectHits(dToLine, layerHit, true, 10, 5.)")\
+       .Define("tof_cut5", "tofAvg(tHitSmeared[select_cut5], dToImpact[select_cut5])")\
+       .Define("select_cut10", "selectHits(dToLine, layerHit, true, 10, 10.)")\
+       .Define("tof_cut10", "tofAvg(tHitSmeared[select_cut10], dToImpact[select_cut10])")\
+       .Define("select_cut15", "selectHits(dToLine, layerHit, true, 10, 15.)")\
+       .Define("tof_cut15", "tofAvg(tHitSmeared[select_cut15], dToImpact[select_cut15])")\
+       .Define("select_cyl_all", "selectHits(dToLine, layerHit, false, 10, 9999.)")\
+       .Define("tof_cyl", "tofAvg(tHitSmeared[select_cyl_all], dToImpact[select_cyl_all])")\
+       .Define("select_cyl_cut5", "selectHits(dToLine, layerHit, false, 10, 5.)")\
+       .Define("tof_cyl_cut5", "tofAvg(tHitSmeared[select_cyl_cut5], dToImpact[select_cyl_cut5])")\
+       .Define("select_cyl_cut10", "selectHits(dToLine, layerHit, false, 10, 10.)")\
+       .Define("tof_cyl_cut10", "tofAvg(tHitSmeared[select_cyl_cut10], dToImpact[select_cyl_cut10])")\
+       .Define("select_cyl_cut15", "selectHits(dToLine, layerHit, false, 10, 15.)")\
+       .Define("tof_cyl_cut15", "tofAvg(tHitSmeared[select_cyl_cut15], dToImpact[select_cyl_cut15])")
 
-#PLOT 2D
-def plot_2d(track_length_column="trackLengthToEcal_IKF_zedLambda", tof_column="tofClosest0"):
-    print("1")
-    df_beta = df.Define("mom", "sqrt(recoIpPx*recoIpPx + recoIpPy*recoIpPy + recoIpPz*recoIpPz)").\
-                Define("beta", f"{track_length_column}/({tof_column}*299.792458)").Filter("beta >= 0 && beta <= 1")
-    df_mass = df_beta.Define("mass", "mom*sqrt( 1./(beta*beta) - 1.)*1000")
-    print("2")
-    h = df_mass.Histo2D((f"h_{track_length_column}", f"{track_length_column}; momentum [GeV]; Mass [MeV]", 500, 0, 15, 500, -100, 1300.), "mom","mass")
-    print("3")
+names = ["tof_default", "tof_cut5", "tof_cut10", "tof_cut15", "tof_cyl", "tof_cyl_cut5", "tof_cyl_cut10", "tof_cyl_cut15"]
+histos= []
 
-    canvas = ROOT.TCanvas(f"{track_length_column}",
-                        "",
-                        int(600/(1. - ROOT.gStyle.GetPadLeftMargin() - ROOT.gStyle.GetPadRightMargin())),
-                        int(600/(1. - ROOT.gStyle.GetPadTopMargin() - ROOT.gStyle.GetPadBottomMargin())) )
-    print("4")
+for n in names:
+    h = df.Define("diff", f"({n} - trueTOF) * 1000").Histo1D((f"h_{n}", ";#Delta T (ps);N entries", 300, -100, 100), "diff")
+    histos.append(h)
 
-    h.Draw("colz")
-    print("5")
-    h.SetMinimum(1)
-    h.SetMaximum(10000)
-    canvas.SetLogz()
-    canvas.SetGridx(0)
-    canvas.SetGridy(0)
-    canvas.SetRightMargin(0.12)
-    canvas.Update()
-    print("6")
-    palette = h.GetListOfFunctions().FindObject("palette")
-    palette.SetX1NDC(0.89)
-    palette.SetX2NDC(0.91)
-    canvas.Modified()
-    canvas.Update()
-    print("7")
-    input("wait")
-    canvas.Close()
-    print("8")
+hs = ROOT.THStack()
+for i, h in enumerate(histos):
+    hs.Add(h.GetPtr())
+    h.SetLineColor(i+1)
 
-
-#PLOT 1D
-def plot_1d():
-    algorithms = ["trackLengthToEcal_IKF_zedLambda",
-                "trackLengthToEcal_SHA_zedLambda_ECAL",
-                "trackLengthToEcal_SHA_phiLambda_IP"]
-
-    histos = []
-    for name in algorithms:
-        df_beta = df.Define("mom", "sqrt(recoIpPx*recoIpPx + recoIpPy*recoIpPy + recoIpPz*recoIpPz)").\
-                    Define("beta", f"{name}/(tofClosest0*299.792458)").Filter("beta >= 0 && beta <= 1")
-        df_mass = df_beta.Define("mass", "mom*sqrt( 1./(beta*beta) - 1.)*1000")
-        h = df_mass.Histo1D((f"h_{name}", f"{name}; mass [MeV]; N entries", 2000, 0, 1100), "mass")
-        histos.append(h)
-
-    ROOT.gStyle.SetPadLeftMargin(0.18)
-    hs = ROOT.THStack()
-    canvas = ROOT.TCanvas("mass_1d_track_lenghts",
-                            "",
-                            int(600/(1. - ROOT.gStyle.GetPadLeftMargin() - ROOT.gStyle.GetPadRightMargin())),
-                            int(600/(1. - ROOT.gStyle.GetPadTopMargin() - ROOT.gStyle.GetPadBottomMargin())) )
-    legend = ROOT.TLegend()
-    for i, (name, h) in enumerate(zip(algorithms, histos)):
-        h.Draw("" if i == 0 else "Lsame")
-        h.SetLineColor(colors[i])
-        h.SetLineWidth(3)
-        legend.AddEntry(h.GetPtr(),name,"l")
-
-    legend.Draw()
-    canvas.Modified()
-    canvas.Update()
-    input("wait")
-
-
-plot_1d()
-# plot_2d("trackLengthToEcal_SHA_phiLambda_IP", "tofClosest0")
-# plot_2d("trackLengthToEcal_SHA_phiZed_IP", "tofClosest0")
-# plot_2d("trackLengthToEcal_SHA_zedLambda_IP", "tofClosest0")
-
-# plot_2d("trackLengthToEcal_SHA_phiLambda_ECAL", "tofClosest0")
-# plot_2d("trackLengthToEcal_SHA_phiZed_ECAL", "tofClosest0")
-# plot_2d("trackLengthToEcal_SHA_zedLambda_ECAL", "tofClosest0")
-
-# plot_2d("trackLengthToEcal_IKF_phiLambda", "tofClosest0")
-# plot_2d("trackLengthToEcal_IKF_phiZed", "tofClosest0")
-# plot_2d("trackLengthToEcal_IKF_zedLambda", "tofClosest0")
+hs.Draw("nostack")
+input("wait")

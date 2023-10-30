@@ -31,28 +31,38 @@ def plot_2d(track_length_column="trackLengthToEcal_IKF_zedLambda", tof_column="t
                 Define("beta", f"{track_length_column}/({tof_column}*299.792458)").Filter("beta >= 0 && beta <= 1")
     df_mass = df_beta.Define("mass", "mom*sqrt( 1./(beta*beta) - 1.)*1000")
     print("2")
-    h = df_mass.Histo2D((f"h_{track_length_column}", f"{track_length_column}; momentum [GeV]; Mass [MeV]", 500, 0, 15, 500, -100, 1300.), "mom","mass")
+    h = df_mass.Histo2D((f"h_{track_length_column}", f"{track_length_column}; momentum [GeV]; mass [MeV]", 500, 0, 15, 500, -100, 1300.), "mom","mass")
     print("3")
 
-    canvas = ROOT.TCanvas(f"{track_length_column}",
-                        "",
-                        int(600/(1. - ROOT.gStyle.GetPadLeftMargin() - ROOT.gStyle.GetPadRightMargin())),
-                        int(600/(1. - ROOT.gStyle.GetPadTopMargin() - ROOT.gStyle.GetPadBottomMargin())) )
+    # canvas = ROOT.TCanvas(f"{track_length_column}",
+    #                     "",
+    #                     int(600/(1. - ROOT.gStyle.GetPadLeftMargin() - ROOT.gStyle.GetPadRightMargin())),
+    #                     int(600/(1. - ROOT.gStyle.GetPadTopMargin() - ROOT.gStyle.GetPadBottomMargin())) )
+
+    canvas = ROOT.TCanvas(f"{track_length_column}", "", 600, 600 )
+
     print("4")
 
     h.Draw("colz")
     print("5")
     h.SetMinimum(1)
     h.SetMaximum(10000)
+    h.GetYaxis().SetTitleOffset(1.4)
     canvas.SetLogz()
     canvas.SetGridx(0)
     canvas.SetGridy(0)
-    canvas.SetRightMargin(0.12)
+    canvas.SetLeftMargin(0.17)
+    canvas.SetRightMargin(0.12) # 0.12 i guess works fine
     canvas.Update()
     print("6")
     palette = h.GetListOfFunctions().FindObject("palette")
     palette.SetX1NDC(0.89)
     palette.SetX2NDC(0.91)
+
+    latex = ROOT.TLatex()
+    latex.SetTextFont(52)
+    latex.DrawLatex(9, 1320., "ILD preliminary")
+
     canvas.Modified()
     canvas.Update()
     print("7")
@@ -94,8 +104,8 @@ def plot_1d():
     input("wait")
 
 
-plot_1d()
-# plot_2d("trackLengthToEcal_SHA_phiLambda_IP", "tofClosest0")
+# plot_1d()
+plot_2d("trackLengthToEcal_SHA_phiLambda_IP", "tofClosest0")
 # plot_2d("trackLengthToEcal_SHA_phiZed_IP", "tofClosest0")
 # plot_2d("trackLengthToEcal_SHA_zedLambda_IP", "tofClosest0")
 
@@ -105,4 +115,4 @@ plot_1d()
 
 # plot_2d("trackLengthToEcal_IKF_phiLambda", "tofClosest0")
 # plot_2d("trackLengthToEcal_IKF_phiZed", "tofClosest0")
-# plot_2d("trackLengthToEcal_IKF_zedLambda", "tofClosest0")
+plot_2d("trackLengthToEcal_IKF_zedLambda", "tofClosest0")

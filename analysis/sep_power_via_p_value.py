@@ -128,7 +128,9 @@ def get_sep_power_graph(df, tof_column="tofClosest0"):
     #                         "",
     #                         int(600/(1. - ROOT.gStyle.GetPadLeftMargin() - ROOT.gStyle.GetPadRightMargin())),
     #                         int(600/(1. - ROOT.gStyle.GetPadTopMargin() - ROOT.gStyle.GetPadBottomMargin())) )
-    return gr_sp_pik
+    ### IMPORTANT: CHANGE THIS BASED ON WHAT DO YOU WANT TO PLOT!!!!!! ###
+    # return gr_sp_pik
+    return gr_sp_kp
     # gr_sp_pik.Draw("APL")
     # gr_sp_kp.Draw("PLsame")
     # gr_sp_kp.SetLineColor(4)
@@ -152,7 +154,9 @@ colors = ["#03045e","#023e8a","#0077b6","#0096c7","#00b4d8","#48cae4"]
 # colors = ["#690000", "#850e0f", "#a21d19", "#c02b25", "#df3831", "#ff463d"]
 colors = [ ROOT.TColor.GetColor(c) for c in colors[::-1]]
 
-legend = ROOT.TLegend()
+legend = ROOT.TLegend(0.4, 0.63, 0.98, 0.94)
+legend.SetFillStyle(0)
+legend.SetBorderSize(0)
 for i, res in enumerate( [0, 10, 30, 50, 70, 90] ):
     gr_sp[res] = get_sep_power_graph(df, tof_column=f"tofClosest{int(res)}")
     gr_sp[res].Draw("ALP" if i == 0 else "LPsame")
@@ -167,6 +171,12 @@ for i, res in enumerate( [0, 10, 30, 50, 70, 90] ):
 
 gr_sp[0].GetXaxis().SetRangeUser(0, 19)
 gr_sp[0].GetYaxis().SetRangeUser(0, 6)
+gr_sp[0].GetYaxis().SetTitleOffset(1.1)
 legend.Draw()
+
+latex = ROOT.TLatex()
+latex.SetTextFont(52)
+latex.DrawLatex(12, 6.06, "ILD preliminary")
+
 canvas.Update()
 input("wait")

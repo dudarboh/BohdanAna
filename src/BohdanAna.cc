@@ -180,6 +180,7 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
                 _tofSET.at(j) = getTofSET(track, 0.01*j);
             }
 
+            drawDisplay(this, evt, displayPFO, pfo, true);
             // plotCanvas(cluster, trackPosAtCalo, trackMomAtCalo, mc);
             // plotTrackParams(trackHitStates, pfo, mc, _bField);
         }
@@ -205,7 +206,7 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
         _tree->Fill();
 
         // Fill all in the TTree
-        // drawDisplay(this, evt, displayPFO, pfo);
+        // drawDisplay(this, evt, displayPFO, pfo, true);
     }
 }
 

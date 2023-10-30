@@ -168,38 +168,64 @@ TStyle* getMyStyle(){
     return myStyle;
 }
 
-void displayPFO(EVENT::ReconstructedParticle* pfo){
+void displayPFO(EVENT::ReconstructedParticle* pfo, bool colorSort){
     std::vector<EVENT::Track*> tracks;
     if ( not pfo->getTracks().empty() )
         tracks = getSubTracks(pfo->getTracks()[0]);
+
+    //plot settings for tracker hits
+    int type = 0; // point
+    int size = 4; // larger point
+    unsigned long color = 0x000000;
     for(auto* track: tracks){
         auto hits = track->getTrackerHits();
-        for (auto* hit : hits){
+        // int maxR = -1;
+        // int hitIdx = 0;
+        for (auto* hit : hits ){
             auto pos = hit->getPosition();
-            int type = 0; // point
-            int size = 4; // larger point
-            unsigned long color = 0x000000;
+
+            //NOTE: after some manual event checking sorting by rho seems to work in most (all?) cases and is not a problem...
+            // if (colorSort){
+            //     std::cout<<"Analysing curl"<<std::endl;
+            //     double r = std::hypot( pos[0], pos[1] );
+            //     std::cout<<"Hit "<<hitIdx+1<<" r = "<<r<<"    detected rmax = "<<maxR;
+            //     if (r >= maxR){
+            //         std::cout<<" --- blue, rewrite maxR"<<std::endl;
+            //         color = 0x0000FF;
+            //         maxR = r;
+            //     }
+            //     else{
+            //         color = 0xFF0000;
+            //         std::cout<<" --- red"<<std::endl;
+            //     }
+
+            //     // from red to blue dividing by N tracker hits                
+            //     // color = interpolateHexColor( 0xFF0000, 0x0000FF, static_cast<float>(hitIdx) / (hits.size() - 1) );
+            // }
+    
             ced_hit(pos[0], pos[1], pos[2], type, size, color);
+            // hitIdx++;
         }
     }
     //plot ecal state for fun
-    const TrackState* tsCalo = tracks.back()->getTrackState( TrackState::AtCalorimeter );
-    auto posCalo = tsCalo->getReferencePoint();
-    ced_hit(posCalo[0], posCalo[1], posCalo[2] + tsCalo->getZ0(), 0, 4, 0x000000); // track state at calorimeterer
+    if (not tracks.empty()){
+        const TrackState* tsCalo = tracks.back()->getTrackState( TrackState::AtCalorimeter );
+        auto posCalo = tsCalo->getReferencePoint();
+        ced_hit(posCalo[0], posCalo[1], posCalo[2] + tsCalo->getZ0(), 0, 4, 0x000000); // track state at calorimeterer
+    }
 
 
     std::vector<EVENT::Cluster*> clusters = pfo->getClusters();
+    type = 0; // point
+    size = 4; // larger point
+    color = 0x000000;
     for(auto* cluster: clusters){
         auto hits = cluster->getCalorimeterHits();
         for (auto* hit: hits){
             auto pos = hit->getPosition();
-            int type = 0; // point
-            int size = 4; // larger point
-            unsigned long color = 0x000000;
             ced_hit(pos[0], pos[1], pos[2], type, size, color);
         }
     }
-
 
 }
 

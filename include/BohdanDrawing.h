@@ -14,7 +14,7 @@
 #include <vector>
 
 TStyle* getMyStyle();
-void displayPFO(EVENT::ReconstructedParticle* pfo);
+void displayPFO(EVENT::ReconstructedParticle* pfo, bool colorSort);
 void displayFTDSimHits(EVENT::LCEvent* evt);
 void plotECALTimes(EVENT::Cluster* cluster, dd4hep::rec::Vector3D posAtEcal, dd4hep::rec::Vector3D momAtEcal, EVENT::MCParticle* mc);
 void plotTrackParams(const std::vector<HitState>& trackStates, EVENT::ReconstructedParticle* pfo, EVENT::MCParticle* mc, double bField);
