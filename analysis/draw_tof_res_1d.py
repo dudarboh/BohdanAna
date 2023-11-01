@@ -8,11 +8,15 @@ class Algorithm:
         self.len = track_length
         self.tof = tof
 
-colors = [ROOT.TColor.GetColor('#ff7f00') ,ROOT.TColor.GetColor('#984ea3') ,ROOT.TColor.GetColor('#4daf4a') ,ROOT.TColor.GetColor('#377eb8') ,ROOT.TColor.GetColor('#e41a1c')]
+# colors = [ROOT.TColor.GetColor('#ff7f00') ,ROOT.TColor.GetColor('#984ea3') ,ROOT.TColor.GetColor('#4daf4a') ,ROOT.TColor.GetColor('#377eb8') ,ROOT.TColor.GetColor('#e41a1c')]
+colors_3_qualitative = [ROOT.TColor.GetColor('#d95f02'), ROOT.TColor.GetColor('#7570b3'), ROOT.TColor.GetColor('#1b9e77')]
+colors = colors_3_qualitative
 
-algoClosest30 = Algorithm("Single ECAL hit (30 ps)", "harmonicMomToEcal", "trackLengthToEcal", "tofClosest30")
-algoSET50 = Algorithm("Two SET strips (50 ps)", "harmonicMomToSET", "trackLengthToSET", "tofSET50")
-algoAverage100 = Algorithm("Ten ECAL hits (100 ps)", "harmonicMomToEcal", "trackLengthToEcal", "tofAverage100")
+
+
+algoClosest30 = Algorithm("Single ECAL layer", "harmonicMomToEcal", "trackLengthToEcal", "tofClosest30")
+algoSET50 = Algorithm("Double SET layer", "harmonicMomToSET", "trackLengthToSET", "tofSET50")
+algoAverage100 = Algorithm("Ten ECAL layers", "harmonicMomToEcal", "trackLengthToEcal", "tofAverage100")
 algorithms = [algoClosest30, algoSET50, algoAverage100]
 
 def draw_lines_1d(maxy):
@@ -37,7 +41,7 @@ for alg in algorithms:
     # df_beta = df.Define("beta", f"{alg.len}/({alg.tof}*299.792458)").Filter("beta >= 0 && beta <= 1")
     tof_true = "tofClosest0" if "SET" not in alg.tof else "tofSET0"
     df_res = df.Define("res", f"({alg.tof} - {tof_true})*1000")
-    h = df_res.Histo1D((f"{alg.name}", f"{alg.name}; #Delta TOF (ps); N entries", 1500, -300, 300), "res")
+    h = df_res.Histo1D((f"{alg.name}", f"{alg.name}; reconstructed TOF - true TOF [ps]; N entries", 1500, -300, 300), "res")
     histos.append(h)
 
 
@@ -47,7 +51,7 @@ canvas.SetRightMargin(0.05)
 canvas.SetGridx(True)
 maxy = 0
 for i, h in enumerate(histos):
-    h.GetYaxis().SetTitleOffset(1.6)
+    h.GetYaxis().SetTitleOffset(1.65)
     h.SetLineColor(colors[i])
     h.SetMarkerColor(colors[i])
     h.SetMarkerStyle(0)
@@ -57,28 +61,57 @@ for i, h in enumerate(histos):
 
 histos[0].SetMaximum(maxy)
 histos[0].Draw() # draw axis for lines, god bless...
-
-legend = ROOT.TLegend(0.21, 0.81, 0.6, 0.94)
+histos[0].GetXaxis().SetRangeUser(-290, 290)
 
 for i, h in enumerate(histos):
     h.Draw("same")
-    legend.AddEntry(h.GetPtr())
-
-legend.Draw()
 
 fits = []
-legend_fits = ROOT.TLegend(0.66, 0.81, 0.85, 0.94)
+
 for i, h in enumerate(histos):
     f = ROOT.TF1(f"f_{i}", "gaus", -50, 50)
     f.SetLineColor(colors[i])
     f.SetLineWidth(2)
     h.Fit(f, "RN")
-    fits.append(f)
     f.SetNpx(1000)
+    fits.append(f)
     f.Draw("same")
-    legend_fits.AddEntry(f, "#sigma_{fit} = " + f"{round(f.GetParameter(2), 1)}" + " ps", "l")
 
+legend = ROOT.TLegend(0.6, 0.44, 0.996, 0.935)
+legend.SetBorderSize(0)
+legend.SetFillStyle(0)
+legend.SetMargin(0.1)
 
-legend_fits.Draw("same")
+entry1 = legend.AddEntry(histos[0].GetPtr(), histos[0].GetTitle(), "l")
+entry2 = legend.AddEntry("", "#sigma_{hit} = 30 ps", "")
+entry3 = legend.AddEntry("", "#sigma_{TOF, fit} = " + f"{round(fits[0].GetParameter(2), 1)} ps", "")
+gap_entry1 = legend.AddEntry("", "", "")
+
+entry4 = legend.AddEntry(histos[1].GetPtr(), histos[1].GetTitle(), "l")
+entry5 = legend.AddEntry("", "#sigma_{hit} = 50 ps", "")
+entry6 = legend.AddEntry("", "#sigma_{TOF, fit} = " + f"{round(fits[1].GetParameter(2), 1)} ps", "")
+gap_entry2 = legend.AddEntry("", "", "")
+
+entry7 = legend.AddEntry(histos[2].GetPtr(), histos[2].GetTitle(), "l")
+entry8 = legend.AddEntry("", "#sigma_{hit} = 100 ps", "")
+entry9 = legend.AddEntry("", "#sigma_{TOF, fit} = " + f"{round(fits[2].GetParameter(2), 1)} ps", "")
+gap_entry3 = legend.AddEntry("", "", "")
+
+entry1.SetTextColor(colors[0])
+entry2.SetTextColor(colors[0])
+entry3.SetTextColor(colors[0])
+entry4.SetTextColor(colors[1])
+entry5.SetTextColor(colors[1])
+entry6.SetTextColor(colors[1])
+entry7.SetTextColor(colors[2])
+entry8.SetTextColor(colors[2])
+entry9.SetTextColor(colors[2])
+
+legend.Draw()
+
+latex = ROOT.TLatex()
+latex.SetTextFont(52)
+latex.DrawLatex(64, 28750., "ILD preliminary")
+
 canvas.Update()
 input("Finish")
