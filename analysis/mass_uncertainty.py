@@ -6,8 +6,10 @@ import matplotlib.lines as mlines
 
 plt.rcParams.update({'font.size':18, 'text.usetex':True})
 
-
-
+particles = {}
+particles['pion'] = {'mass' : 0.13957039, 'color': '#1b9e77', 'legend' : "#pi^{#pm}", 'legend' : "#pi^{#pm}"}
+particles['kaon'] = {'mass' : 0.493677, 'color': '#d95f02', 'legend' : "K^{#pm}"}
+particles['proton'] = {'mass' : 0.93827208816, 'color': '#7570b3', 'legend' : "p"}
 SPEED_OF_LIGHT = 299.792458 # mm / ns
 
 def get_mass(true_mass, momentum, track_length, relative_momentum_resolution, relative_length_resolution, tof_resolution):
@@ -29,11 +31,6 @@ def get_mass(true_mass, momentum, track_length, relative_momentum_resolution, re
 def get_mass_plot():
     # We always work in momentum bins
     momentum = np.arange(0.1, 8, 0.01)
-
-    particles = {}
-    particles['pion'] = {'mass' : 0.13957039, 'color': '#1b9e77'}
-    particles['kaon'] = {'mass' : 0.493677, 'color': '#d95f02'}
-    particles['proton'] = {'mass' : 0.93827208816, 'color': '#7570b3'}
 
     band_names = ['true', 'dp', 'dp+dl', 'total']
     band_sides = ['plus', 'minus']
@@ -110,77 +107,70 @@ def get_mass_plot():
     ax.text(0.2, 1.1, text, linespacing=1.5, bbox=dict(facecolor='white', edgecolor='black', pad=.5, boxstyle='round'))
     plt.show()
 
-def mass_vs_dt():
+def mass_vs_dtdl(x_axis='dt'):
     momentum = 4 # GeV
     track_length = 2000. # mm
-    tof_resolution = np.arange(-0.100, 0.100, 0.001) # ns
 
-    particles = {}
-    particles['pion'] = {'mass' : 0.13957039, 'color': '#1b9e77'}
-    particles['kaon'] = {'mass' : 0.493677, 'color': '#d95f02'}
-    particles['proton'] = {'mass' : 0.93827208816, 'color': '#7570b3'}
+    if x_axis == 'dt':
+        x_min, x_max, x_title = -100, 100, '#Delta T (ps)'
+        legend = ROOT.TLegend(0.2, 0.67, 0.76, 0.93)
+        # tof_res is expected to be in ns as an input to get_mass()
+        mom_res, len_res, tof_res = 0., 0., np.arange(x_min/1000., x_max/1000., 0.001) # ns
+    elif x_axis == 'dl':
+        x_min, x_max, x_title = -30, 30, '#Delta L (mm)'
+        legend = ROOT.TLegend(0.72, 0.67, 0.995, 0.93)
+        # len_res is expected to be relative as an input to get_mass()
+        mom_res, len_res, tof_res = 0., np.arange(x_min, x_max, 0.1)/track_length, 0.
 
-    fig, ax = plt.subplots(figsize=(8, 8))
+    legend.SetFillStyle(0)
+    legend.SetBorderSize(0)
+
+    canvas = ROOT.TCanvas("name", "title")
+    graphs = {}
+    lines = {}
+
     for name in particles:
-        mass = get_mass(particles[name]['mass'], momentum, track_length, 0., 0., tof_resolution)
+        mass = get_mass(particles[name]['mass'], momentum, track_length, mom_res, len_res, tof_res)
         mass[mass < 0] = 0
+        if x_axis == 'dt':
+            graphs[name] = ROOT.TGraph(len(tof_res), tof_res*1000, mass)
+        elif x_axis == 'dl':
+            graphs[name] = ROOT.TGraph(len(len_res), len_res*track_length, mass)
 
-        ax.plot(tof_resolution*1000, mass, color=particles[name]['color'])
+        graphs[name].SetLineColor(ROOT.TColor.GetColor(particles[name]['color']))
+        graphs[name].SetLineWidth(3)
+        graphs[name].Draw("AL" if name =='pion' else "Lsame")
+        if name=='pion':
+            graphs[name].GetYaxis().SetTitle('Mass (GeV/c^{2})')
+            graphs[name].GetYaxis().SetTitleOffset(1.2)
+            graphs[name].GetYaxis().SetRangeUser(-0.1, 1.5)
+            graphs[name].GetXaxis().SetTitle(x_title)
+            graphs[name].GetXaxis().SetRangeUser(x_min, x_max)
+            
 
-    ax.set_xlabel('$\Delta T (\mathrm{ps})$')
-    ax.set_ylabel('Mass ($\mathrm{GeV}/c^{2}$)')
-    ax.set_xlim(-100, 100)
-    ax.set_ylim(-0.1, 1.2)
-    ax.yaxis.set_ticks(np.arange(-0.1, 1.2, 0.1))
-    ax.grid()
+        lines[name] = ROOT.TLine(x_min, particles[name]['mass'], x_max, particles[name]['mass'])
+        lines[name].SetLineColor(ROOT.TColor.GetColor(particles[name]['color']))
+        lines[name].SetLineWidth(2)
+        lines[name].SetLineStyle(9)
+        lines[name].Draw()
 
-    text= r'''$ p = 4 \ \mathrm{GeV / c}$    
-    $ L = 2000 \ \mathrm{mm}$'''
+        legend.AddEntry(graphs[name], particles[name]['legend'], "l")
+    legend.Draw()
 
-    pion_legend = mpatches.Patch(color=particles['pion']['color'], label='$\pi^{\pm}$')
-    kaon_legend = mpatches.Patch(color=particles['kaon']['color'], label='$K^{\pm}$')
-    proton_legend = mpatches.Patch(color=particles['proton']['color'], label='$p$')
+    latex = ROOT.TLatex()
+    latex.SetTextFont(42)
+    momentum_text = f"p = {momentum}" + " #frac{GeV}{c}"
+    track_length_text = f"L = {track_length:.0f}" + " mm"
+    if x_axis == 'dt':
+        latex.DrawLatex(-0.3, 1.35, momentum_text)
+        latex.DrawLatex(-0.3, 1.2, track_length_text)
+    elif x_axis == 'dl':
+        latex.DrawLatex(-12, 1.35, momentum_text)
+        latex.DrawLatex(-12, 1.2, track_length_text)
 
-    ax.legend(handles=[proton_legend, kaon_legend, pion_legend])
-    ax.text(30, 0.1, text, linespacing=1.5, bbox=dict(facecolor='white', edgecolor='black', pad=.5, boxstyle='round'))
-    plt.show()
-
-
-def mass_vs_dl():
-    momentum = 4 # GeV
-    track_length = 2000. # mm
-    len_resolution = np.arange(-30, 30, 0.1) # mm
-
-    particles = {}
-    particles['pion'] = {'mass' : 0.13957039, 'color': '#1b9e77'}
-    particles['kaon'] = {'mass' : 0.493677, 'color': '#d95f02'}
-    particles['proton'] = {'mass' : 0.93827208816, 'color': '#7570b3'}
-
-    fig, ax = plt.subplots(figsize=(8, 8))
-    for name in particles:
-        mass = get_mass(particles[name]['mass'], momentum, track_length, 0., len_resolution/track_length, 0.)
-        mass[mass < 0] = 0
-
-        ax.plot(len_resolution, mass, color=particles[name]['color'])
-
-    ax.set_xlabel('$\Delta L (\mathrm{mm})$')
-    ax.set_ylabel('Mass ($\mathrm{GeV}/c^{2}$)')
-    ax.set_xlim(-30, 30)
-    ax.set_ylim(-0.1, 1.2)
-    ax.yaxis.set_ticks(np.arange(-0.1, 1.2, 0.1))
-    ax.grid()
-
-    text= r'''$ p = 4 \ \mathrm{GeV / c}$    
-    $ L = 2000 \ \mathrm{mm}$'''
-
-    pion_legend = mpatches.Patch(color=particles['pion']['color'], label='$\pi^{\pm}$')
-    kaon_legend = mpatches.Patch(color=particles['kaon']['color'], label='$K^{\pm}$')
-    proton_legend = mpatches.Patch(color=particles['proton']['color'], label='$p$')
-
-    ax.legend(handles=[proton_legend, kaon_legend, pion_legend])
-    ax.text(-25, 0.1, text, linespacing=1.5, bbox=dict(facecolor='white', edgecolor='black', pad=.5, boxstyle='round'))
-    plt.show()
+    canvas.Update()
+    input("wait")
 
 
-get_mass_plot()
-# mass_vs_dl()
+# get_mass_plot()
+mass_vs_dtdl('dt')
