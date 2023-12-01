@@ -7,9 +7,9 @@ import matplotlib.lines as mlines
 plt.rcParams.update({'font.size':18, 'text.usetex':True})
 
 particles = {}
-particles['pion'] = {'mass' : 0.13957039, 'color': '#1b9e77', 'legend' : "#pi^{#pm}", 'legend' : "#pi^{#pm}"}
+particles['pion'] = {'mass' : 0.13957039, 'color': '#1b9e77', 'legend' : "#pi^{#pm}"}
 particles['kaon'] = {'mass' : 0.493677, 'color': '#d95f02', 'legend' : "K^{#pm}"}
-particles['proton'] = {'mass' : 0.93827208816, 'color': '#7570b3', 'legend' : "p"}
+particles['proton'] = {'mass' : 0.93827208816, 'color': '#7570b3', 'legend' : "p "}
 SPEED_OF_LIGHT = 299.792458 # mm / ns
 
 def get_mass(true_mass, momentum, track_length, relative_momentum_resolution, relative_length_resolution, tof_resolution):
@@ -26,7 +26,7 @@ def get_mass(true_mass, momentum, track_length, relative_momentum_resolution, re
     smeared_beta = smeared_track_length/(smeared_tof*SPEED_OF_LIGHT)
     mass = smeared_momentum*np.sqrt( 1/(smeared_beta*smeared_beta) - 1) # GeV
 
-    return np.nan_to_num(mass, nan=-0.1)
+    return np.nan_to_num(mass, nan=0), tof
 
 def get_mass_plot():
     # We always work in momentum bins
@@ -113,25 +113,33 @@ def mass_vs_dtdl(x_axis='dt'):
 
     if x_axis == 'dt':
         x_min, x_max, x_title = -100, 100, '#Delta T (ps)'
-        legend = ROOT.TLegend(0.2, 0.67, 0.76, 0.93)
+        legend = ROOT.TLegend(0.2, 0.6, 0.59, 0.76)
         # tof_res is expected to be in ns as an input to get_mass()
-        mom_res, len_res, tof_res = 0., 0., np.arange(x_min/1000., x_max/1000., 0.001) # ns
+        mom_res, len_res, tof_res = 0., 0., np.arange(x_min/1000., x_max/1000. + 0.001, 0.001) # ns
     elif x_axis == 'dl':
         x_min, x_max, x_title = -30, 30, '#Delta L (mm)'
-        legend = ROOT.TLegend(0.72, 0.67, 0.995, 0.93)
+        legend = ROOT.TLegend(0.51, 0.6, 0.9, 0.76)
         # len_res is expected to be relative as an input to get_mass()
-        mom_res, len_res, tof_res = 0., np.arange(x_min, x_max, 0.1)/track_length, 0.
+        mom_res, len_res, tof_res = 0., np.arange(x_min, x_max + 0.1, 0.1)/track_length, 0.
 
     legend.SetFillStyle(0)
     legend.SetBorderSize(0)
-
+    legend.SetMargin(0.15)
+    legend.SetTextAlign(32)
+    legend.SetTextFont(42)
     canvas = ROOT.TCanvas("name", "title")
+    canvas.SetTopMargin(0.12)
+    canvas.SetBottomMargin(0.14)
+    canvas.SetLeftMargin(0.18)
+    canvas.SetRightMargin(0.07)
+
     graphs = {}
     lines = {}
 
+    tof_true_average = 0.
     for name in particles:
-        mass = get_mass(particles[name]['mass'], momentum, track_length, mom_res, len_res, tof_res)
-        mass[mass < 0] = 0
+        mass, tof_true = get_mass(particles[name]['mass'], momentum, track_length, mom_res, len_res, tof_res)
+        tof_true_average += tof_true/3.
         if x_axis == 'dt':
             graphs[name] = ROOT.TGraph(len(tof_res), tof_res*1000, mass)
         elif x_axis == 'dl':
@@ -143,7 +151,7 @@ def mass_vs_dtdl(x_axis='dt'):
         if name=='pion':
             graphs[name].GetYaxis().SetTitle('Mass (GeV/c^{2})')
             graphs[name].GetYaxis().SetTitleOffset(1.2)
-            graphs[name].GetYaxis().SetRangeUser(-0.1, 1.5)
+            graphs[name].GetYaxis().SetRangeUser(-0.1, 1.65)
             graphs[name].GetXaxis().SetTitle(x_title)
             graphs[name].GetXaxis().SetRangeUser(x_min, x_max)
             
@@ -154,7 +162,7 @@ def mass_vs_dtdl(x_axis='dt'):
         lines[name].SetLineStyle(9)
         lines[name].Draw()
 
-        legend.AddEntry(graphs[name], particles[name]['legend'], "l")
+        legend.AddEntry(graphs[name], "#font[62]{" + f"{particles[name]['legend']}" + "}    T_{true}: " + f"{tof_true:.2f} ns", "l")
     legend.Draw()
 
     latex = ROOT.TLatex()
@@ -162,11 +170,33 @@ def mass_vs_dtdl(x_axis='dt'):
     momentum_text = f"p = {momentum}" + " #frac{GeV}{c}"
     track_length_text = f"L = {track_length:.0f}" + " mm"
     if x_axis == 'dt':
-        latex.DrawLatex(-0.3, 1.35, momentum_text)
-        latex.DrawLatex(-0.3, 1.2, track_length_text)
+        latex.DrawLatex(-70, 1.45, momentum_text)
+        latex.DrawLatex(11, 1.45, track_length_text)
     elif x_axis == 'dl':
-        latex.DrawLatex(-12, 1.35, momentum_text)
-        latex.DrawLatex(-12, 1.2, track_length_text)
+        latex.DrawLatex(-20, 1.45, momentum_text)
+        latex.DrawLatex(4, 1.45, track_length_text)
+
+
+    canvas.Update()
+    if x_axis == 'dt':
+        top_axis = ROOT.TGaxis(canvas.GetUxmin(),canvas.GetUymax(),
+                            canvas.GetUxmax(), canvas.GetUymax(),x_min/(tof_true_average*1000)*100,x_max/(tof_true_average*1000)*100,510,"-L")
+        top_axis.SetTitle("#delta T (%)")
+        # top_axis.SetLineColor(ROOT.kRed)
+        # top_axis.SetLabelColor(ROOT.kRed)
+        top_axis.Draw()
+    else:
+        top_axis = ROOT.TGaxis(canvas.GetUxmin(),canvas.GetUymax(),
+                            canvas.GetUxmax(), canvas.GetUymax(),x_min/track_length*100,x_max/track_length*100,510,"-L")
+        top_axis.SetTitle("#delta L (%)")
+        # top_axis.SetLineColor(ROOT.kRed)
+        # top_axis.SetLabelColor(ROOT.kRed)
+    top_axis.SetLabelSize(0.06)
+    top_axis.SetTitleSize(0.07)
+    top_axis.SetLabelFont(42)
+    top_axis.SetTitleFont(42)
+    top_axis.SetTitleOffset(0.78)
+    top_axis.Draw()
 
     canvas.Update()
     input("wait")
