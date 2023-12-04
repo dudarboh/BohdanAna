@@ -108,7 +108,7 @@ def get_mass_plot():
     plt.show()
 
 def mass_vs_dtdl(x_axis='dt'):
-    momentum = 4 # GeV
+    momentum = 0.8 # GeV
     track_length = 2000. # mm
 
     if x_axis == 'dt':
@@ -161,8 +161,8 @@ def mass_vs_dtdl(x_axis='dt'):
         lines[name].SetLineWidth(2)
         lines[name].SetLineStyle(9)
         lines[name].Draw()
-
-        legend.AddEntry(graphs[name], "#font[62]{" + f"{particles[name]['legend']}" + "}    T_{true}: " + f"{tof_true:.2f} ns", "l")
+        align_len = 10-len(f'{tof_true:.2f}')
+        legend.AddEntry(graphs[name], "#font[62]{" + f"{particles[name]['legend']}" + "}  T_{true}:" + f"{tof_true:>{align_len}.2f} ns", "l")
     legend.Draw()
 
     latex = ROOT.TLatex()
@@ -203,4 +203,4 @@ def mass_vs_dtdl(x_axis='dt'):
 
 
 # get_mass_plot()
-mass_vs_dtdl('dt')
+mass_vs_dtdl('dl')
