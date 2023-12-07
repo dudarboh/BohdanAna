@@ -168,7 +168,31 @@ TStyle* getMyStyle(){
     return myStyle;
 }
 
-void displayPFO(EVENT::ReconstructedParticle* pfo, bool colorSort){
+void displayEvent(std::vector<std::pair<EVENT::ReconstructedParticle*, EVENT::MCParticle*>> pfos){
+    std::vector<unsigned long> colors = {0x7fc97f ,0xbeaed4 ,0xfdc086 ,0xffff99 ,0x386cb0 ,0xf0027f, 0x7fc97f ,0xbeaed4 ,0xfdc086 ,0xffff99 ,0x386cb0 ,0xf0027f, 0x7fc97f ,0xbeaed4 ,0xfdc086 ,0xffff99 ,0x386cb0 ,0xf0027f};
+    // std::vector<unsigned long> colors1 = {0xe5f5f9, 0xccece6, 0x99d8c9, 0x66c2a4, 0x41ae76, 0x238b45, 0x006d2c, 0x00441b, 0xe5f5f9, 0xccece6, 0x99d8c9, 0x66c2a4, 0x41ae76, 0x238b45, 0x006d2c, 0x00441b};
+    // std::vector<unsigned long> colors2 = {0xe7e1ef, 0xd4b9da, 0xc994c7, 0xdf65b0, 0xe7298a, 0xce1256, 0x980043, 0x67001f, 0xe7e1ef, 0xd4b9da, 0xc994c7, 0xdf65b0, 0xe7298a, 0xce1256, 0x980043, 0x67001f};
+    int counter1 = 0;
+    int counter2 = 0;
+    std::vector<EVENT::MCParticle*> usedParents;
+    for(int i=0; i < pfos.size(); i++){
+        ReconstructedParticle* pfo = pfos[i].first;
+        MCParticle* parent = pfos[i].second;
+        // if ( std::find(usedParents.begin(), usedParents.end(), parent) == usedParents.end() ){
+        //     displayPFO(pfo, colors1[counter1]);
+        //     counter1++;
+        // }
+        // else{
+        //     displayPFO(pfo, colors2[counter2]);
+        //     counter2++;
+        // }
+        displayPFO(pfo, colors[i]);
+
+        usedParents.push_back(parent);
+    }
+}
+
+void displayPFO(EVENT::ReconstructedParticle* pfo, unsigned long color=0x000000){
     std::vector<EVENT::Track*> tracks;
     if ( not pfo->getTracks().empty() )
         tracks = getSubTracks(pfo->getTracks()[0]);
@@ -176,32 +200,12 @@ void displayPFO(EVENT::ReconstructedParticle* pfo, bool colorSort){
     //plot settings for tracker hits
     int type = 0; // point
     int size = 4; // larger point
-    unsigned long color = 0x000000;
     for(auto* track: tracks){
         auto hits = track->getTrackerHits();
         // int maxR = -1;
         // int hitIdx = 0;
         for (auto* hit : hits ){
             auto pos = hit->getPosition();
-
-            //NOTE: after some manual event checking sorting by rho seems to work in most (all?) cases and is not a problem...
-            // if (colorSort){
-            //     std::cout<<"Analysing curl"<<std::endl;
-            //     double r = std::hypot( pos[0], pos[1] );
-            //     std::cout<<"Hit "<<hitIdx+1<<" r = "<<r<<"    detected rmax = "<<maxR;
-            //     if (r >= maxR){
-            //         std::cout<<" --- blue, rewrite maxR"<<std::endl;
-            //         color = 0x0000FF;
-            //         maxR = r;
-            //     }
-            //     else{
-            //         color = 0xFF0000;
-            //         std::cout<<" --- red"<<std::endl;
-            //     }
-
-            //     // from red to blue dividing by N tracker hits                
-            //     // color = interpolateHexColor( 0xFF0000, 0x0000FF, static_cast<float>(hitIdx) / (hits.size() - 1) );
-            // }
     
             ced_hit(pos[0], pos[1], pos[2], type, size, color);
             // hitIdx++;
@@ -218,7 +222,6 @@ void displayPFO(EVENT::ReconstructedParticle* pfo, bool colorSort){
     std::vector<EVENT::Cluster*> clusters = pfo->getClusters();
     type = 0; // point
     size = 4; // larger point
-    color = 0x000000;
     for(auto* cluster: clusters){
         auto hits = cluster->getCalorimeterHits();
         for (auto* hit: hits){

@@ -104,6 +104,7 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
     LCRelationNavigator pfo2mc ( evt->getCollection("RecoMCTruthLink") );
     LCRelationNavigator navToSimTrackerHits( evt->getCollection("TrackerHitsRelations") );
 
+    std::vector<std::pair<EVENT::ReconstructedParticle*, EVENT::MCParticle*>> pfos2Draw;
     for (int i=0; i<pfos->getNumberOfElements(); ++i){
         streamlog_out(DEBUG8)<<"Starting to analyze "<<i+1<<" PFO"<<std::endl;
         resetVariables();
@@ -180,7 +181,7 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
                 _tofSET.at(j) = getTofSET(track, 0.01*j);
             }
 
-            drawDisplay(this, evt, displayPFO, pfo, true);
+            // drawDisplay(this, evt, displayPFO, pfo, true);
             // plotCanvas(cluster, trackPosAtCalo, trackMomAtCalo, mc);
             // plotTrackParams(trackHitStates, pfo, mc, _bField);
         }
@@ -199,15 +200,20 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
                 _tofFit.at(j) = getTofFrankFit(selectedHits, photonPosAtCalo, 0.01*j);
                 // no track - no SET!
             }
+
+            if ( mc->getParents().empty() ) continue;
+            if (std::abs(mc->getParents()[0]->getPDG()) == 111){
+                std::cout<<"I AM HEEEEEEEEEEEEEEEEEEEEREEEEEEEEEEEEEEEEEEE"<<std::endl;
+                pfos2Draw.push_back( {pfo, mc->getParents()[0]} );
+            }
         }
         else{
             continue;
         }
         _tree->Fill();
-
-        // Fill all in the TTree
-        // drawDisplay(this, evt, displayPFO, pfo, true);
     }
+    drawDisplay(this, evt, displayEvent, pfos2Draw);
+
 }
 
 void BohdanAna::end(){
