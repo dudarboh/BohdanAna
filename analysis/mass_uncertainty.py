@@ -182,15 +182,11 @@ def mass_vs_dtdl(x_axis='dt'):
         top_axis = ROOT.TGaxis(canvas.GetUxmin(),canvas.GetUymax(),
                             canvas.GetUxmax(), canvas.GetUymax(),x_min/(tof_true_average*1000)*100,x_max/(tof_true_average*1000)*100,510,"-L")
         top_axis.SetTitle("#delta T (%)")
-        # top_axis.SetLineColor(ROOT.kRed)
-        # top_axis.SetLabelColor(ROOT.kRed)
         top_axis.Draw()
     else:
         top_axis = ROOT.TGaxis(canvas.GetUxmin(),canvas.GetUymax(),
                             canvas.GetUxmax(), canvas.GetUymax(),x_min/track_length*100,x_max/track_length*100,510,"-L")
         top_axis.SetTitle("#delta L (%)")
-        # top_axis.SetLineColor(ROOT.kRed)
-        # top_axis.SetLabelColor(ROOT.kRed)
     top_axis.SetLabelSize(0.06)
     top_axis.SetTitleSize(0.07)
     top_axis.SetLabelFont(42)
