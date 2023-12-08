@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
 
+ROOT.gStyle.SetCanvasPreferGL(True)
 plt.rcParams.update({'font.size':18, 'text.usetex':True})
 
 particles = {}
@@ -28,84 +29,82 @@ def get_mass(true_mass, momentum, track_length, relative_momentum_resolution, re
 
     return np.nan_to_num(mass, nan=0), tof
 
+def get_filled_graph(x, y_min, y_max):
+    n_points = len(x)
+    graph = ROOT.TGraph(2*n_points)
+    for i in range(n_points):
+        graph.SetPoint(i, x[i], y_max[i])
+        graph.SetPoint(n_points + i, x[n_points-i-1], y_min[n_points-i-1])
+    return graph
+
+
 def get_mass_plot():
     # We always work in momentum bins
     momentum = np.arange(0.1, 8, 0.01)
 
-    band_names = ['true', 'dp', 'dp+dl', 'total']
-    band_sides = ['plus', 'minus']
-
     # # STAR DATA from the paper https://arxiv.org/abs/nucl-ex/0308022
-    # track_length = 2200. # mm at eta = 1.
-    # relative_momentum_resolution = 0.013
-    # relative_length_resolution = 0.002
-    # tof_resolution = 0.100 # ns
-
-    # text= r''' \textbf{STAR apparatus}
-    # $ L = 2200 \ \mathrm{mm}$
-    # $ \Delta p/p = 0.013 $
-    # $ \Delta L / L = 0.002 $
-    # $ \Delta T = 100 \ \mathrm{ps} $'''
-
-    # ILD roughly or STAR with modern timing
-    track_length = 2200. # mm
+    track_length = 2200. # mm at eta = 1.
     relative_momentum_resolution = 0.013
     relative_length_resolution = 0.002
-    tof_resolution = 0.020 # ns
+    tof_resolution = 0.100 # ns
 
     text= r''' \textbf{STAR apparatus}
-    \textbf{modern timing}
     $ L = 2200 \ \mathrm{mm}$
     $ \Delta p/p = 0.013 $
     $ \Delta L / L = 0.002 $
-    $ \Delta T = 20 \ \mathrm{ps} $'''
+    $ \Delta T = 100 \ \mathrm{ps} $'''
+
+    # ILD roughly or STAR with modern timing
+    # track_length = 2200. # mm
+    # relative_momentum_resolution = 0.013
+    # relative_length_resolution = 0.002
+    # tof_resolution = 0.020 # ns
+
+    # text= r''' \textbf{STAR apparatus}
+    # \textbf{modern timing}
+    # $ L = 2200 \ \mathrm{mm}$
+    # $ \Delta p/p = 0.013 $
+    # $ \Delta L / L = 0.002 $
+    # $ \Delta T = 20 \ \mathrm{ps} $'''
 
 
     #pions
     mass_bands = {}
-
+    graphs = {}
+    canvas = ROOT.TCanvas("name", "title")
     for name in particles:
-        mass_bands[name, 'true'] = get_mass(particles[name]['mass'], momentum, track_length, 0., 0., 0.)
-        mass_bands[name, 'up_dpdl'] = get_mass(particles[name]['mass'], momentum, track_length, relative_momentum_resolution, -relative_length_resolution, 0.)
-        mass_bands[name, 'down_dpdl'] = get_mass(particles[name]['mass'], momentum, track_length, -relative_momentum_resolution, relative_length_resolution, 0.)
-        mass_bands[name, 'up_total'] = get_mass(particles[name]['mass'], momentum, track_length, relative_momentum_resolution, -relative_length_resolution, tof_resolution)
-        mass_bands[name, 'down_total'] = get_mass(particles[name]['mass'], momentum, track_length, -relative_momentum_resolution, relative_length_resolution, -tof_resolution)
+        mass_bands[name, 'true'], _ = get_mass(particles[name]['mass'], momentum, track_length, 0., 0., 0.)
+        graphs[name, 'true'] = ROOT.TGraph(len(momentum), momentum, mass_bands[name, 'true'])
 
+        mass_bands[name, 'up_dpdl'], _ = get_mass(particles[name]['mass'], momentum, track_length, relative_momentum_resolution, -relative_length_resolution, 0.)
+        mass_bands[name, 'down_dpdl'], _ = get_mass(particles[name]['mass'], momentum, track_length, -relative_momentum_resolution, relative_length_resolution, 0.)
+        graphs[name, 'dl_band'] = get_filled_graph(momentum, mass_bands[name, 'down_dpdl'], mass_bands[name, 'up_dpdl'])
 
-    fig, ax = plt.subplots(figsize=(8, 8))
+        mass_bands[name, 'up_total'], _ = get_mass(particles[name]['mass'], momentum, track_length, relative_momentum_resolution, -relative_length_resolution, tof_resolution)
+        mass_bands[name, 'down_total'], _ = get_mass(particles[name]['mass'], momentum, track_length, -relative_momentum_resolution, relative_length_resolution, -tof_resolution)
+        graphs[name, 'total_band'] = get_filled_graph(momentum, mass_bands[name, 'down_total'], mass_bands[name, 'up_total'])
+        graphs[name, 'total_band'].SetFillColorAlpha(ROOT.kRed, 0.2)
 
-    ax.plot(momentum, mass_bands['pion', 'true'], color=particles['pion']['color'], label="$m_{\pi, \mathrm{true}}$")
-    ax.fill_between(momentum, mass_bands['pion', 'down_dpdl'], mass_bands['pion', 'up_dpdl'], color=particles['pion']['color'], hatch='////', label="$m_{\pi}(p \pm \Delta p, \ell \pm \Delta \ell, \mathrm{TOF})$", alpha=0.2)
-    ax.fill_between(momentum, mass_bands['pion', 'down_total'], mass_bands['pion', 'up_total'], color=particles['pion']['color'], hatch='....', label="$m_{\pi}(p \pm \Delta p, \ell \pm \Delta \ell, \mathrm{TOF} \pm \Delta \mathrm{TOF})$", alpha=0.2)
+        graphs[name, 'true'].Draw("AL" if name == 'pion' else "Lsame")
+        graphs[name, 'true'].SetLineColor( ROOT.TColor.GetColor(particles[name]['color']) )
+        graphs[name, 'dl_band'].Draw("fsame")
+        graphs[name, 'dl_band'].SetFillColorAlpha(ROOT.TColor.GetColor(particles[name]['color']), 0.2)
+        graphs[name, 'total_band'].Draw("fsame")
+        graphs[name, 'total_band'].SetFillColorAlpha(ROOT.TColor.GetColor(particles[name]['color']), 0.2)
+        if name == 'pion':
+            graphs[name, 'true'].GetXaxis().SetTitle("Momentum (GeV/c)")
+            graphs[name, 'true'].GetYaxis().SetTitle("Mass (GeV/c^{2})")
+            graphs[name, 'true'].GetXaxis().SetRangeUser(0, 8)
+            graphs[name, 'true'].GetYaxis().SetRangeUser(0, 3.)
+        
+    canvas.Update()
+    input("wait")
 
-    ax.plot(momentum, mass_bands['kaon', 'true'], color=particles['kaon']['color'], label="$m_{\kaon, \mathrm{true}}$")
-    ax.fill_between(momentum, mass_bands['kaon', 'down_dpdl'], mass_bands['kaon', 'up_dpdl'], color=particles['kaon']['color'], hatch='////', label="$m_{\kaon}(p \pm \Delta p, \ell \pm \Delta \ell, \mathrm{TOF})$", alpha=0.2)
-    ax.fill_between(momentum, mass_bands['kaon', 'down_total'], mass_bands['kaon', 'up_total'], color=particles['kaon']['color'], hatch='....', label="$m_{\kaon}(p \pm \Delta p, \ell \pm \Delta \ell, \mathrm{TOF} \pm \Delta \mathrm{TOF})$", alpha=0.2)
+    # canvas.SetTopMargin(0.12)
+    # canvas.SetBottomMargin(0.14)
+    # canvas.SetLeftMargin(0.18)
+    # canvas.SetRightMargin(0.07)
 
-    ax.plot(momentum, mass_bands['proton', 'true'], color=particles['proton']['color'], label="$m_{\proton, \mathrm{true}}$")
-    ax.fill_between(momentum, mass_bands['proton', 'down_dpdl'], mass_bands['proton', 'up_dpdl'], color=particles['proton']['color'], hatch='////', label="$m_{\proton}(p \pm \Delta p, \ell \pm \Delta \ell, \mathrm{TOF})$", alpha=0.2)
-    ax.fill_between(momentum, mass_bands['proton', 'down_total'], mass_bands['proton', 'up_total'], color=particles['proton']['color'], hatch='....', label="$m_{\proton}(p \pm \Delta p, \ell \pm \Delta \ell, \mathrm{TOF} \pm \Delta \mathrm{TOF})$", alpha=0.2)
-
-    ax.set_xlabel('Momentum ($\mathrm{GeV}/c$)')
-    ax.set_ylabel('Mass ($\mathrm{GeV}/c^{2}$)')
-    ax.set_title('')
-    ax.set_xlim(0.0, 5.1)
-    ax.xaxis.set_ticks(np.arange(0, 5.1, 1))
-    ax.set_ylim(0.0, 1.7)
-    ax.yaxis.set_ticks(np.arange(0.0, 1.7, 0.2))
-    ax.grid()
-
-    pion_legend = mpatches.Patch(color=particles['pion']['color'], label='$\pi^{\pm}$')
-    kaon_legend = mpatches.Patch(color=particles['kaon']['color'], label='$K^{\pm}$')
-    proton_legend = mpatches.Patch(color=particles['proton']['color'], label='$p$')
-
-    true_legend = mlines.Line2D([], [], color='black', label='true mass')
-    dpdl_legend = mpatches.Patch(hatch='////', label='$\Delta L$', fill=False)
-    total_legend = mpatches.Patch(hatch='....', label='$\Delta L \oplus \Delta T$', fill=False)
-
-    ax.legend(handles=[pion_legend, kaon_legend, proton_legend, true_legend, dpdl_legend, total_legend], ncol=2)
-    ax.text(0.2, 1.1, text, linespacing=1.5, bbox=dict(facecolor='white', edgecolor='black', pad=.5, boxstyle='round'))
-    plt.show()
 
 def mass_vs_dtdl(x_axis='dt'):
     momentum = 0.8 # GeV
@@ -198,5 +197,5 @@ def mass_vs_dtdl(x_axis='dt'):
     input("wait")
 
 
-# get_mass_plot()
-mass_vs_dtdl('dl')
+get_mass_plot()
+# mass_vs_dtdl('dl')
