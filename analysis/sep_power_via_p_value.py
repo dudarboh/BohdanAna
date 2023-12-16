@@ -54,25 +54,19 @@ def get_sep_power_graph(df, tof_column="tofClosest0"):
     df_total = df.Define("beta", f"trackLengthToEcal_IKF_zedLambda/({tof_column}*299.792458)")\
                 .Filter("beta >= 0 && beta <= 1")\
                 .Define("mass", "harmonicMomToEcal_IKF_zedLambda*sqrt( 1./(beta*beta) - 1.)*1000")
-    h_2d_total = df_total.Histo2D(("h_total", "All; momentum [GeV]; Mass [MeV]", n_mom_bins, 0, 20, n_mass_bins, 0, 6000.), "harmonicMomToEcal_IKF_zedLambda","mass")
+    # df_total = df.Define("beta", f"trackLengthToEcal_IKF_zedLambda/({tof_column}*299.792458)")\
+    #             .Define("mass", "harmonicMomToEcal_IKF_zedLambda*harmonicMomToEcal_IKF_zedLambda*( 1./(beta*beta) - 1.)")
 
-    df_pion = df.Filter("abs(pdg) == 211")\
-                .Define("beta", f"trackLengthToEcal_IKF_zedLambda/({tof_column}*299.792458)")\
-                .Filter("beta >= 0 && beta <= 1")\
-                .Define("mass", "harmonicMomToEcal_IKF_zedLambda*sqrt( 1./(beta*beta) - 1.)*1000")
-    h_2d_pion = df_pion.Histo2D(("h_pion", "#pi; momentum [GeV]; Mass [MeV]", n_mom_bins, 0, 20, n_mass_bins, 0, 6000.), "harmonicMomToEcal_IKF_zedLambda","mass")
+    h_2d_total = df_total.Histo2D(("h_total", "", n_mom_bins, 0, 20, n_mass_bins, 0, 6000.), "harmonicMomToEcal_IKF_zedLambda","mass")
 
-    df_kaon = df.Filter("abs(pdg) == 321")\
-                .Define("beta", f"trackLengthToEcal_IKF_zedLambda/({tof_column}*299.792458)")\
-                .Filter("beta >= 0 && beta <= 1")\
-                .Define("mass", "harmonicMomToEcal_IKF_zedLambda*sqrt( 1./(beta*beta) - 1.)*1000")
-    h_2d_kaon = df_kaon.Histo2D(("h_kaon", "K; momentum [GeV]; Mass [MeV]", n_mom_bins, 0, 20, n_mass_bins, 0, 6000.), "harmonicMomToEcal_IKF_zedLambda","mass")
+    df_pion = df_total.Filter("abs(pdg) == 211")
+    h_2d_pion = df_pion.Histo2D(("h_pion", "", n_mom_bins, 0, 20, n_mass_bins, 0, 6000.), "harmonicMomToEcal_IKF_zedLambda","mass")
 
-    df_proton = df.Filter("abs(pdg) == 2212")\
-                .Define("beta", f"trackLengthToEcal_IKF_zedLambda/({tof_column}*299.792458)")\
-                .Filter("beta >= 0 && beta <= 1")\
-                .Define("mass", "harmonicMomToEcal_IKF_zedLambda*sqrt( 1./(beta*beta) - 1.)*1000")
-    h_2d_proton = df_proton.Histo2D(("h_proton", "proton; momentum [GeV]; Mass [MeV]", n_mom_bins, 0, 20, n_mass_bins, 0, 6000.), "harmonicMomToEcal_IKF_zedLambda","mass")
+    df_kaon = df_total.Filter("abs(pdg) == 321")
+    h_2d_kaon = df_kaon.Histo2D(("h_kaon", "", n_mom_bins, 0, 20, n_mass_bins, 0, 6000.), "harmonicMomToEcal_IKF_zedLambda","mass")
+
+    df_proton = df_total.Filter("abs(pdg) == 2212")
+    h_2d_proton = df_proton.Histo2D(("h_proton", "", n_mom_bins, 0, 20, n_mass_bins, 0, 6000.), "harmonicMomToEcal_IKF_zedLambda","mass")
 
     # DRAW FANCY 2D plot
     # ROOT.gStyle.SetPadRightMargin(0.12)
@@ -101,8 +95,8 @@ def get_sep_power_graph(df, tof_column="tofClosest0"):
 
     gr_sp_pik = ROOT.TGraph()
     gr_sp_kp = ROOT.TGraph()
-    gr_sp_pik.SetTitle("; momentum [GeV]; #pi/K separation power")
-    gr_sp_kp.SetTitle("; momentum [GeV]; K/p separation power")
+    gr_sp_pik.SetTitle("; Momentum (GeV/c); #pi/K separation power")
+    gr_sp_kp.SetTitle("; Momentum (GeV/c); K/p separation power")
     # gr_sp_pik.SetPoint(0, 0, 0)
     # gr_sp_kp.SetPoint(0, 0, 0)
 
@@ -129,8 +123,8 @@ def get_sep_power_graph(df, tof_column="tofClosest0"):
     #                         int(600/(1. - ROOT.gStyle.GetPadLeftMargin() - ROOT.gStyle.GetPadRightMargin())),
     #                         int(600/(1. - ROOT.gStyle.GetPadTopMargin() - ROOT.gStyle.GetPadBottomMargin())) )
     ### IMPORTANT: CHANGE THIS BASED ON WHAT DO YOU WANT TO PLOT!!!!!! ###
-    # return gr_sp_pik
-    return gr_sp_kp
+    return gr_sp_pik
+    # return gr_sp_kp
     # gr_sp_pik.Draw("APL")
     # gr_sp_kp.Draw("PLsame")
     # gr_sp_kp.SetLineColor(4)
@@ -150,24 +144,22 @@ canvas.SetGridx(True)
 canvas.SetGridy(True)
 
 gr_sp={}
-colors = ["#03045e","#023e8a","#0077b6","#0096c7","#00b4d8","#48cae4"]
+colors = ['#0444b3', '#0068cc', '#008add', '#1caaea', '#61caf4', '#98e8ff']
+# colors = ["#03045e","#023e8a","#0077b6","#0096c7","#00b4d8","#48cae4"]
 # colors = ["#690000", "#850e0f", "#a21d19", "#c02b25", "#df3831", "#ff463d"]
-colors = [ ROOT.TColor.GetColor(c) for c in colors[::-1]]
+colors = [ ROOT.TColor.GetColor(c) for c in colors]
 
 legend = ROOT.TLegend(0.4, 0.63, 0.98, 0.94)
 legend.SetFillStyle(0)
 legend.SetBorderSize(0)
-for i, res in enumerate( [0, 10, 30, 50, 70, 90] ):
+for i, res in enumerate( [0, 20, 40, 60, 80, 100] ):
     gr_sp[res] = get_sep_power_graph(df, tof_column=f"tofClosest{int(res)}")
     gr_sp[res].Draw("ALP" if i == 0 else "LPsame")
     gr_sp[res].SetLineColor(colors[i])
     gr_sp[res].SetMarkerColor(colors[i])
     gr_sp[res].SetLineWidth(4)
     gr_sp[res].SetMarkerStyle(20)
-    if i == 0:
-        legend.AddEntry(gr_sp[res], "perfect TOF resolution","lp")
-    else:
-        legend.AddEntry(gr_sp[res], f"{res} ps","lp")
+    legend.AddEntry(gr_sp[res], f"{res} ps","lp")
 
 gr_sp[0].GetXaxis().SetRangeUser(0, 19)
 gr_sp[0].GetYaxis().SetRangeUser(0, 6)
