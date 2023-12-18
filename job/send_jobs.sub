@@ -12,8 +12,7 @@ request_cpus = 1
 request_memory = 1GB
 request_disk = 10KB
 
-queue file from /afs/desy.de/user/d/dudarboh/analysis/BohdanAna/job/failed_jobs.txt
-#queue file from /afs/desy.de/user/d/dudarboh/analysis/data/REC/250GeV/2f_Z_hadronic_E250_eLpR.txt
-#queue file from /afs/desy.de/user/d/dudarboh/analysis/data/REC/250GeV/2f_Z_hadronic_E250_eRpL.txt
-#queue file from /afs/desy.de/user/d/dudarboh/analysis/data/REC/250GeV/4f_WW_hadronic_E250_eLpR.txt
-#queue file from /afs/desy.de/user/d/dudarboh/analysis/data/REC/250GeV/4f_WW_hadronic_E250_eRpL.txt
+queue file from /afs/desy.de/user/d/dudarboh/analysis/data/REC/250GeV/2f_Z_hadronic_E250_eLpR.txt
+queue file from /afs/desy.de/user/d/dudarboh/analysis/data/REC/250GeV/2f_Z_hadronic_E250_eRpL.txt
+queue file from /afs/desy.de/user/d/dudarboh/analysis/data/REC/250GeV/4f_WW_hadronic_E250_eLpR.txt
+queue file from /afs/desy.de/user/d/dudarboh/analysis/data/REC/250GeV/4f_WW_hadronic_E250_eRpL.txt

@@ -76,11 +76,12 @@ void BohdanAna::init(){
 
     //tofs
     _tree->Branch("layerClosest", &_layerClosest);
-    for (int i = 0; i < 11; i++){
-        _tree->Branch(( "tofClosest"+std::to_string(i*10) ).c_str(), &( _tofClosest[i]) );
-        _tree->Branch(( "tofAverage"+std::to_string(i*10) ).c_str(), &( _tofAverage[i]) );
-        _tree->Branch(( "tofSET"+std::to_string(i*10) ).c_str(), &( _tofSET[i]) );
-        _tree->Branch(( "tofFit"+std::to_string(i*10) ).c_str(), &( _tofFit[i]) );
+    for (size_t i = 0; i < _resolutions.size(); i++){
+        int res = int(_resolutions[i]);
+        _tree->Branch(( "tofClosest"+std::to_string(res) ).c_str(), &( _tofClosest[i]) );
+        _tree->Branch(( "tofAverage"+std::to_string(res) ).c_str(), &( _tofAverage[i]) );
+        _tree->Branch(( "tofSET"+std::to_string(res) ).c_str(), &( _tofSET[i]) );
+        _tree->Branch(( "tofFit"+std::to_string(res) ).c_str(), &( _tofFit[i]) );
     }
 
     _tree->Branch("nHits", &_nHits);
@@ -173,14 +174,15 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
             streamlog_out(DEBUG8)<<"selectFrankEcalHits()"<<std::endl;
             auto selectedHits = selectFrankEcalHits(cluster, trackPosAtCalo, trackMomAtCalo, 10);
             streamlog_out(DEBUG8)<<"Calculating TOFs for all resolutions"<<std::endl;
-            for (int j = 0; j < 11; j++){
-                _tofClosest.at(j) = getTofClosest(cluster, trackPosAtCalo, 0.01*j).second;
-                _tofAverage.at(j) = getTofFrankAvg(selectedHits, trackPosAtCalo, 0.01*j);
-                _tofFit.at(j) = getTofFrankFit(selectedHits, trackPosAtCalo, 0.01*j);
-                _tofSET.at(j) = getTofSET(track, 0.01*j);
+            for (size_t j = 0; j < _resolutions.size(); j++){
+                double res = _resolutions[j]/1000.; // in ns
+                _tofClosest.at(j) = getTofClosest(cluster, trackPosAtCalo, res).second;
+                _tofAverage.at(j) = getTofFrankAvg(selectedHits, trackPosAtCalo, res);
+                _tofFit.at(j) = getTofFrankFit(selectedHits, trackPosAtCalo, res);
+                _tofSET.at(j) = getTofSET(track, res);
             }
 
-            drawDisplay(this, evt, displayPFO, pfo, true);
+            // drawDisplay(this, evt, displayPFO, pfo, true);
             // plotCanvas(cluster, trackPosAtCalo, trackMomAtCalo, mc);
             // plotTrackParams(trackHitStates, pfo, mc, _bField);
         }
@@ -193,10 +195,11 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
             _layerClosest = getTofClosest(cluster, photonPosAtCalo, 0.).first;
             auto selectedHits = selectFrankEcalHits(cluster, photonPosAtCalo, mom, 10);
             streamlog_out(DEBUG8)<<"Calculating TOFs for all resolutions"<<std::endl;
-            for (int j = 0; j < 11; j++){
-                _tofClosest.at(j) = getTofClosest(cluster, photonPosAtCalo, 0.01*j).second;
-                _tofAverage.at(j) = getTofFrankAvg(selectedHits, photonPosAtCalo, 0.01*j);
-                _tofFit.at(j) = getTofFrankFit(selectedHits, photonPosAtCalo, 0.01*j);
+            for (size_t j = 0; j < _resolutions.size(); j++){
+                double res = _resolutions[j]/1000.; // in ns
+                _tofClosest.at(j) = getTofClosest(cluster, photonPosAtCalo, res).second;
+                _tofAverage.at(j) = getTofFrankAvg(selectedHits, photonPosAtCalo, res);
+                _tofFit.at(j) = getTofFrankFit(selectedHits, photonPosAtCalo, res);
                 // no track - no SET!
             }
         }
@@ -205,8 +208,19 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
         }
         _tree->Fill();
 
-        // Fill all in the TTree
-        // drawDisplay(this, evt, displayPFO, pfo, true);
+        //DEBUGGING
+        // double mom = _trackLength_IKF_zedLambda.harmonicMomToEcal;
+        // double trackLength = _trackLength_IKF_zedLambda.trackLengthToEcal;
+        // double beta = trackLength/(299.792458*_tofClosest[0]);
+        // double m2 = mom*mom*(1./(beta*beta) - 1.);
+        // if (m2 < -0.1 && _tofClosest[0] > 6. && mom < 1.2){
+        //     streamlog_out(DEBUG8)<<" Momentum: "<<mom<<" GeV/c"<<std::endl;
+        //     streamlog_out(DEBUG8)<<" Track length: "<<trackLength<<" mm"<<std::endl;
+        //     streamlog_out(DEBUG8)<<" TOF: "<<_tofClosest[0]<<" ns"<<std::endl;
+        //     streamlog_out(DEBUG8)<<" Beta: "<<beta<<std::endl;
+        //     streamlog_out(DEBUG8)<<" m^2: "<<m2<<" GeV/c^2"<<std::endl;
+        //     drawDisplay(this, evt, displayPFO, pfo, true);
+        // }
     }
 }
 

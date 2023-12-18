@@ -8,7 +8,7 @@ include(ilcsoft_default_settings)
 
 # Remove this ugly warning
 set(CMAKE_BUILD_TYPE Debug)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-effc++ -O3")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-effc++ -O3 -g")
 message(STATUS "C++ flags are set to: " ${CMAKE_CXX_FLAGS})
 
 

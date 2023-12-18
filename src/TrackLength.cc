@@ -98,6 +98,8 @@ std::vector<HitState> getTrackStates(ReconstructedParticle* pfo, double bField, 
                 state.ts = getTrackStateAtHit(marlinTrk.get(), hitsInFit[j].first);
                 state.hit = hitsInFit[j].first;
                 state.simHit = getSimTrackerHit(state.hit, navToSimTrackerHits);
+                streamlog_out(DEBUG7)<<"Added state from hit at ("<<state.hit->getPosition()[0]<<", "<<state.hit->getPosition()[1]<<", "<<state.hit->getPosition()[2]<<")"<<std::endl;
+                streamlog_out(DEBUG7)<<state.ts<<std::endl;
                 trackStates.push_back(state);
             }
         }
@@ -107,16 +109,24 @@ std::vector<HitState> getTrackStates(ReconstructedParticle* pfo, double bField, 
                 state.ts = getTrackStateAtHit(marlinTrk.get(), hitsInFit[j].first);
                 state.hit = hitsInFit[j].first;
                 state.simHit = getSimTrackerHit(state.hit, navToSimTrackerHits);
+                streamlog_out(DEBUG7)<<"Added state from hit at ("<<state.hit->getPosition()[0]<<", "<<state.hit->getPosition()[1]<<", "<<state.hit->getPosition()[2]<<")"<<std::endl;
+                streamlog_out(DEBUG7)<<state.ts<<std::endl;
                 trackStates.push_back(state);
             }
         }
     }
 
-    const IMPL::TrackStateImpl* tsCalo = static_cast<const IMPL::TrackStateImpl*> (lastGoodRefittedTrack.getTrackState(TrackState::AtCalorimeter) );
-    if ( pfo->getClusters().size() > 0 && tsCalo != nullptr ){
+    const EVENT::TrackState* tsCaloBugged = lastGoodRefittedTrack.getTrackState(TrackState::AtCalorimeter);
+    if ( pfo->getClusters().size() > 0 && tsCaloBugged != nullptr ){
+        // d0 and z0 of the track state at calo MUST be 0. This is a bug! Fix manually here.
+        IMPL::TrackStateImpl tsCalo = *(dynamic_cast<const IMPL::TrackStateImpl*> (tsCaloBugged));
+        tsCalo.setD0(0.);
+        tsCalo.setZ0(0.);
         HitState state;
-        state.ts = *(tsCalo);
+        state.ts = tsCalo;
         // no hit/simhit for the extrapolated track state at the ECAL
+        streamlog_out(DEBUG7)<<"Added state tsCalo ("<<(state.ts).getReferencePoint()[0]<<", "<<(state.ts).getReferencePoint()[1]<<", "<<(state.ts).getReferencePoint()[2]<<")"<<std::endl;
+        streamlog_out(DEBUG7)<<state.ts<<std::endl;
         trackStates.push_back( state );
     }
     return trackStates;
@@ -139,6 +149,7 @@ double getTrackLengthSHA(Track* track, int location=TrackState::AtCalorimeter, T
 TrackLengthResult getTrackLengthIKF(const std::vector<IMPL::TrackStateImpl>& trackStates, double bField, TrackLengthOption option){
     TrackLengthResult result;
     int nTrackStates = trackStates.size();
+    streamlog_out(DEBUG7)<<"Calculating track length for"<<nTrackStates<<" track states"<<std::endl;
     if (nTrackStates <= 1) return result;
 
     for( int i=1; i < nTrackStates-1; ++i ){
@@ -147,6 +158,7 @@ TrackLengthResult getTrackLengthIKF(const std::vector<IMPL::TrackStateImpl>& tra
         Vector3D mom(momArr[0], momArr[1], momArr[2]);
         result.trackLengthToSET += arcLength;
         result.harmonicMomToSET += arcLength/mom.r2();
+        streamlog_out(DEBUG7)<<"Arc length "<<i<<": "<<arcLength<<"  sum: "<<result.trackLengthToSET<<std::endl;
     }
 
     //now calculate to the Ecal one more step
@@ -155,6 +167,7 @@ TrackLengthResult getTrackLengthIKF(const std::vector<IMPL::TrackStateImpl>& tra
     Vector3D lastMom(lastMomArr[0], lastMomArr[1], lastMomArr[2]);
     result.trackLengthToEcal = result.trackLengthToSET + lastArcLength;
     result.harmonicMomToEcal = result.harmonicMomToSET + lastArcLength/lastMom.r2();
+    streamlog_out(DEBUG7)<<"Last Arc length "<<": "<<lastArcLength<<"  sum: "<<result.trackLengthToEcal<<std::endl;
 
     // don't forget to do the last step to properly calculate harmonic momentum!
     result.harmonicMomToSET = std::sqrt(result.trackLengthToSET/result.harmonicMomToSET);
