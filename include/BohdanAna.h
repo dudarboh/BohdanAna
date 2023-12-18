@@ -49,10 +49,14 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
         TrackLengthResult _trackLength_IKF_phiLambda;
         TrackLengthResult _trackLength_IKF_phiZed;
         TrackLengthResult _trackLength_IKF_zedLambda;
-
+        bool _cleanTrack = true;
 
         //each element per time resolution from 0 to 100 ps
+        int _typeClosest = -1;
+        int _caloIDClosest = -1;
+        int _layoutClosest = -1;
         int _layerClosest = -1;
+        bool _cleanClosestHit = false;
         std::vector<double> _resolutions = {0, 1, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 300};
         std::array<double, 15> _tofClosest{};
         std::array<double, 15> _tofAverage{};

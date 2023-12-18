@@ -73,9 +73,14 @@ void BohdanAna::init(){
     _tree->Branch("trackLengthToSET_IKF_zedLambda", &_trackLength_IKF_zedLambda.trackLengthToSET);
     _tree->Branch("harmonicMomToEcal_IKF_zedLambda", &_trackLength_IKF_zedLambda.harmonicMomToEcal);
     _tree->Branch("harmonicMomToSET_IKF_zedLambda", &_trackLength_IKF_zedLambda.harmonicMomToSET);
+    _tree->Branch("cleanTrack", &_cleanTrack);
 
     //tofs
+    _tree->Branch("typeClosest", &_typeClosest);
+    _tree->Branch("caloIDClosest", &_caloIDClosest);
+    _tree->Branch("layoutClosest", &_layoutClosest);
     _tree->Branch("layerClosest", &_layerClosest);
+    _tree->Branch("cleanClosestHit", &_cleanClosestHit);
     for (size_t i = 0; i < _resolutions.size(); i++){
         int res = int(_resolutions[i]);
         _tree->Branch(( "tofClosest"+std::to_string(res) ).c_str(), &( _tofClosest[i]) );
@@ -104,6 +109,7 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
     LCCollection* pfos = evt->getCollection("PandoraPFOs");
     LCRelationNavigator pfo2mc ( evt->getCollection("RecoMCTruthLink") );
     LCRelationNavigator navToSimTrackerHits( evt->getCollection("TrackerHitsRelations") );
+    LCRelationNavigator navToSimCalorimeterHits( evt->getCollection("CalorimeterHitsRelations") );
 
     for (int i=0; i<pfos->getNumberOfElements(); ++i){
         streamlog_out(DEBUG8)<<"Starting to analyze "<<i+1<<" PFO"<<std::endl;
@@ -153,6 +159,7 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
             std::vector<IMPL::TrackStateImpl> trackStates;
             for(auto& hitState: trackHitStates){
                 trackStates.push_back(hitState.ts);
+                if ( hitState.simHit != nullptr && hitState.simHit->getMCParticle() != mc ) _cleanTrack = false;
             }
 
             streamlog_out(DEBUG8)<<"getTrackLengthSHA(AtIP)"<<std::endl;
@@ -169,14 +176,20 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
             _trackLength_IKF_zedLambda = getTrackLengthIKF(trackStates, _bField, TrackLengthOption::zedLambda);
 
             streamlog_out(DEBUG8)<<"getTofClosest()"<<std::endl;
-            _layerClosest = getTofClosest(cluster, trackPosAtCalo, 0.).first;
+            CalorimeterHit* closestHit = getClosestHit(cluster, trackPosAtCalo);
+
+            _typeClosest = getHitCaloType(closestHit);
+            _caloIDClosest = getHitCaloID(closestHit);
+            _layoutClosest = getHitCaloLayout(closestHit);
+            _layerClosest = getHitCaloLayer(closestHit);
+            _cleanClosestHit = getHitEarliestMC(closestHit, navToSimCalorimeterHits) == mc;
 
             streamlog_out(DEBUG8)<<"selectFrankEcalHits()"<<std::endl;
             auto selectedHits = selectFrankEcalHits(cluster, trackPosAtCalo, trackMomAtCalo, 10);
             streamlog_out(DEBUG8)<<"Calculating TOFs for all resolutions"<<std::endl;
             for (size_t j = 0; j < _resolutions.size(); j++){
                 double res = _resolutions[j]/1000.; // in ns
-                _tofClosest.at(j) = getTofClosest(cluster, trackPosAtCalo, res).second;
+                _tofClosest.at(j) = getHitTof(closestHit, trackPosAtCalo, res);
                 _tofAverage.at(j) = getTofFrankAvg(selectedHits, trackPosAtCalo, res);
                 _tofFit.at(j) = getTofFrankFit(selectedHits, trackPosAtCalo, res);
                 _tofSET.at(j) = getTofSET(track, res);
@@ -192,12 +205,19 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
             Vector3D photonPosAtCalo = getPhotonAtCalorimeter(mc);
             Vector3D mom( mc->getMomentum() );
 
-            _layerClosest = getTofClosest(cluster, photonPosAtCalo, 0.).first;
+            CalorimeterHit* closestHit = getClosestHit(cluster, photonPosAtCalo);
+            _typeClosest = getHitCaloType(closestHit);
+            _caloIDClosest = getHitCaloID(closestHit);
+            _layoutClosest = getHitCaloLayout(closestHit);
+            _layerClosest = getHitCaloLayer(closestHit);
+            _cleanClosestHit = getHitEarliestMC(closestHit, navToSimCalorimeterHits) == mc;
+
+
             auto selectedHits = selectFrankEcalHits(cluster, photonPosAtCalo, mom, 10);
             streamlog_out(DEBUG8)<<"Calculating TOFs for all resolutions"<<std::endl;
             for (size_t j = 0; j < _resolutions.size(); j++){
                 double res = _resolutions[j]/1000.; // in ns
-                _tofClosest.at(j) = getTofClosest(cluster, photonPosAtCalo, res).second;
+                _tofClosest.at(j) = getHitTof(closestHit, photonPosAtCalo, res);
                 _tofAverage.at(j) = getTofFrankAvg(selectedHits, photonPosAtCalo, res);
                 _tofFit.at(j) = getTofFrankFit(selectedHits, photonPosAtCalo, res);
                 // no track - no SET!
@@ -246,8 +266,12 @@ void BohdanAna::resetVariables(){
     _trackLength_IKF_phiLambda = TrackLengthResult();
     _trackLength_IKF_phiZed = TrackLengthResult();
     _trackLength_IKF_zedLambda = TrackLengthResult();
-
+    _cleanTrack = true;
+    _typeClosest = -1;
+    _caloIDClosest = -1;
+    _layoutClosest = -1;
     _layerClosest = -1;
+    _cleanClosestHit = false;
     _tofClosest.fill(0.);
     _tofAverage.fill(0.);
     _tofSET.fill(0.);

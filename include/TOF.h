@@ -6,21 +6,29 @@
 #include "EVENT/Track.h"
 #include "EVENT/ReconstructedParticle.h"
 #include "EVENT/MCParticle.h"
+#include "UTIL/LCRelationNavigator.h"
 #include "DDRec/Vector3D.h"
 #include <vector>
 #include <utility>
 
-std::vector<EVENT::CalorimeterHit*> selectFrankEcalHits( EVENT::Cluster* cluster, dd4hep::rec::Vector3D posAtEcal, dd4hep::rec::Vector3D momAtEcal, int maxEcalLayer);
+std::vector<EVENT::CalorimeterHit*> selectFrankEcalHits( EVENT::Cluster* cluster, const dd4hep::rec::Vector3D& posAtEcal, const dd4hep::rec::Vector3D& momAtEcal, int maxEcalLayer );
 
-std::pair<int, double> getTofClosest( EVENT::Cluster* cluster, dd4hep::rec::Vector3D posAtEcal, double timeResolution);
+EVENT::CalorimeterHit* getClosestHit( EVENT::Cluster* cluster, const dd4hep::rec::Vector3D& posAtEcal );
 
-double getTofFrankAvg( const std::vector<EVENT::CalorimeterHit*>& selectedHits, dd4hep::rec::Vector3D posAtEcal, double timeResolution);
+double getHitTof( EVENT::CalorimeterHit* hit, const dd4hep::rec::Vector3D& posAtEcal, double timeResolution) ;
+int getHitCaloType( EVENT::CalorimeterHit* hit );
+int getHitCaloID( EVENT::CalorimeterHit* hit );
+int getHitCaloLayout( EVENT::CalorimeterHit* hit );
+int getHitCaloLayer( EVENT::CalorimeterHit* hit );
+EVENT::MCParticle* getHitEarliestMC( EVENT::CalorimeterHit* hit, const UTIL::LCRelationNavigator& navToSimCalorimeterHits );
 
-double getTofFrankFit( const std::vector<EVENT::CalorimeterHit*>& selectedHits, dd4hep::rec::Vector3D posAtEcal, double timeResolution);
+double getTofFrankAvg( const std::vector<EVENT::CalorimeterHit*>& selectedHits, const dd4hep::rec::Vector3D& posAtEcal, double timeResolution );
 
-double getTofSET(EVENT::Track* track, double timeResolution);
+double getTofFrankFit( const std::vector<EVENT::CalorimeterHit*>& selectedHits, const dd4hep::rec::Vector3D& posAtEcal, double timeResolution );
 
-double getTofPhotonTrue(EVENT::MCParticle* mc);
+double getTofSET(EVENT::Track* track, double timeResolution );
+
+double getTofPhotonTrue(EVENT::MCParticle* mc );
 
 
 #endif

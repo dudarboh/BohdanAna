@@ -8,10 +8,10 @@ colors = ['#1b9e77', '#d95f02', '#7570b3']
 colors = [ ROOT.TColor.GetColor(c) for c in colors]
 
 df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna.root").Filter("abs(pdg) == 211 || abs(pdg) == 321 || abs(pdg) == 2212")
-df = df.Filter("tofClosest0 > 6. && layerClosest == 0")
+df = df.Filter("tofClosest0 > 6.")
 # ROOT.Experimental.AddProgressBar(df)
-n_mom_bins, mom_min, mom_max = 1000, 0, 10
-n_mass_bins, mass_min, mass_max = 1000, -0.3, 1.2
+n_mom_bins, mom_min, mom_max = 2000, 0, 20
+n_mass_bins, mass_min, mass_max = 2000, -3, 3
 
 def get_2d_histo(df, tof_column="tofClosest0"):
     df = df.Define("beta", f"trackLengthToEcal_IKF_zedLambda/({tof_column}*299.792458)")
