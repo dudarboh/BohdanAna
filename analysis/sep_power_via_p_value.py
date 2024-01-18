@@ -1,174 +1,229 @@
 import ROOT
 import numpy as np
+
+from my_utilities import *
+
 ROOT.gStyle.SetPalette(ROOT.kBird)
 ROOT.gStyle.SetNumberContours(256)
-ROOT.gStyle.SetOptTitle(1)
-ROOT.EnableImplicitMT()
+# ROOT.EnableImplicitMT()
 
-colors = ['#1b9e77', '#d95f02', '#7570b3']
-colors = [ ROOT.TColor.GetColor(c) for c in colors]
+def extract_data(df, tof_column="tofClosest0"):
+    df = df.Define("beta", f"trackLengthToEcal_IKF_zedLambda/({tof_column}*299.792458)")
+    df = df.Define("inverseBeta", "1/beta")
+    df = df.Define("mass2", "harmonicMomToEcal_IKF_zedLambda*harmonicMomToEcal_IKF_zedLambda*( 1./(beta*beta) - 1.)")
+    return df
+    # df_mass = df.Filter("mass2 > 0.").Define("mass", "sqrt(mass2)")
+    # return df_mass
 
-def get_p_value(h1, h2):
+def get_pdg_histogram(df, pdg="all"):
+    n_x_bins, x_min, x_max = 70, 0, 20
+    y_name = "mass2"
+    if y_name == "mass2":
+        n_y_bins, y_min, y_max = 3000, -10, 10
+    elif y_name == "beta":
+        n_y_bins, y_min, y_max = 3000, 0, 2
+
+    df_filtered = df.Filter(f"abs(pdg) == {pdg}") if pdg != "all" else df
+    h = df_filtered.Histo2D((f"h_{pdg}", "", n_x_bins, x_min, x_max, n_y_bins, y_min, y_max), "harmonicMomToEcal_IKF_zedLambda",y_name)
+    return h
+
+def analyse_optimal_cut(h1, h2, debug=False):
     '''
-        h1 should be to the left, (let's assume signal)
-        h2 should be to the right (let's assume background)
+        h1, h2 - 1D histograms in a given momentum slice
     '''
-    # as bins in mass: 500, -100, 1300.
-    # i changed it to 3000 -0 6000 , because with 100 ps ALL masses move to higher values
+    cut_mass = []
     efficiencies = []
     mis_ids = []
-    cut_mass = []
     diff = []
     n_signal = h1.GetEntries()
     n_background = h2.GetEntries()
 
-    for cut in range(1, h1.GetXaxis().GetNbins()):
-        eff = h1.Integral(0, cut)/n_signal
-        mis_id = h2.Integral(0, cut)/n_background
+    for bin in range(1, h1.GetXaxis().GetNbins()):
+        bin_x = h1.GetXaxis().GetBinUpEdge(bin)
+        # integral includes first/last bins
+        eff = h1.Integral(0, bin)/n_signal if n_signal !=0 else 0
+        mis_id = h2.Integral(0, bin)/n_background if n_background !=0 else 0
+        if mis_id > eff:
+            # h1 is the right histogram and h2 is the left! Flip the effieincy!
+            eff, mis_id = 1-eff, 1-mis_id
 
-        cut_mass.append( h1.GetXaxis().GetBinLowEdge(cut+1)  )
+        cut_mass.append( bin_x )
         efficiencies.append(eff)
         mis_ids.append(mis_id)
         diff.append( abs(1-eff - mis_id) )
 
-    cut_mass = np.array(cut_mass)
-    efficiencies = np.array(efficiencies)
-    mis_ids = np.array(mis_ids)
-    diff = np.array(diff)
+    optimal_idx = np.argmin( diff )
 
-    p_value = mis_ids[ np.argmin(diff) ]
-    sep_power = 2*ROOT.Math.gaussian_quantile_c(p_value, 1)
-    print(f"Found cut at mass: {round(cut_mass[np.argmin(diff)], 2)}\
-            with (efficiency): {round(1-efficiencies[np.argmin(diff)], 2)} and mis id: {round(p_value, 2)} and sep power {round(sep_power, 2)}")
-    return sep_power
+    optimal_cut = cut_mass[optimal_idx]
+    optimal_eff = efficiencies[optimal_idx]
+    optimal_mis_id = mis_ids[optimal_idx]
 
+    print(f"Cut: {round(optimal_cut, 2)} / eff: {round(optimal_eff, 2)} / mis id: {round(optimal_mis_id, 2)}")
+    if debug:
+        draw_optimal_cut(h1, h2, optimal_cut)
 
-# df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/dEdx/final.root")
-df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna.root")
-df = df.Filter("tofClosest0 > 6.")
-n_mom_bins = 70
-n_mass_bins = 3000
+    return optimal_cut, optimal_eff, optimal_mis_id
 
-def get_sep_power_graph(df, tof_column="tofClosest0"):
+def draw_optimal_cut(h1, h2, cut):
+    # my default pi/k/p colours
+    colors = ['#1b9e77', '#d95f02', '#7570b3']
+    colors = [ ROOT.TColor.GetColor(c) for c in colors]
 
-    df_total = df.Define("beta", f"trackLengthToEcal_IKF_zedLambda/({tof_column}*299.792458)")\
-                .Filter("beta >= 0 && beta <= 1")\
-                .Define("mass", "harmonicMomToEcal_IKF_zedLambda*sqrt( 1./(beta*beta) - 1.)*1000")
-    # df_total = df.Define("beta", f"trackLengthToEcal_IKF_zedLambda/({tof_column}*299.792458)")\
-    #             .Define("mass", "harmonicMomToEcal_IKF_zedLambda*harmonicMomToEcal_IKF_zedLambda*( 1./(beta*beta) - 1.)")
+    h1, h2 = h1.Clone(), h2.Clone()
+    h1.Scale(1./h1.GetEntries())
+    h2.Scale(1./h2.GetEntries())
 
-    h_2d_total = df_total.Histo2D(("h_total", "", n_mom_bins, 0, 20, n_mass_bins, 0, 6000.), "harmonicMomToEcal_IKF_zedLambda","mass")
+    h1_fill = h1.Clone()
+    h2_fill = h2.Clone()
+    for bin in range(1, h1_fill.GetXaxis().GetNbins() ):
+        if h1_fill.GetBinCenter(bin) < cut:
+            h1_fill.SetBinContent(bin, 0.)
+        else:
+            h2_fill.SetBinContent(bin, 0.)
 
-    df_pion = df_total.Filter("abs(pdg) == 211")
-    h_2d_pion = df_pion.Histo2D(("h_pion", "", n_mom_bins, 0, 20, n_mass_bins, 0, 6000.), "harmonicMomToEcal_IKF_zedLambda","mass")
+    margin = 0.22
+    ROOT.gStyle.SetPadLeftMargin(0.9*margin)
+    ROOT.gStyle.SetPadRightMargin(0.1*margin)
+    ROOT.gStyle.SetPadTopMargin(0.3*margin)
+    ROOT.gStyle.SetPadBottomMargin(0.7*margin)
+    canvas = ROOT.TCanvas(get_rand_string(),"", 600, 600)
 
-    df_kaon = df_total.Filter("abs(pdg) == 321")
-    h_2d_kaon = df_kaon.Histo2D(("h_kaon", "", n_mom_bins, 0, 20, n_mass_bins, 0, 6000.), "harmonicMomToEcal_IKF_zedLambda","mass")
+    h1.Draw("hist")
+    h1.GetXaxis().SetTitle("Mass^{2} (GeV^{2}/c^{4})")
+    h1.GetYaxis().SetTitle("Normalised N entries")
+    # h1.GetYaxis().SetTitleOffset(1.2)
+    h1.GetYaxis().SetMaxDigits(3)
+    h2.Draw("hist same")
+    h1_fill.Draw("hist f same")
+    h2_fill.Draw("hist f same")
 
-    df_proton = df_total.Filter("abs(pdg) == 2212")
-    h_2d_proton = df_proton.Histo2D(("h_proton", "", n_mom_bins, 0, 20, n_mass_bins, 0, 6000.), "harmonicMomToEcal_IKF_zedLambda","mass")
+    ymax = 1.05*max(h1.GetMaximum(), h2.GetMaximum())
+    h1.SetMaximum(ymax)
 
-    # DRAW FANCY 2D plot
-    # ROOT.gStyle.SetPadRightMargin(0.12)
-    # canvas = ROOT.TCanvas("c_2d_m_vs_p_total",
-    #                         "",
-    #                         int(600/(1. - ROOT.gStyle.GetPadLeftMargin() - ROOT.gStyle.GetPadRightMargin())),
-    #                         int(600/(1. - ROOT.gStyle.GetPadTopMargin() - ROOT.gStyle.GetPadBottomMargin())) )
-    # h_2d_total.Draw("colz")
+    h1.SetLineWidth(4)
+    h1.SetLineColor(colors[0])
+    h1_fill.SetFillStyle(3001)
+    h1_fill.SetFillColor(colors[0])
+    h1_fill.SetLineColor(colors[0])
 
-    # h_2d_total.SetMinimum(1)
-    # h_2d_total.SetMaximum(100000)
-    # canvas.SetLogz()
-    # canvas.SetGridx(0)
-    # canvas.SetGridy(0)
-    # canvas.Update()
-    # palette = h_2d_total.GetListOfFunctions().FindObject("palette")
-    # palette.SetX1NDC(0.89)
-    # palette.SetX2NDC(0.91)
-    # canvas.Modified()
-    # canvas.Update()
+    h2.SetLineWidth(4)
+    h2.SetLineColor(colors[1])
+    h2_fill.SetFillStyle(3001)
+    h2_fill.SetFillColor(colors[1])
+    h2_fill.SetLineColor(colors[1])
 
-    # canvas2 = ROOT.TCanvas("c_proj_m_vs_p",
-    #                         "",
-    #                         int(600/(1. - ROOT.gStyle.GetPadLeftMargin() - ROOT.gStyle.GetPadRightMargin())),
-    #                         int(600/(1. - ROOT.gStyle.GetPadTopMargin() - ROOT.gStyle.GetPadBottomMargin())) )
+    line = ROOT.TLine(cut, 0., cut, ymax)
+    line.SetLineColor(15)
+    line.SetLineWidth(2)
+    line.SetLineStyle(9)
+    line.Draw()
+    
+    canvas.Update()
+    input("wait")
 
-    gr_sp_pik = ROOT.TGraph()
-    gr_sp_kp = ROOT.TGraph()
-    gr_sp_pik.SetTitle("; Momentum (GeV/c); #pi/K separation power")
-    gr_sp_kp.SetTitle("; Momentum (GeV/c); K/p separation power")
-    # gr_sp_pik.SetPoint(0, 0, 0)
-    # gr_sp_kp.SetPoint(0, 0, 0)
-
-    for i in range(1, n_mom_bins):
-        h_proj_pion = h_2d_pion.ProjectionY("h_pion_projection", i, i)
-        h_proj_kaon = h_2d_kaon.ProjectionY("h_kaon_projection", i, i)
-        h_proj_proton = h_2d_proton.ProjectionY("h_proton_projection", i, i)
-
-        print(f"Computing for momentum range: {round(h_2d_total.GetXaxis().GetBinLowEdge(i), 2)} to {round(h_2d_total.GetXaxis().GetBinLowEdge(i+1), 2)}")
-        gr_sp_pik.SetPoint(i-1, h_2d_total.GetXaxis().GetBinCenter(i), get_p_value(h_proj_pion, h_proj_kaon) )
-        gr_sp_kp.SetPoint(i-1, h_2d_total.GetXaxis().GetBinCenter(i), get_p_value(h_proj_kaon, h_proj_proton))
-
-        # h_proj_pion.Draw()
-        # h_proj_pion.SetLineColor(colors[0])
-        # h_proj_kaon.Draw("Lsame")
-        # h_proj_kaon.SetLineColor(colors[1])
-        # h_proj_proton.Draw("Lsame")
-        # h_proj_proton.SetLineColor(colors[2])
-        # canvas2.SetLogy()
-        # canvas2.Update()
-
-    # canvas3 = ROOT.TCanvas("c_sep_power",
-    #                         "",
-    #                         int(600/(1. - ROOT.gStyle.GetPadLeftMargin() - ROOT.gStyle.GetPadRightMargin())),
-    #                         int(600/(1. - ROOT.gStyle.GetPadTopMargin() - ROOT.gStyle.GetPadBottomMargin())) )
-    ### IMPORTANT: CHANGE THIS BASED ON WHAT DO YOU WANT TO PLOT!!!!!! ###
-    return gr_sp_pik
-    # return gr_sp_kp
-    # gr_sp_pik.Draw("APL")
-    # gr_sp_kp.Draw("PLsame")
-    # gr_sp_kp.SetLineColor(4)
-    # canvas3.Update()
-    # input("wait")
+def get_separation_power(p_value):
+    '''p-value == 1 - efficiency'''
+    return 2*ROOT.Math.gaussian_quantile_c(p_value, 1)
 
 
-# get_sep_power_graph(df, tof_column="tofClosest90")
-# input("EEEEEEEEEND")
+def analyse_pid(h1, h2):
+    '''
+        h1,h2 - 2D histogram of something vs momentum
+    '''
+    gr_cut = ROOT.TGraph()
+    gr_eff = ROOT.TGraph()
+    gr_misid = ROOT.TGraph()
+    gr_sep_power = ROOT.TGraph()
 
-canvas = ROOT.TCanvas("c",
-                        "",
-                        int(600/(1. - ROOT.gStyle.GetPadLeftMargin() - ROOT.gStyle.GetPadRightMargin())),
-                        int(600/(1. - ROOT.gStyle.GetPadTopMargin() - ROOT.gStyle.GetPadBottomMargin())) )
+    for i in range(1, h1.GetXaxis().GetNbins() ):
+        x_low, x, x_up = h1.GetXaxis().GetBinLowEdge(i), h1.GetXaxis().GetBinCenter(i), h1.GetXaxis().GetBinUpEdge(i)
+        h1_proj = h1.ProjectionY("h1_proj", i, i)
+        h2_proj = h2.ProjectionY("h2_proj", i, i)
 
-canvas.SetGridx(True)
-canvas.SetGridy(True)
+        print(f"Momentum: {x_low:.2f} -- {x_up:.2f}")
+        cut, eff, misid = analyse_optimal_cut(h1_proj, h2_proj, debug=True)
+        sep_power = get_separation_power(1-eff)
 
-gr_sp={}
-colors = ['#0444b3', '#0068cc', '#008add', '#1caaea', '#61caf4', '#98e8ff']
-# colors = ["#03045e","#023e8a","#0077b6","#0096c7","#00b4d8","#48cae4"]
-# colors = ["#690000", "#850e0f", "#a21d19", "#c02b25", "#df3831", "#ff463d"]
-colors = [ ROOT.TColor.GetColor(c) for c in colors]
+        gr_cut.SetPoint(i-1, x, cut)
+        gr_eff.SetPoint(i-1, x, eff)
+        gr_misid.SetPoint(i-1, x, misid)
+        gr_sep_power.SetPoint(i-1, x, sep_power)
+    return gr_cut, gr_eff, gr_misid, gr_sep_power
 
-legend = ROOT.TLegend(0.4, 0.63, 0.98, 0.94)
-legend.SetFillStyle(0)
-legend.SetBorderSize(0)
-for i, res in enumerate( [0, 20, 40, 60, 80, 100] ):
-    gr_sp[res] = get_sep_power_graph(df, tof_column=f"tofClosest{int(res)}")
-    gr_sp[res].Draw("ALP" if i == 0 else "LPsame")
-    gr_sp[res].SetLineColor(colors[i])
-    gr_sp[res].SetMarkerColor(colors[i])
-    gr_sp[res].SetLineWidth(4)
-    gr_sp[res].SetMarkerStyle(20)
-    legend.AddEntry(gr_sp[res], f"{res} ps","lp")
+def draw_sep_powers(graphs):
+    # colors = ["#03045e","#023e8a","#0077b6","#0096c7","#00b4d8","#48cae4"]
+    # colors = ["#690000", "#850e0f", "#a21d19", "#c02b25", "#df3831", "#ff463d"]
+    colors = ['#0444b3', '#0068cc', '#008add', '#1caaea', '#61caf4', '#98e8ff']
+    colors = [ ROOT.TColor.GetColor(c) for c in colors]
 
-gr_sp[0].GetXaxis().SetRangeUser(0, 19)
-gr_sp[0].GetYaxis().SetRangeUser(0, 6)
-gr_sp[0].GetYaxis().SetTitleOffset(1.1)
-legend.Draw()
+    margin = 0.22
+    ROOT.gStyle.SetPadLeftMargin(0.8*margin)
+    ROOT.gStyle.SetPadRightMargin(0.2*margin)
+    ROOT.gStyle.SetPadTopMargin(0.3*margin)
+    ROOT.gStyle.SetPadBottomMargin(0.7*margin)
+    canvas = ROOT.TCanvas(get_rand_string(),"", 600, 600)
+    canvas.SetGridx(True)
+    canvas.SetGridy(True)
 
-latex = ROOT.TLatex()
-latex.SetTextFont(52)
-latex.DrawLatex(12, 6.06, "ILD preliminary")
+    legend = ROOT.TLegend(0.4, 0.63, 0.98, 0.94)
+    legend.SetFillStyle(0)
+    legend.SetBorderSize(0)
+    for i, (res, gr) in enumerate(graphs.items()):
+        if i == 0:
+            gr.Draw("ALP")
+            gr.SetTitle(";Momentum (GeV/c); Z")
+            gr.GetXaxis().SetRangeUser(0, 19)
+            gr.GetYaxis().SetRangeUser(0, 6)
+            gr.GetYaxis().SetTitleOffset(1.1)
+        else:
+            gr.Draw("LPsame")
+        gr.SetLineColor(colors[i])
+        gr.SetMarkerColor(colors[i])
+        gr.SetLineWidth(4)
+        gr.SetMarkerStyle(20)
+        legend.AddEntry(gr, f"{res} ps","lp")
 
-canvas.Update()
-input("wait")
+    legend.Draw()
+
+    latex = ROOT.TLatex()
+    latex.SetTextFont(52)
+    latex.DrawLatex(12, 6.06, "ILD preliminary")
+
+    canvas.Update()
+    return canvas, legend
+
+
+def main():
+    df_init = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna.root")\
+                  .Filter("abs(pdg) == 211 || abs(pdg) == 321 || abs(pdg) == 2212")\
+                  .Filter("tofClosest0 > 6.")
+    graphs_sep_power_pik = {}
+    graphs_sep_power_kp = {}
+
+# [0, 20, 40, 60, 80, 100]
+    for res in [30]:
+        df = extract_data(df_init, tof_column=f"tofClosest{res}")
+
+        h_all = get_pdg_histogram(df)
+        h_pi = get_pdg_histogram(df, "211")
+        h_k = get_pdg_histogram(df, "321")
+        h_p = get_pdg_histogram(df, "2212")
+
+        # c_all = draw_2d_plot(h_all, 1e6)
+        # c_pi=  draw_2d_plot(h_pi, 1e6)
+        # c_k = draw_2d_plot(h_k, 1e6)
+        # c_p = draw_2d_plot(h_p, 1e6)
+        # input("wait")
+
+        gr_cut_pik, gr_eff_pik, gr_misid_pik, gr_sep_power_pik = analyse_pid(h_pi, h_k)
+        gr_cut_kp, gr_eff_kp, gr_misid_kp, gr_sep_power_kp = analyse_pid(h_k, h_p)
+
+        graphs_sep_power_pik[res] = gr_sep_power_pik
+        graphs_sep_power_kp[res] = gr_sep_power_kp
+
+    c1, leg1 = draw_sep_powers(graphs_sep_power_pik)
+    input("wait")
+    c2, leg2 = draw_sep_powers(graphs_sep_power_kp)
+    input("wait")
+
+main()

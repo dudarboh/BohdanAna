@@ -159,6 +159,7 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
             std::vector<IMPL::TrackStateImpl> trackStates;
             for(auto& hitState: trackHitStates){
                 trackStates.push_back(hitState.ts);
+
                 if ( hitState.simHit != nullptr && hitState.simHit->getMCParticle() != mc ) _cleanTrack = false;
             }
 
@@ -171,8 +172,8 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
             _trackLength_SHA_phiZed_ECAL = getTrackLengthSHA(track, TrackState::AtCalorimeter, TrackLengthOption::phiZed);
             _trackLength_SHA_zedLambda_ECAL = getTrackLengthSHA(track, TrackState::AtCalorimeter, TrackLengthOption::zedLambda);
             streamlog_out(DEBUG8)<<"getTrackLengthIKF()"<<std::endl;
-            _trackLength_IKF_phiLambda = getTrackLengthIKF(trackStates, _bField, TrackLengthOption::phiLambda);
-            _trackLength_IKF_phiZed = getTrackLengthIKF(trackStates, _bField, TrackLengthOption::phiZed);
+            // _trackLength_IKF_phiLambda = getTrackLengthIKF(trackStates, _bField, TrackLengthOption::phiLambda);
+            // _trackLength_IKF_phiZed = getTrackLengthIKF(trackStates, _bField, TrackLengthOption::phiZed);
             _trackLength_IKF_zedLambda = getTrackLengthIKF(trackStates, _bField, TrackLengthOption::zedLambda);
 
             streamlog_out(DEBUG8)<<"getTofClosest()"<<std::endl;
@@ -229,18 +230,18 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
         _tree->Fill();
 
         //DEBUGGING
-        // double mom = _trackLength_IKF_zedLambda.harmonicMomToEcal;
-        // double trackLength = _trackLength_IKF_zedLambda.trackLengthToEcal;
-        // double beta = trackLength/(299.792458*_tofClosest[0]);
-        // double m2 = mom*mom*(1./(beta*beta) - 1.);
-        // if (m2 < -0.1 && _tofClosest[0] > 6. && mom < 1.2){
-        //     streamlog_out(DEBUG8)<<" Momentum: "<<mom<<" GeV/c"<<std::endl;
-        //     streamlog_out(DEBUG8)<<" Track length: "<<trackLength<<" mm"<<std::endl;
-        //     streamlog_out(DEBUG8)<<" TOF: "<<_tofClosest[0]<<" ns"<<std::endl;
-        //     streamlog_out(DEBUG8)<<" Beta: "<<beta<<std::endl;
-        //     streamlog_out(DEBUG8)<<" m^2: "<<m2<<" GeV/c^2"<<std::endl;
-        //     drawDisplay(this, evt, displayPFO, pfo, true);
-        // }
+        double mom = _trackLength_IKF_zedLambda.harmonicMomToEcal;
+        double trackLength = _trackLength_IKF_zedLambda.trackLengthToEcal;
+        double beta = trackLength/(299.792458*_tofClosest[0]);
+        double m2 = mom*mom*(1./(beta*beta) - 1.);
+        if (m2 < -1. && _tofClosest[0] > 6. && mom < 2. && _layerClosest == 0 && _cleanClosestHit && _cleanTrack){
+            streamlog_out(DEBUG8)<<" Momentum: "<<mom<<" GeV/c"<<std::endl;
+            streamlog_out(DEBUG8)<<" Track length: "<<trackLength<<" mm"<<std::endl;
+            streamlog_out(DEBUG8)<<" TOF: "<<_tofClosest[0]<<" ns"<<std::endl;
+            streamlog_out(DEBUG8)<<" Beta: "<<beta<<std::endl;
+            streamlog_out(DEBUG8)<<" m^2: "<<m2<<" GeV/c^2"<<std::endl;
+            drawDisplay(this, evt, displayPFO, pfo, true);
+        }
     }
 }
 

@@ -10,13 +10,16 @@ df = df.Filter("tofClosest0 > 6.")
 df = df.Define("beta", "trackLengthToEcal_IKF_zedLambda/(tofClosest0*299.792458)")
 df = df.Define("mass2", "harmonicMomToEcal_IKF_zedLambda*harmonicMomToEcal_IKF_zedLambda*( 1./(beta*beta) - 1.)")
 
+#DONT FORGET TO REMOVE THIS
+# df = df.Filter("cleanClosestHit == 1 && cleanTrack == 1 && layerClosest == 0")
+
 h1 = df.Histo1D(("h1", ";clean track; %", 2, 0, 2), "cleanTrack")
 h2 = df.Histo1D(("h2", ";clean closest hit; %", 2, 0, 2), "cleanClosestHit")
 h3 = df.Histo1D(("h3", ";layer closest; %", 15,0,15), "layerClosest")
 h4 = df.Histo1D(("h4", ";calo type; %", 15,0,15), "typeClosest")
 h5 = df.Histo1D(("h5", ";calo id; %", 15,0,15), "caloIDClosest")
 h6 = df.Histo1D(("h6", ";calo layout; %", 15,0,15), "layoutClosest")
-histos = [h1, h2, h3, h4, h5, h6]
+# histos = [h1, h2, h3, h4, h5, h6]
 # canvas = ROOT.TCanvas()
 # for h in histos:
 #     h.Scale(100./h.GetEntries())
@@ -32,32 +35,38 @@ n_mass_bins, mass_min, mass_max = 2000, -3, 3
 
 
 cuts = ["true","cleanClosestHit == 1", "cleanClosestHit == 1 && cleanTrack == 1", "cleanClosestHit == 1 && cleanTrack == 1 && layerClosest == 0"]
+# cuts = ["true","cleanClosestHit != 1", "cleanTrack != 1", "layerClosest != 0"]
+cuts = ["true","cleanClosestHit == 1 && cleanTrack == 1 && layerClosest == 0 && layoutClosest == 4"]
+
 ROOT.gStyle.SetPadLeftMargin(0.17)
 ROOT.gStyle.SetPadRightMargin(0.14)
 ROOT.gStyle.SetPadTopMargin(0.04)
 ROOT.gStyle.SetPadBottomMargin(0.14)
 canvas2 = ROOT.TCanvas("c_2d_m_vs_p_total","",600,600)
 histos ={}
+n_events ={}
 for cut in cuts:
     df_sel = df.Filter(cut) 
     histos[cut] = df_sel.Histo2D((f"h2_{cut}", "; Momentum (GeV/c); Mass^{2} (GeV^{2}/c^{4})", n_mom_bins, mom_min, mom_max, n_mass_bins, mass_min, mass_max), "harmonicMomToEcal_IKF_zedLambda","mass2")
-for h_2d in histos.values():
+    n_events[cut] = df_sel.Count()
 
+print("Total events: ", n_events["true"].GetValue())
+for cut in cuts:
+    print("Passing ", cut, 100.*n_events[cut].GetValue()/n_events["true"].GetValue())
     # DRAW FANCY 2D plot
-    h_2d.Draw("colz")
-    h_2d.GetYaxis().SetTitleOffset(1.1)
-    print(h_2d.GetMaximum())
-    h_2d.SetMinimum(1)
-    h_2d.SetMaximum(10000)
+    histos[cut].Draw("colz")
+    histos[cut].GetYaxis().SetTitleOffset(1.1)
+    print(histos[cut].GetMaximum())
+    histos[cut].SetMinimum(1)
+    histos[cut].SetMaximum(10000)
     canvas2.SetLogz()
     canvas2.SetGridx(0)
     canvas2.SetGridy(0)
     canvas2.Update()
-    palette = h_2d.GetListOfFunctions().FindObject("palette")
+    palette = histos[cut].GetListOfFunctions().FindObject("palette")
     palette.SetX1(mom_min + 1.01*(mom_max-mom_min))
     palette.SetX2(mom_min + 1.05*(mom_max-mom_min))
     palette.SetLabelOffset(0.001)
-
     canvas2.Modified()
     canvas2.Update()
     input("wait")

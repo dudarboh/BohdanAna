@@ -98,8 +98,8 @@ std::vector<HitState> getTrackStates(ReconstructedParticle* pfo, double bField, 
                 state.ts = getTrackStateAtHit(marlinTrk.get(), hitsInFit[j].first);
                 state.hit = hitsInFit[j].first;
                 state.simHit = getSimTrackerHit(state.hit, navToSimTrackerHits);
-                streamlog_out(DEBUG7)<<"Added state from hit at ("<<state.hit->getPosition()[0]<<", "<<state.hit->getPosition()[1]<<", "<<state.hit->getPosition()[2]<<")"<<std::endl;
-                streamlog_out(DEBUG7)<<state.ts<<std::endl;
+                streamlog_out(DEBUG6)<<"Added state from hit at ("<<state.hit->getPosition()[0]<<", "<<state.hit->getPosition()[1]<<", "<<state.hit->getPosition()[2]<<")"<<std::endl;
+                streamlog_out(DEBUG6)<<state.ts<<std::endl;
                 trackStates.push_back(state);
             }
         }
@@ -109,8 +109,8 @@ std::vector<HitState> getTrackStates(ReconstructedParticle* pfo, double bField, 
                 state.ts = getTrackStateAtHit(marlinTrk.get(), hitsInFit[j].first);
                 state.hit = hitsInFit[j].first;
                 state.simHit = getSimTrackerHit(state.hit, navToSimTrackerHits);
-                streamlog_out(DEBUG7)<<"Added state from hit at ("<<state.hit->getPosition()[0]<<", "<<state.hit->getPosition()[1]<<", "<<state.hit->getPosition()[2]<<")"<<std::endl;
-                streamlog_out(DEBUG7)<<state.ts<<std::endl;
+                streamlog_out(DEBUG6)<<"Added state from hit at ("<<state.hit->getPosition()[0]<<", "<<state.hit->getPosition()[1]<<", "<<state.hit->getPosition()[2]<<")"<<std::endl;
+                streamlog_out(DEBUG6)<<state.ts<<std::endl;
                 trackStates.push_back(state);
             }
         }
