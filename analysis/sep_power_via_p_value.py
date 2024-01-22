@@ -15,9 +15,8 @@ def extract_data(df, tof_column="tofClosest0"):
     # df_mass = df.Filter("mass2 > 0.").Define("mass", "sqrt(mass2)")
     # return df_mass
 
-def get_pdg_histogram(df, pdg="all"):
+def get_pdg_histogram(df, pdg="all", y_name="mass2"):
     n_x_bins, x_min, x_max = 70, 0, 20
-    y_name = "mass2"
     if y_name == "mass2":
         n_y_bins, y_min, y_max = 3000, -10, 10
     elif y_name == "beta":
@@ -204,10 +203,11 @@ def main():
     for res in [30]:
         df = extract_data(df_init, tof_column=f"tofClosest{res}")
 
-        h_all = get_pdg_histogram(df)
-        h_pi = get_pdg_histogram(df, "211")
-        h_k = get_pdg_histogram(df, "321")
-        h_p = get_pdg_histogram(df, "2212")
+        y_name = "mass2"
+        h_all = get_pdg_histogram(df, "all", y_name)
+        h_pi = get_pdg_histogram(df, "211", y_name)
+        h_k = get_pdg_histogram(df, "321", y_name)
+        h_p = get_pdg_histogram(df, "2212", y_name)
 
         # c_all = draw_2d_plot(h_all, 1e6)
         # c_pi=  draw_2d_plot(h_pi, 1e6)

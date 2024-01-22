@@ -3,31 +3,22 @@ import ROOT
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
+from my_utilities import *
 
 ROOT.gStyle.SetCanvasPreferGL(True)
 plt.rcParams.update({'font.size':18, 'text.usetex':True})
 
-particles = {}
-particles['pion'] = {'mass' : 0.13957039, 'color': ROOT.TColor.GetColor('#1b9e77'), 'legend' : "#pi^{#pm}"}
-particles['kaon'] = {'mass' : 0.493677, 'color': ROOT.TColor.GetColor('#d95f02'), 'legend' : "K^{#pm}"}
-particles['proton'] = {'mass' : 0.93827208816, 'color': ROOT.TColor.GetColor('#7570b3'), 'legend' : "p "}
-
-def get_mass(true_mass_in_gev, mom_in_gev, trk_len_in_mm, relative_momentum_resolution, relative_length_resolution, tof_res_in_ns):
-    '''Return mass of the particle in momentum bins for the plot'''
-
-    # Deduce true TOF
-    tof = trk_len_in_mm/SPEED_OF_LIGHT * np.sqrt( 1 + true_mass_in_gev*true_mass_in_gev/(mom_in_gev*mom_in_gev) ) # ns
-
-    # smear everything
-    smeared_momentum = mom_in_gev*(1. + relative_momentum_resolution)
-    smeared_track_length = trk_len_in_mm*(1. + relative_length_resolution)
-    smeared_tof = tof + tof_res_in_ns
-
-    smeared_beta = smeared_track_length/(smeared_tof*SPEED_OF_LIGHT)
-    mass2 = smeared_momentum*smeared_momentum*(1./(smeared_beta*smeared_beta) - 1.) # GeV^2/c^4
-    mass = np.sqrt(mass2) # GeV/c^2
-
-    return {"beta": smeared_beta, "mass2" : np.nan_to_num(mass2, nan=0), "mass" : np.nan_to_num(mass, nan=0), "tof_true": tof}
+class Particle:
+    def __init__(self, name, legend, color, mass, momentum, track_length):
+        self.name = name
+        self.legend = legend
+        self.color = color
+        self.mass = mass
+        self.momentum = momentum
+        self.track_length = track_length
+        self.tof = track_length/SPEED_OF_LIGHT * np.sqrt( 1 + (mass/momentum)**2 ) if momentum !=0 else -1
+        self.beta = track_length/(SPEED_OF_LIGHT * self.tof) if self.tof != -1 else -1
+        self.gamma = 1/np.sqrt(1 - self.beta**2)
 
 def get_filled_graph(x, y_min, y_max):
     n_points = len(x)
@@ -36,6 +27,41 @@ def get_filled_graph(x, y_min, y_max):
         graph.SetPoint(i, x[i], y_max[i])
         graph.SetPoint(n_points + i, x[n_points-i-1], y_min[n_points-i-1])
     return graph
+
+momentum, track_length = 4., 2000.
+pion = Particle('pion', '#pi^{#pm}', ROOT.TColor.GetColor('#1b9e77'), 0.13957039, momentum, track_length)
+kaon = Particle('kaon', 'K^{#pm}', ROOT.TColor.GetColor('#d95f02'), 0.493677, momentum, track_length)
+proton = Particle('proton', 'p', ROOT.TColor.GetColor('#7570b3'), 0.93827208816, momentum, track_length)
+
+particles = [pion, kaon, proton]
+
+margin = 0.22
+ROOT.gStyle.SetPadLeftMargin(0.8*margin)
+ROOT.gStyle.SetPadRightMargin(0.2*margin)
+ROOT.gStyle.SetPadTopMargin(0.3*margin)
+ROOT.gStyle.SetPadBottomMargin(0.7*margin)
+canvas = ROOT.TCanvas(get_rand_string(),"", 600, 600)
+
+
+
+def get_appox_uncertainty(particle, relative_momentum_resolution, relative_length_resolution, tof_res_in_ns):
+    dm = particle.mass * np.sqrt(relative_momentum_resolution**2 + (relative_length_resolution**2 + (tof_res_in_ns/particle.tof)**2)*particle.gamma**4)
+    return np.nan_to_num(particle.mass + dm, nan=0), np.nan_to_num(particle.mass - dm, nan=0)
+
+
+def get_mass(particle, relative_momentum_resolution, relative_length_resolution, tof_res_in_ns):
+    '''Return mass of the particle in momentum bins for the plot'''
+
+    # smear everything
+    smeared_momentum = particle.momentum*(1. + relative_momentum_resolution)
+    smeared_track_length = particle.track_length*(1. + relative_length_resolution)
+    smeared_tof = particle.tof + tof_res_in_ns
+
+    smeared_beta = smeared_track_length/(smeared_tof*SPEED_OF_LIGHT)
+    mass2 = smeared_momentum*smeared_momentum*(1./(smeared_beta*smeared_beta) - 1.) # GeV^2/c^4
+    mass = np.sqrt(mass2) # GeV/c^2
+    return np.nan_to_num(mass, nan=0)
+
 
 
 def get_mass_plot():

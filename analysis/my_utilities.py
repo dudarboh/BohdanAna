@@ -2,6 +2,8 @@ import ROOT
 from random import choice
 from string import ascii_letters
 
+SPEED_OF_LIGHT = 299.792458 # mm / ns
+
 def get_rand_string():
     return ''.join(choice(ascii_letters) for i in range(16))
 
