@@ -7,6 +7,19 @@ SPEED_OF_LIGHT = 299.792458 # mm / ns
 def get_rand_string():
     return ''.join(choice(ascii_letters) for i in range(16))
 
+
+def get_filled_graph(x, y_min, y_max):
+    '''
+    Return a TGraph filled between y_min and y_max.
+    '''
+    n_points = len(x)
+    graph = ROOT.TGraph(2*n_points)
+    for i in range(n_points):
+        graph.SetPoint(i, x[i], y_max[i])
+        graph.SetPoint(n_points + i, x[n_points-i-1], y_min[n_points-i-1])
+    return graph
+
+
 def draw_2d_plot(h, maximum=1e4):
     '''
     Draw a 2D histogram in the appropriate styling and pause.

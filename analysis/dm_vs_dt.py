@@ -3,21 +3,11 @@ import ROOT
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
-from my_utilities import *
+import my_utils
 ROOT.gStyle.SetCanvasPreferGL(True)
 plt.rcParams.update({'font.size':18, 'text.usetex':True})
 
 SPEED_OF_LIGHT = 299.792458 # mm / ns
-
-class Particle:
-    def __init__(self, name, legend, color, mass, momentum, track_length):
-        self.name = name
-        self.legend = legend
-        self.color = color
-        self.mass = mass
-        self.momentum = momentum
-        self.track_length = track_length
-        self.tof = track_length/SPEED_OF_LIGHT * np.sqrt( 1 + (mass/momentum)**2 ) if momentum !=0 else -1
 
 def vary_dt(particle, dt):
     '''
@@ -58,6 +48,7 @@ true_masses = {}
 slopes ={}
 dt = np.arange(-100.,101.)
 
+y_min_limit, y_max_limit = -0.1, 1.65
 for p in particles:
     m = vary_dt(p, dt/1000 )
     graphs[p.name] = ROOT.TGraph(len(dt), dt, m)
@@ -67,7 +58,7 @@ for p in particles:
         graphs[p.name].Draw("AL")
         graphs[p.name].GetYaxis().SetTitle('Mass (GeV/c^{2})')
         graphs[p.name].GetYaxis().SetTitleOffset(1.2)
-        graphs[p.name].GetYaxis().SetRangeUser(-0.1, 1.65)
+        graphs[p.name].GetYaxis().SetRangeUser(y_min_limit, y_max_limit)
         graphs[p.name].GetXaxis().SetTitle("#Delta T (ps)")
         graphs[p.name].GetXaxis().SetRangeUser(dt[0], dt[-1])
     else:
@@ -82,7 +73,7 @@ for p in particles:
     mid_idx = int(len(dt)/2)
     slope = (m[mid_idx+1] - m[mid_idx-1]) / (dt[mid_idx+1] - dt[mid_idx-1])
     y_line = p.mass + slope * dt
-    slopes[p.name] = ROOT.TLine(dt[y_line > -0.1][0], y_line[y_line > -0.1][0], dt[y_line < 1.65][-1], y_line[y_line < 1.65][-1])
+    slopes[p.name] = ROOT.TLine(dt[y_line > y_min_limit][0], y_line[y_line > y_min_limit][0], dt[y_line < y_max_limit][-1], y_line[y_line < y_max_limit][-1])
     slopes[p.name].SetLineColor(p.color)
     slopes[p.name].SetLineWidth(2)
     slopes[p.name].SetLineStyle(9)

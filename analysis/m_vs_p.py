@@ -1,6 +1,6 @@
 import ROOT
 import numpy as np
-from my_utilities import *
+import my_utils
 
 ROOT.gStyle.SetPalette(ROOT.kBird)
 ROOT.gStyle.SetNumberContours(256)
