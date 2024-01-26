@@ -3,234 +3,196 @@ import ROOT
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
+from utils import *
+
+VAR_NAME = 'm2'
+PLOT_NAME = "dtdl" # approx
+if VAR_NAME == 'm':
+    y_title = "Mass (GeV/c^{2})"
+    y_min, y_max = 0, 3.
+    lin_uncert_legend = " m#[]{#frac{#Deltap}{p} \u2295 #gamma^{2}#(){#frac{#DeltaL}{L} \u2295 #frac{#DeltaT}{T}}}"
+    total_uncert_legend = " m(p#pm#Deltap, L#mp#DeltaL, T#pm#DeltaT)"
+    x_text_pos, y0_text_pos, dy = 0.44, 1.77, 0.2
+    legend = ROOT.TLegend(0.2, 0.71, 0.84, 0.92)
+    legend.SetColumnSeparation(0.2)
+elif VAR_NAME == 'm2':
+    y_title = "Mass^{2} (GeV^{2}/c^{4})"
+    y_min, y_max = -1., 3.
+    lin_uncert_legend = " 2m^{2}#[]{#frac{#Deltap}{p} \u2295 #gamma^{2}#(){#frac{#DeltaL}{L} \u2295 #frac{#DeltaT}{T}}}"
+    total_uncert_legend = "m^{2}(p#pm#Deltap, L#mp#DeltaL, T#pm#DeltaT)"
+    x_text_pos, y0_text_pos, dy = 0.27, 1.82, 0.22
+    legend = ROOT.TLegend(0.2, 0.75, 0.76, 0.91)
+    legend.SetColumnSeparation(0.05)
+
+if PLOT_NAME == 'dtdl':
+    pass
+elif PLOT_NAME == 'approx':
+    pass
 
 ROOT.gStyle.SetCanvasPreferGL(True)
 plt.rcParams.update({'font.size':18, 'text.usetex':True})
 
-particles = {}
-particles['pion'] = {'mass' : 0.13957039, 'color': ROOT.TColor.GetColor('#1b9e77'), 'legend' : "#pi^{#pm}"}
-particles['kaon'] = {'mass' : 0.493677, 'color': ROOT.TColor.GetColor('#d95f02'), 'legend' : "K^{#pm}"}
-particles['proton'] = {'mass' : 0.93827208816, 'color': ROOT.TColor.GetColor('#7570b3'), 'legend' : "p "}
+margin = 0.22
+ROOT.gStyle.SetPadLeftMargin(0.8*margin)
+ROOT.gStyle.SetPadRightMargin(0.2*margin)
+ROOT.gStyle.SetPadTopMargin(0.3*margin)
+ROOT.gStyle.SetPadBottomMargin(0.7*margin)
+canvas = ROOT.TCanvas(get_rand_string(),"", 600, 600)
+legend.SetNColumns(2)
+legend.SetFillStyle(0)
+legend.SetBorderSize(0)
+legend.SetMargin(0.2)
+legend.SetTextFont(62)
 
-def get_mass(true_mass_in_gev, mom_in_gev, trk_len_in_mm, relative_momentum_resolution, relative_length_resolution, tof_res_in_ns):
-    '''Return mass of the particle in momentum bins for the plot'''
+fill_alpha = .3
 
-    # Deduce true TOF
-    tof = trk_len_in_mm/SPEED_OF_LIGHT * np.sqrt( 1 + true_mass_in_gev*true_mass_in_gev/(mom_in_gev*mom_in_gev) ) # ns
+momentum, track_length = np.arange(0.1, 8, 0.01), 2200.
+# # STAR DATA from the paper https://arxiv.org/abs/nucl-ex/0308022
+dp = 0.013 # relative
+dl = 0.002 # relative
+# dt = 0.100 # ns
+dt = 0.020 # ns
 
-    # smear everything
-    smeared_momentum = mom_in_gev*(1. + relative_momentum_resolution)
-    smeared_track_length = trk_len_in_mm*(1. + relative_length_resolution)
-    smeared_tof = tof + tof_res_in_ns
-
-    smeared_beta = smeared_track_length/(smeared_tof*SPEED_OF_LIGHT)
-    mass2 = smeared_momentum*smeared_momentum*(1./(smeared_beta*smeared_beta) - 1.) # GeV^2/c^4
-    mass = np.sqrt(mass2) # GeV/c^2
-
-    return {"beta": smeared_beta, "mass2" : np.nan_to_num(mass2, nan=0), "mass" : np.nan_to_num(mass, nan=0), "tof_true": tof}
-
-def get_filled_graph(x, y_min, y_max):
-    n_points = len(x)
-    graph = ROOT.TGraph(2*n_points)
-    for i in range(n_points):
-        graph.SetPoint(i, x[i], y_max[i])
-        graph.SetPoint(n_points + i, x[n_points-i-1], y_min[n_points-i-1])
-    return graph
+particles = create_list_of_particles(momentum, track_length)
+(pion, kaon, proton) = particles
 
 
-def get_mass_plot():
-    # We always work in momentum bins
-    momentum = np.arange(0.1, 8, 0.01)
+graphs = {}
+if PLOT_NAME == "approx":
+    for p in particles:
+        m_down_approx, m_up_approx = get_linear_uncertainty(p, dp, dl, dt, func=VAR_NAME)
+        m_down, m_up = get_uncertainty(p, dp, dl, dt, func=VAR_NAME)
+        graphs[p, 'approx'] = get_filled_graph(momentum, m_down_approx, m_up_approx)
+        graphs[p, 'total'] = get_filled_graph(momentum, m_down, m_up)
+        graphs[p, 'mass'] = ROOT.TGraph(len(momentum), momentum, np.full_like(momentum, p.mass))
 
-    # # STAR DATA from the paper https://arxiv.org/abs/nucl-ex/0308022
-    track_length = 2200. # mm at eta = 1.
-    relative_momentum_resolution = 0.013
-    relative_length_resolution = 0.002
-    tof_resolution = 0.100 # ns
-    # tof_resolution = 0.020 # ns
+        if p.name == 'pion':
+            graphs[p, 'mass'].Draw("AL")
+            graphs[p, 'mass'].GetXaxis().SetTitle("Momentum (GeV/c)")
+            graphs[p, 'mass'].GetYaxis().SetTitle(y_title)
+            graphs[p, 'mass'].GetYaxis().SetTitleOffset(1.2)
+            graphs[p, 'mass'].GetXaxis().SetRangeUser(0, 8)
+            graphs[p, 'mass'].GetYaxis().SetRangeUser(y_min, y_max)
+
+        else:
+            graphs[p, 'mass'].Draw("L same")
+
+        graphs[p, 'mass'].SetLineColor( p.color )
+        graphs[p, 'approx'].SetLineWidth(3)
+        graphs[p, 'approx'].SetLineStyle(9)
+        graphs[p, 'approx'].SetLineColor(p.color)
+        graphs[p, 'total'].SetFillColorAlpha(p.color, fill_alpha)
+        graphs[p, 'approx'].Draw("Lsame")
+        graphs[p, 'total'].Draw("fsame")
 
 
-    mass_bands = {}
-    graphs = {}
-    canvas = ROOT.TCanvas("name", "title")
-    canvas.SetTopMargin(0.02)
-    canvas.SetBottomMargin(0.16)
-    canvas.SetLeftMargin(0.18)
-    canvas.SetRightMargin(0.02)
 
-    fill_alpha = .3
-
-    legend = ROOT.TLegend(0.2, 0.72, 0.66, 0.96)
-    legend.SetNColumns(2)
-    legend.SetFillStyle(0)
-    legend.SetBorderSize(0)
-    legend.SetMargin(0.4)
-    # legend.SetColumnSeparation(0.25)
-    # legend.SetTextAlign(32)
-    legend.SetTextFont(42)
-
-    for name in particles:
-        mass_bands[name, 'true'] = get_mass(particles[name]['mass'], momentum, track_length, 0., 0., 0.)["mass"]
-        mass_bands[name, 'up_dpdl'] = get_mass(particles[name]['mass'], momentum, track_length, relative_momentum_resolution, -relative_length_resolution, 0.)["mass"]
-        mass_bands[name, 'down_dpdl'] = get_mass(particles[name]['mass'], momentum, track_length, -relative_momentum_resolution, relative_length_resolution, 0.)["mass"]
-        mass_bands[name, 'up_total'] = get_mass(particles[name]['mass'], momentum, track_length, relative_momentum_resolution, -relative_length_resolution, tof_resolution)["mass"]
-        mass_bands[name, 'down_total'] = get_mass(particles[name]['mass'], momentum, track_length, -relative_momentum_resolution, relative_length_resolution, -tof_resolution)["mass"]
-
-        graphs[name, 'true'] = ROOT.TGraph(len(momentum), momentum, mass_bands[name, 'true'])
-        graphs[name, 'true'].Draw("AL" if name == 'pion' else "Lsame")
-        graphs[name, 'true'].SetLineColor( particles[name]['color'] )
-        graphs[name, 'true'].SetLineWidth(3)
-
-        graphs[name, 'dl_band'] = get_filled_graph(momentum, mass_bands[name, 'down_dpdl'], mass_bands[name, 'up_dpdl'])
-        graphs[name, 'dl_band'].SetFillColorAlpha(particles[name]['color'], fill_alpha)
-        graphs[name, 'dl_band'].Draw("fsame")
-
-        graphs[name, 'total_band'] = get_filled_graph(momentum, mass_bands[name, 'down_total'], mass_bands[name, 'up_total'])
-        graphs[name, 'total_band'].SetFillColorAlpha(particles[name]['color'], fill_alpha)
-        graphs[name, 'total_band'].Draw("fsame")
-        if name == 'pion':
-            graphs[name, 'true'].GetXaxis().SetTitle("Momentum (GeV/c)")
-            graphs[name, 'true'].GetYaxis().SetTitle("Mass (GeV/c^{2})")
-            graphs[name, 'true'].GetYaxis().SetTitleOffset(1.2)
-            graphs[name, 'true'].GetXaxis().SetRangeUser(0, 8)
-            graphs[name, 'true'].GetYaxis().SetRangeUser(0, 2.3)
-        
-
-    # pi
-    gr_legend_pi = ROOT.TGraph()
-    gr_legend_pi.SetFillColor(particles['pion']['color'])
-    legend.AddEntry(gr_legend_pi, "#font[62]{#pi}", "f")
-
-    # true mass
-    gr_legend_true = ROOT.TGraph()
-    gr_legend_true.SetLineWidth(3)
-    gr_legend_true.SetLineColor(ROOT.kBlack)
-    legend.AddEntry(gr_legend_true, "true mass", "l")
-
-    # K
-    gr_legend_k = ROOT.TGraph()
-    gr_legend_k.SetFillColor(particles['kaon']['color'])
-    legend.AddEntry(gr_legend_k, "#font[62]{K}", "f")
-
-    # DL
+    #row1 col1
     gr_legend_dl = ROOT.TGraph()
-    gr_legend_dl.SetFillColorAlpha(ROOT.kBlack, 2*fill_alpha)
-    legend.AddEntry(gr_legend_dl, "#DeltaL", "f")
+    gr_legend_dl.SetLineStyle(9)
+    gr_legend_dl.SetLineWidth(3)
+    legend.AddEntry(gr_legend_dl, lin_uncert_legend, "l")
 
-    # p
-    gr_legend_p = ROOT.TGraph()
-    gr_legend_p.SetFillColor(particles['proton']['color'])
-    legend.AddEntry(gr_legend_p, "#font[62]{p}", "f")
+    #row1 col2
+    gr_legend_pi = ROOT.TGraph()
+    gr_legend_pi.SetFillColor(pion.color)
+    legend.AddEntry(gr_legend_pi, pion.legend, "f")
 
-    # DL DT
+    #row2 col1
+    gr_legend_true = ROOT.TGraph()
+    gr_legend_true.SetLineColor(ROOT.kBlack)
+    legend.AddEntry("", "", "")
+
+    #row2 col2
+    gr_legend_k = ROOT.TGraph()
+    gr_legend_k.SetFillColor(kaon.color)
+    legend.AddEntry(gr_legend_k, kaon.legend, "f")
+
+    #row3 col1
     gr_legend_dldt = ROOT.TGraph()
     gr_legend_dldt.SetFillColor(ROOT.kBlack)
     gr_legend_dldt.SetFillColorAlpha(ROOT.kBlack, fill_alpha)
-    legend.AddEntry(gr_legend_dldt, "#DeltaL \u2295 #DeltaT", "f")
+    legend.AddEntry(gr_legend_dldt, total_uncert_legend, "f")
+
+    #row3 col2
+    gr_legend_p = ROOT.TGraph()
+    gr_legend_p.SetFillColor(proton.color)
+    legend.AddEntry(gr_legend_p, proton.legend, "f")
+
 
     legend.Draw()
 
-    latex = ROOT.TLatex()
-    # latex = ROOT.TMathText()
-    latex.SetTextFont(42)
-    latex.DrawLatex(4.65, 2.08, f"L = {track_length:.0f}" + " mm")
-    latex.DrawLatex(4.65, 1.91, "#Deltap/p = " + f"{relative_momentum_resolution:.3f}")
-    latex.DrawLatex(4.65, 1.74, "#DeltaL/L = " + f"{relative_length_resolution:.3f}")
-    latex.DrawLatex(4.65, 1.57, "#DeltaT = " + f"{1000*tof_resolution:.0f}" + " ps")
-    canvas.Update()
-    input("wait")
+elif PLOT_NAME == "dtdl":
+    for p in particles:
+        m_down_dt, m_up_dt = get_uncertainty(p, 0., 0., dt, func=VAR_NAME)
+        m_down_dl, m_up_dl = get_uncertainty(p, 0., dl, 0., func=VAR_NAME)
+        graphs[p, 'dt'] = get_filled_graph(momentum, m_down_dt, m_up_dt)
+        graphs[p, 'dl'] = get_filled_graph(momentum, m_down_dl, m_up_dl)
+        graphs[p, 'mass'] = ROOT.TGraph(len(momentum), momentum, np.full_like(momentum, p.mass))
 
-def mass_vs_dtdl(x_axis='dt'):
-    momentum = 4 # GeV
-    track_length = 2000. # mm
+        if p.name == 'pion':
+            graphs[p, 'mass'].Draw("AL")
+            graphs[p, 'mass'].GetXaxis().SetTitle("Momentum (GeV/c)")
+            graphs[p, 'mass'].GetYaxis().SetTitle(y_title)
+            graphs[p, 'mass'].GetYaxis().SetTitleOffset(1.2)
+            graphs[p, 'mass'].GetXaxis().SetRangeUser(0, 8)
+            graphs[p, 'mass'].GetYaxis().SetRangeUser(y_min, y_max)
+        else:
+            graphs[p, 'mass'].Draw("L same")
 
-    if x_axis == 'dt':
-        x_min, x_max, x_title = -100, 100, '#Delta T (ps)'
-        legend = ROOT.TLegend(0.2, 0.6, 0.59, 0.76)
-        # tof_res is expected to be in ns as an input to get_mass()
-        mom_res, len_res, tof_res = 0., 0., np.arange(x_min/1000., x_max/1000. + 0.001, 0.001) # ns
-    elif x_axis == 'dl':
-        x_min, x_max, x_title = -30, 30, '#Delta L (mm)'
-        legend = ROOT.TLegend(0.51, 0.6, 0.9, 0.76)
-        # len_res is expected to be relative as an input to get_mass()
-        mom_res, len_res, tof_res = 0., np.arange(x_min, x_max + 0.1, 0.1)/track_length, 0.
+        graphs[p, 'mass'].SetLineColor( p.color )
+        graphs[p, 'dl'].SetLineWidth(3)
+        graphs[p, 'dl'].SetLineStyle(9)
+        graphs[p, 'dl'].SetLineColor(p.color)
+        graphs[p, 'dt'].SetFillColorAlpha(p.color, fill_alpha)
+        graphs[p, 'dl'].Draw("Lsame")
+        graphs[p, 'dt'].Draw("fsame")
 
-    legend.SetFillStyle(0)
-    legend.SetBorderSize(0)
-    legend.SetMargin(0.15)
-    legend.SetTextAlign(32)
-    legend.SetTextFont(42)
-    canvas = ROOT.TCanvas("name", "title")
-    canvas.SetTopMargin(0.12)
-    canvas.SetBottomMargin(0.14)
-    canvas.SetLeftMargin(0.18)
-    canvas.SetRightMargin(0.07)
 
-    graphs = {}
-    lines = {}
 
-    tof_true_average = 0.
-    for name in particles:
-        vars = get_mass(particles[name]['mass'], momentum, track_length, mom_res, len_res, tof_res)
-        mass, tof_true = vars['mass'], vars['tof_true']
-        tof_true_average += tof_true/3.
-        if x_axis == 'dt':
-            graphs[name] = ROOT.TGraph(len(tof_res), tof_res*1000, mass)
-        elif x_axis == 'dl':
-            graphs[name] = ROOT.TGraph(len(len_res), len_res*track_length, mass)
+    #row1 col1
+    gr_legend_dl = ROOT.TGraph()
+    gr_legend_dl.SetLineStyle(9)
+    gr_legend_dl.SetLineWidth(3)
+    legend.AddEntry(gr_legend_dl, "#Delta L", "l")
 
-        graphs[name].SetLineColor(particles[name]['color'])
-        graphs[name].SetLineWidth(3)
-        graphs[name].Draw("AL" if name =='pion' else "Lsame")
-        if name=='pion':
-            graphs[name].GetYaxis().SetTitle('Mass (GeV/c^{2})')
-            graphs[name].GetYaxis().SetTitleOffset(1.2)
-            graphs[name].GetYaxis().SetRangeUser(-0.1, 1.65)
-            graphs[name].GetXaxis().SetTitle(x_title)
-            graphs[name].GetXaxis().SetRangeUser(x_min, x_max)
-            
+    #row1 col2
+    gr_legend_pi = ROOT.TGraph()
+    gr_legend_pi.SetFillColor(pion.color)
+    legend.AddEntry(gr_legend_pi, pion.legend, "f")
 
-        lines[name] = ROOT.TLine(x_min, particles[name]['mass'], x_max, particles[name]['mass'])
-        lines[name].SetLineColor(particles[name]['color'])
-        lines[name].SetLineWidth(2)
-        lines[name].SetLineStyle(9)
-        lines[name].Draw()
-        align_len = 10-len(f'{tof_true:.2f}')
-        legend.AddEntry(graphs[name], "#font[62]{" + f"{particles[name]['legend']}" + "}  T_{true}:" + f"{tof_true:>{align_len}.2f} ns", "l")
+    #row2 col1
+    gr_legend_true = ROOT.TGraph()
+    gr_legend_true.SetLineColor(ROOT.kBlack)
+    legend.AddEntry("", "", "")
+
+    #row2 col2
+    gr_legend_k = ROOT.TGraph()
+    gr_legend_k.SetFillColor(kaon.color)
+    legend.AddEntry(gr_legend_k, kaon.legend, "f")
+
+    #row3 col1
+    gr_legend_dldt = ROOT.TGraph()
+    gr_legend_dldt.SetFillColor(ROOT.kBlack)
+    gr_legend_dldt.SetFillColorAlpha(ROOT.kBlack, fill_alpha)
+    legend.AddEntry(gr_legend_dldt, "#Delta T", "f")
+
+    #row3 col2
+    gr_legend_p = ROOT.TGraph()
+    gr_legend_p.SetFillColor(proton.color)
+    legend.AddEntry(gr_legend_p, proton.legend, "f")
+
+
     legend.Draw()
 
-    latex = ROOT.TLatex()
-    latex.SetTextFont(42)
-    momentum_text = f"p = {momentum}" + " #frac{GeV}{c}"
-    track_length_text = f"L = {track_length:.0f}" + " mm"
-    if x_axis == 'dt':
-        latex.DrawLatex(-70, 1.45, momentum_text)
-        latex.DrawLatex(11, 1.45, track_length_text)
-    elif x_axis == 'dl':
-        latex.DrawLatex(-20, 1.45, momentum_text)
-        latex.DrawLatex(4, 1.45, track_length_text)
+latex.DrawLatex(x_text_pos, y0_text_pos, f"L = {track_length:.0f}" + " mm")
+if PLOT_NAME == "approx":
+    latex.DrawLatex(x_text_pos, y0_text_pos - dy, "#Deltap/p = " + f"{dp:.3f}")
+    latex.DrawLatex(x_text_pos, y0_text_pos - 2*dy, "#DeltaL/L = " + f"{dl:.3f}")
+    latex.DrawLatex(x_text_pos, y0_text_pos - 3*dy, "#DeltaT = " + f"{1000*dt:.0f}" + " ps")
+elif PLOT_NAME == "dtdl":
+    latex.DrawLatex(x_text_pos, y0_text_pos - dy, "#DeltaL/L = " + f"{dl:.3f}")
+    latex.DrawLatex(x_text_pos, y0_text_pos - 2*dy, "#DeltaT = " + f"{1000*dt:.0f}" + " ps")
 
-
-    canvas.Update()
-    if x_axis == 'dt':
-        top_axis = ROOT.TGaxis(canvas.GetUxmin(),canvas.GetUymax(),
-                            canvas.GetUxmax(), canvas.GetUymax(),x_min/(tof_true_average*1000)*100,x_max/(tof_true_average*1000)*100,510,"-L")
-        top_axis.SetTitle("#delta T (%)")
-        top_axis.Draw()
-    else:
-        top_axis = ROOT.TGaxis(canvas.GetUxmin(),canvas.GetUymax(),
-                            canvas.GetUxmax(), canvas.GetUymax(),x_min/track_length*100,x_max/track_length*100,510,"-L")
-        top_axis.SetTitle("#delta L (%)")
-    top_axis.SetLabelSize(0.06)
-    top_axis.SetTitleSize(0.07)
-    top_axis.SetLabelFont(42)
-    top_axis.SetTitleFont(42)
-    top_axis.SetTitleOffset(0.78)
-    top_axis.Draw()
-
-    canvas.Update()
-    input("wait")
-
-
-# get_mass_plot()
-mass_vs_dtdl('dt')
+canvas.Update()
+input("wait")
