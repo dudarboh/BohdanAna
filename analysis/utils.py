@@ -3,6 +3,10 @@ import numpy as np
 from random import choice
 from string import ascii_letters
 
+ROOT.gStyle.SetPalette(ROOT.kBird)
+ROOT.gStyle.SetNumberContours(256)
+
+
 SPEED_OF_LIGHT = 299.792458 # mm / ns
 PION_MASS = 0.13957039 # GeV/ c^{2}
 KAON_MASS = 0.493677 # GeV/ c^{2}
@@ -24,12 +28,17 @@ class Particle:
         self.tof = track_length/SPEED_OF_LIGHT * np.sqrt( 1 + (mass/momentum)**2 )
         self.beta = track_length/(SPEED_OF_LIGHT * self.tof)
         self.gamma = 1/np.sqrt(1 - self.beta**2)
+        self.legend_graph = ROOT.TGraph()
+        self.legend_graph.SetFillColor(self.color)
 
 def create_list_of_particles(momentum, track_length):
     pion = Particle('pion', ' #pi^{#pm}', ROOT.TColor.GetColor('#1b9e77'), PION_MASS, momentum, track_length)
     kaon = Particle('kaon', ' K^{#pm}', ROOT.TColor.GetColor('#d95f02'), KAON_MASS, momentum, track_length)
     proton = Particle('proton', ' p', ROOT.TColor.GetColor('#7570b3'), PROTON_MASS, momentum, track_length)
     return [pion, kaon, proton]
+
+particles = create_list_of_particles(1., 1) # just for colours! overwrite when studying mass_uncertainty!
+(pion, kaon, proton) = particles
 
 def get_rand_string():
     return ''.join(choice(ascii_letters) for i in range(16))
@@ -85,12 +94,7 @@ def draw_2d_plot(h, maximum=1e4):
     '''
     Draw a 2D histogram in the appropriate styling and pause.
     '''
-    margin = 0.33
-    ROOT.gStyle.SetPadLeftMargin(0.6*margin)
-    ROOT.gStyle.SetPadRightMargin(0.4*margin)
-    ROOT.gStyle.SetPadTopMargin(0.35*margin)
-    ROOT.gStyle.SetPadBottomMargin(0.65*margin)
-    canvas = ROOT.TCanvas(get_rand_string(),"",600,600)
+    canvas = create_canvas(0.33, 0.6, 0.65)
 
     h.Draw("colz")
     h.GetXaxis().SetTitleOffset(1.1)
@@ -117,3 +121,20 @@ def draw_2d_plot(h, maximum=1e4):
     canvas.Update()
     return canvas
 
+def create_legend(x1=0.2, y1=0.75, x2=0.76, y2=0.91):
+    legend = ROOT.TLegend(x1, y1, x2, y2)
+    legend.SetFillStyle(0)
+    legend.SetBorderSize(0)
+    legend.SetTextFont(62)
+    return legend
+
+def create_canvas(margin=0.22, left_margin_fraction=0.8, bottom_margin_fraction=0.7):
+    '''
+    Create a square canvas 600x600 with equal horizontal and vertical margins to ensure also a square plot inside the axes!
+    '''
+    ROOT.gStyle.SetPadLeftMargin( left_margin_fraction * margin )
+    ROOT.gStyle.SetPadRightMargin( (1 - left_margin_fraction) * margin )
+    ROOT.gStyle.SetPadBottomMargin(bottom_margin_fraction * margin)
+    ROOT.gStyle.SetPadTopMargin( (1 - bottom_margin_fraction) * margin)
+    canvas = ROOT.TCanvas(get_rand_string(), "", 600, 600)
+    return canvas

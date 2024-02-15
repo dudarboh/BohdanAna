@@ -45,6 +45,8 @@ double getHelixLength(const TrackStateLike* ts1, const TrackStateLike* ts2, int 
         break;
     }
 
+    //FIXME: d0/z0 at the calorimeter should be always 0!!!
+
     double dPhi = std::abs( ts2->getPhi() - ts1->getPhi() );
     if (dPhi > M_PI) dPhi = 2*M_PI - dPhi;
 

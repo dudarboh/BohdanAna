@@ -5,20 +5,13 @@ from utils import *
 
 ROOT.gStyle.SetPalette(ROOT.kBird)
 ROOT.gStyle.SetNumberContours(256)
-# ROOT.EnableImplicitMT()
+ROOT.EnableImplicitMT()
 
-def extract_data(df, tof_column="tofClosest0"):
-    df = df.Define("beta", f"trackLengthToEcal_IKF_zedLambda/({tof_column}*299.792458)")
-    df = df.Define("inverseBeta", "1/beta")
-    df = df.Define("mass2", "harmonicMomToEcal_IKF_zedLambda*harmonicMomToEcal_IKF_zedLambda*( 1./(beta*beta) - 1.)")
-    return df
-    # df_mass = df.Filter("mass2 > 0.").Define("mass", "sqrt(mass2)")
-    # return df_mass
 
 def get_pdg_histogram(df, pdg="all", y_name="mass2"):
     n_x_bins, x_min, x_max = 70, 0, 20
     if y_name == "mass2":
-        n_y_bins, y_min, y_max = 3000, -10, 10
+        n_y_bins, y_min, y_max = 3000, -3, 3
     elif y_name == "beta":
         n_y_bins, y_min, y_max = 3000, 0, 2
 
@@ -140,7 +133,7 @@ def analyse_pid(h1, h2):
         h2_proj = h2.ProjectionY("h2_proj", i, i)
 
         print(f"Momentum: {x_low:.2f} -- {x_up:.2f}")
-        cut, eff, misid = analyse_optimal_cut(h1_proj, h2_proj, debug=True)
+        cut, eff, misid = analyse_optimal_cut(h1_proj, h2_proj)
         sep_power = get_separation_power(1-eff)
 
         gr_cut.SetPoint(i-1, x, cut)
@@ -153,20 +146,12 @@ def draw_sep_powers(graphs):
     # colors = ["#03045e","#023e8a","#0077b6","#0096c7","#00b4d8","#48cae4"]
     # colors = ["#690000", "#850e0f", "#a21d19", "#c02b25", "#df3831", "#ff463d"]
     colors = ['#0444b3', '#0068cc', '#008add', '#1caaea', '#61caf4', '#98e8ff']
+    colors = ["#0099ff", "#128ce9", "#1d77c5", "#225d98", "#214772", "#1f3c5f", "#1c314d", "#19273b"]
     colors = [ ROOT.TColor.GetColor(c) for c in colors]
 
-    margin = 0.22
-    ROOT.gStyle.SetPadLeftMargin(0.8*margin)
-    ROOT.gStyle.SetPadRightMargin(0.2*margin)
-    ROOT.gStyle.SetPadTopMargin(0.3*margin)
-    ROOT.gStyle.SetPadBottomMargin(0.7*margin)
-    canvas = ROOT.TCanvas(get_rand_string(),"", 600, 600)
-    canvas.SetGridx(True)
-    canvas.SetGridy(True)
+    canvas = create_canvas()
 
-    legend = ROOT.TLegend(0.4, 0.63, 0.98, 0.94)
-    legend.SetFillStyle(0)
-    legend.SetBorderSize(0)
+    legend = create_legend(0.4, 0.63, 0.98, 0.94)
     for i, (res, gr) in enumerate(graphs.items()):
         if i == 0:
             gr.Draw("ALP")
@@ -196,30 +181,48 @@ def main():
     df_init = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna.root")\
                   .Filter("abs(pdg) == 211 || abs(pdg) == 321 || abs(pdg) == 2212")\
                   .Filter("tofClosest0 > 6.")
+
+    h_pis, h_ks, h_ps = {}, {}, {}
     graphs_sep_power_pik = {}
     graphs_sep_power_kp = {}
 
-# [0, 20, 40, 60, 80, 100]
-    for res in [30]:
-        df = extract_data(df_init, tof_column=f"tofClosest{res}")
+    resolutions = [1, 5, 10, 30, 50, 100, 300]
+    # [0, 20, 40, 60, 80, 100]
+    # [0, 1, 5, 10, 30, 50, 80, 100, 300]
+    for res in resolutions:
+        df = df_init.Define("beta", f"trackLengthToEcal_IKF_zedLambda/(tofClosest{res}*299.792458)")\
+               .Define("mass2", "harmonicMomToEcal_IKF_zedLambda*harmonicMomToEcal_IKF_zedLambda*( 1./(beta*beta) - 1.)")
 
         y_name = "mass2"
         h_all = get_pdg_histogram(df, "all", y_name)
         h_pi = get_pdg_histogram(df, "211", y_name)
         h_k = get_pdg_histogram(df, "321", y_name)
         h_p = get_pdg_histogram(df, "2212", y_name)
+        h_pis[res], h_ks[res], h_ps[res] = h_pi, h_k, h_p
 
+    for res in resolutions:
         # c_all = draw_2d_plot(h_all, 1e6)
         # c_pi=  draw_2d_plot(h_pi, 1e6)
         # c_k = draw_2d_plot(h_k, 1e6)
         # c_p = draw_2d_plot(h_p, 1e6)
         # input("wait")
 
-        gr_cut_pik, gr_eff_pik, gr_misid_pik, gr_sep_power_pik = analyse_pid(h_pi, h_k)
-        gr_cut_kp, gr_eff_kp, gr_misid_kp, gr_sep_power_kp = analyse_pid(h_k, h_p)
+        gr_cut_pik, gr_eff_pik, gr_misid_pik, gr_sep_power_pik = analyse_pid(h_pis[res], h_ks[res])
+        gr_cut_kp, gr_eff_kp, gr_misid_kp, gr_sep_power_kp = analyse_pid(h_ks[res], h_ps[res])
 
         graphs_sep_power_pik[res] = gr_sep_power_pik
         graphs_sep_power_kp[res] = gr_sep_power_kp
+
+        # canvas = create_canvas()
+        # gr_sep_power_pik.Draw("AL")
+        # gr_sep_power_pik.SetLineWidth(3)
+        # gr_sep_power_pik.SetLineColor(pion.color)
+        # gr_sep_power_pik.GetXaxis().SetRangeUser(0.,10.)
+        # gr_sep_power_kp.Draw("Lsame")
+        # gr_sep_power_kp.SetLineWidth(3)
+        # gr_sep_power_kp.SetLineColor(kaon.color)
+        # canvas.Update()
+        # input("wait")
 
     c1, leg1 = draw_sep_powers(graphs_sep_power_pik)
     input("wait")

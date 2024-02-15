@@ -172,8 +172,8 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
             _trackLength_SHA_phiZed_ECAL = getTrackLengthSHA(track, TrackState::AtCalorimeter, TrackLengthOption::phiZed);
             _trackLength_SHA_zedLambda_ECAL = getTrackLengthSHA(track, TrackState::AtCalorimeter, TrackLengthOption::zedLambda);
             streamlog_out(DEBUG8)<<"getTrackLengthIKF()"<<std::endl;
-            // _trackLength_IKF_phiLambda = getTrackLengthIKF(trackStates, _bField, TrackLengthOption::phiLambda);
-            // _trackLength_IKF_phiZed = getTrackLengthIKF(trackStates, _bField, TrackLengthOption::phiZed);
+            _trackLength_IKF_phiLambda = getTrackLengthIKF(trackStates, _bField, TrackLengthOption::phiLambda);
+            _trackLength_IKF_phiZed = getTrackLengthIKF(trackStates, _bField, TrackLengthOption::phiZed);
             _trackLength_IKF_zedLambda = getTrackLengthIKF(trackStates, _bField, TrackLengthOption::zedLambda);
 
             streamlog_out(DEBUG8)<<"getTofClosest()"<<std::endl;

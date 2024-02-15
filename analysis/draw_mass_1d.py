@@ -1,70 +1,78 @@
 import ROOT
 ROOT.EnableImplicitMT()
-
-class Algorithm:
-    def __init__(self, name, momentum, track_length, tof):
-        self.name = name
-        self.mom = momentum
-        self.len = track_length
-        self.tof = tof
-
-colors = [ROOT.TColor.GetColor('#ff7f00') ,ROOT.TColor.GetColor('#984ea3') ,ROOT.TColor.GetColor('#4daf4a') ,ROOT.TColor.GetColor('#377eb8') ,ROOT.TColor.GetColor('#e41a1c')]
-
-algoClosest0 = Algorithm("Closest 0 ps", "harmonicMomToEcal", "trackLengthToEcal", "tofClosest0")
-algoClosest30 = Algorithm("Closest 30 ps", "harmonicMomToEcal", "trackLengthToEcal", "tofClosest30")
-algoSET50 = Algorithm("SET 50 ps", "harmonicMomToSET", "trackLengthToSET", "tofSET50")
-algoAverage100 = Algorithm("Average 100 ps", "harmonicMomToEcal", "trackLengthToEcal", "tofAverage100")
-# algorithms = [algoClosest0, algoClosest30, algoSET50, algoAverage100]
-algorithms = [algoClosest30, algoSET50, algoAverage100]
+from utils import *
 
 def draw_lines_1d(maxy):
     lines = {}
-    pdgs = [211, 321, 2212]
-    m_pdg = {211 : 0.13957039*1000, 321 : 0.493677*1000, 2212 : 0.938272088*1000}
-    for pdg in pdgs:
-        lines[pdg] = ROOT.TLine(m_pdg[pdg], 0., m_pdg[pdg], maxy)
-        lines[pdg].SetLineColor(15)
-        lines[pdg].SetLineWidth(2)
-        lines[pdg].SetLineStyle(9)
-        lines[pdg].Draw()
+    for p in particles:
+        lines[p] = ROOT.TLine(p.mass2, 0., p.mass2, maxy)
+        lines[p].SetLineColor(15)
+        lines[p].SetLineWidth(2)
+        lines[p].SetLineStyle(9)
+        lines[p].Draw()
     return lines
 
 
-df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna.root")
-df = df.Filter("tofClosest0 > 6. && tofSET0 > 6.").Filter("abs(pdg) == 211 || abs(pdg) == 321 || abs(pdg) == 2212")
+# total range
+n_bins, x_min, x_max = 500, -0.3, 1.2
 
-histos = []
-for alg in algorithms:
-    df_beta = df.Define("beta", f"{alg.len}/({alg.tof}*299.792458)").Filter("beta >= 0 && beta <= 1")
-    df_mass = df_beta.Define("mass", f"{alg.mom}*sqrt( 1./(beta*beta) - 1.)*1000")
-
-    h = df_mass.Histo1D((f"{alg.name}", f"{alg.name}; mass [MeV]; N entries", 2000, 0, 1100), "mass")
-    histos.append(h)
-
-
-canvas = ROOT.TCanvas()
-canvas.SetLeftMargin(0.18)
-maxy = 0
-for i, h in enumerate(histos):
-    h.GetYaxis().SetTitleOffset(1.4)
-    h.SetLineColor(colors[i])
-    h.SetMarkerColor(colors[i])
-    h.SetMarkerStyle(0)
-    h.SetLineWidth(3)
-    maxy = max( maxy, 1.05*h.GetMaximum() )
+#pion peak
+n_bins, x_min, x_max = 500, -10e-3, 50e-3
+#kaon peak
+# n_bins, x_min, x_max = 500, 0.2, 0.28
+# #proton peak
+# n_bins, x_min, x_max = 500, 0.8, 0.95
 
 
-histos[0].SetMaximum(1.05*maxy)
-histos[0].Draw() # draw axis for lines, god bless...
-lines = draw_lines_1d(1.05*maxy)
+def main():
+    df_init = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna.root")\
+                  .Filter("abs(pdg) == 211 || abs(pdg) == 321 || abs(pdg) == 2212")\
+                  .Filter("tofClosest0 > 6.")
 
-legend = ROOT.TLegend(0.6, 0.7, 0.93, 0.93)
-legend.AddEntry(lines[211], "True #pi/K/p mass", "l")
+    h_phi_lambda = df_init.Define("beta", "trackLengthToEcal_SHA_phiLambda_IP/(tofClosest0*299.792458)")\
+                .Define("mass2", "(recoIpPx*recoIpPx+recoIpPy*recoIpPy+recoIpPz*recoIpPz)*( 1./(beta*beta) - 1.)")\
+                .Histo1D((get_rand_string(), "", n_bins, x_min, x_max),"mass2")
+                # .Define("mass", "sqrt(mass2)*1000")\
 
-for i, h in enumerate(histos):
-    h.Draw("same")
-    legend.AddEntry(h.GetPtr())
+    h_phi_zed = df_init.Define("beta", "trackLengthToEcal_SHA_phiZed_IP/(tofClosest0*299.792458)")\
+                .Define("mass2", "(recoIpPx*recoIpPx+recoIpPy*recoIpPy+recoIpPz*recoIpPz)*( 1./(beta*beta) - 1.)")\
+                .Histo1D((get_rand_string(), "", n_bins, x_min, x_max),"mass2")
+                # .Define("mass", "sqrt(mass2)*1000")\
 
-legend.Draw()
-canvas.Update()
-input("Finish")
+    h_zed_lambda = df_init.Define("beta", "trackLengthToEcal_SHA_zedLambda_IP/(tofClosest0*299.792458)")\
+                .Define("mass2", "(recoIpPx*recoIpPx+recoIpPy*recoIpPy+recoIpPz*recoIpPz)*( 1./(beta*beta) - 1.)")\
+                .Histo1D((get_rand_string(), "", n_bins, x_min, x_max),"mass2")
+                # .Define("mass", "sqrt(mass2)*1000")\
+
+    canvas = create_canvas(margin=0.33, left_margin_fraction=0.7, bottom_margin_fraction=0.7)
+    legend = create_legend()
+    legend.SetTextFont(42)
+    h_phi_lambda.Draw("L")
+    h_phi_lambda.SetLineColor(ROOT.TColor.GetColor('#000000'))
+    h_phi_lambda.SetLineWidth(3)
+    h_phi_lambda.SetTitle(";Mass^{2} (GeV^{2}/c^{4}); N entries")
+    h_phi_lambda.GetXaxis().SetMaxDigits(3)
+    h_phi_lambda.GetXaxis().SetTitleOffset(1.1)
+    h_phi_lambda.GetYaxis().SetMaxDigits(3)
+    h_phi_lambda.SetMaximum( 1.05*max(h_phi_lambda.GetMaximum(), h_phi_zed.GetMaximum(), h_zed_lambda.GetMaximum()) )
+    legend.AddEntry(h_phi_lambda.GetPtr(), "#frac{#Delta#varphi}{#Omega}#sqrt{1+tan^{2}#lambda}", "l")
+
+    h_phi_zed.Draw("L same")
+    h_phi_zed.SetLineWidth(3)
+    h_phi_zed.SetLineColor(ROOT.TColor.GetColor('#688E26'))
+    legend.AddEntry(h_phi_zed.GetPtr(), "#sqrt{#frac{#Delta#varphi}{#Omega}^{2} + #Deltaz^{2}}", "l")
+
+    h_zed_lambda.Draw("L same")
+    h_zed_lambda.SetLineWidth(3)
+    h_zed_lambda.SetLineColor(ROOT.TColor.GetColor('#FAA613'))
+    legend.AddEntry(h_zed_lambda.GetPtr(), "#frac{#Deltaz}{tan#lambda}#sqrt{1+tan^{2}#lambda}", "l")
+
+    legend.Draw()
+    lines = draw_lines_1d(h_phi_lambda.GetMaximum())
+    legend.AddEntry(lines[pion], "true #pi^{#pm} mass", "l")
+
+    canvas.Update()
+    input("wait")
+
+
+main()

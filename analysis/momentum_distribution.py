@@ -1,35 +1,36 @@
 import ROOT
 import numpy as np
-ROOT.gStyle.SetOptTitle(1)
+from utils import *
 ROOT.EnableImplicitMT()
 
-colors = ['#1b9e77', '#d95f02', '#7570b3']
-colors = [ ROOT.TColor.GetColor(c) for c in colors]
+df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna.root")\
+                .Filter("abs(pdg) == 211 || abs(pdg) == 321 || abs(pdg) == 2212")\
+                .Filter("tofClosest0 > 6.")
+df = df.Define("pzvspt", "abs(mcPz)/sqrt(mcPx*mcPx + mcPy*mcPy)")
 
-df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna.root")
-df = df.Filter("tofClosest0 > 6.").Define("mom", "sqrt(recoIpPx*recoIpPx + recoIpPy*recoIpPy + recoIpPz*recoIpPz)")
+canvas = create_canvas()
+
+h = df.Histo1D(("h", "",1000, 0, 10), "pzvspt")
+h.Draw()
+
+print("Total particles: ", df.Count().GetValue())
+print("Super perp particles: ", df.Filter("pzvspt < 0.0055431805").Count().GetValue())
+print(" % ", df.Filter("pzvspt < 0.0055431805").Count().GetValue()/df.Count().GetValue() * 100)
+
+canvas.Update()
+input("wait")
 
 df_pion = df.Filter("abs(pdg) == 211")
 df_kaon = df.Filter("abs(pdg) == 321")
 df_proton = df.Filter("abs(pdg) == 2212")
 
 # # MOMENTUM PLOT
-h_mom_pions = df_pion.Histo1D(("h_mom_pions", "Pions; momentum (GeV); N particles",300, 0, 10), "mom")
-h_mom_kaons = df_kaon.Histo1D(("h_mom_kaons", "Kaons; momentum (GeV); N particles",300, 0, 10), "mom")
-h_mom_protons = df_proton.Histo1D(("h_mom_protons", "Protons; momentum (GeV); N particles",300, 0, 10), "mom")
+h_mom_pions = df_pion.Histo1D(("h_mom_pions", "Pions; momentum (GeV); N particles",1000, 0, 1), "pzvspt")
+h_mom_kaons = df_kaon.Histo1D(("h_mom_kaons", "Kaons; momentum (GeV); N particles",1000, 0, 1), "pzvspt")
+h_mom_protons = df_proton.Histo1D(("h_mom_protons", "Protons; momentum (GeV); N particles",1000, 0, 1), "pzvspt")
 h_mom_pions.Scale( 1. / h_mom_pions.GetEntries() )
 h_mom_kaons.Scale( 1. / h_mom_kaons.GetEntries() )
 h_mom_protons.Scale( 1. / h_mom_protons.GetEntries() )
-
-
-ROOT.gStyle.SetPadLeftMargin(0.2)
-ROOT.gStyle.SetPadRightMargin(0.04)
-
-canvas = ROOT.TCanvas("momentum_distribution",
-                        "",
-                        int(600/(1. - ROOT.gStyle.GetPadLeftMargin() - ROOT.gStyle.GetPadRightMargin())),
-                        int(600/(1. - ROOT.gStyle.GetPadTopMargin() - ROOT.gStyle.GetPadBottomMargin())) )
-
 
 h_mom_pions.Draw("histo ")
 h_mom_pions.SetLineColor(colors[0])
