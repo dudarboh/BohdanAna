@@ -27,66 +27,69 @@ void BohdanAna::init(){
     _trkSystem->setOption( MarlinTrk::IMarlinTrkSystem::CFG::useSmoothing, true);
     _trkSystem->init();
 
-    _file.reset( new TFile("results.root", "RECREATE") );
-    _tree.reset( new TTree("treename", "treename") );
-
     //mc
-    _tree->Branch("pdg", &_pdg);
+    auto _pdg = _model->MakeField<int>("pdg");
 
     //track parameters
-    _tree->Branch("dEdx", &_dEdx);
-    _tree->Branch("omegaIP", &_omegaIP);
-    _tree->Branch("omegaECAL", &_omegaECAL);
-    _tree->Branch("tanLambdaIP", &_tanLambdaIP);
-    _tree->Branch("tanLambdaECAL", &_tanLambdaECAL);
-
+    auto _dEdx = _model->MakeField<float>("dEdx");
+    auto _omegaIP = _model->MakeField<float>("omegaIP");
+    auto _omegaECAL = _model->MakeField<float>("omegaECAL");
+    auto _tanLambdaIP = _model->MakeField<float>("tanLambdaIP");
+    auto _tanLambdaECAL = _model->MakeField<float>("tanLambdaECAL");
+    
     //momenta
-    _tree->Branch("mcPx", &(_mcMom[0]) );
-    _tree->Branch("mcPy", &(_mcMom[1]) );
-    _tree->Branch("mcPz", &(_mcMom[2]) );
-    _tree->Branch("recoIpPx", &(_recoIpMom[0]) );
-    _tree->Branch("recoIpPy", &(_recoIpMom[1]) );
-    _tree->Branch("recoIpPz", &(_recoIpMom[2]) );
-    _tree->Branch("recoCaloPx", &(_recoCaloMom[0]) );
-    _tree->Branch("recoCaloPy", &(_recoCaloMom[1]) );
-    _tree->Branch("recoCaloPz", &(_recoCaloMom[2]) );
-    _tree->Branch("recoCaloX", &(_recoCaloPos[0]) );
-    _tree->Branch("recoCaloY", &(_recoCaloPos[1]) );
-    _tree->Branch("recoCaloZ", &(_recoCaloPos[2]) );
+    auto _mcPx = _model->MakeField<float>("mcPx");
+    auto _mcPy = _model->MakeField<float>("mcPy");
+    auto _mcPz = _model->MakeField<float>("mcPz");
+    auto _recoIpPx = _model->MakeField<float>("recoIpPx");
+    auto _recoIpPy = _model->MakeField<float>("recoIpPy");
+    auto _recoIpPz = _model->MakeField<float>("recoIpPz");
+    auto _recoCaloX = _model->MakeField<float>("recoCaloX");
+    auto _recoCaloY = _model->MakeField<float>("recoCaloY");
+    auto _recoCaloZ = _model->MakeField<float>("recoCaloZ");
+    auto _recoCaloPx = _model->MakeField<float>("recoCaloPx");
+    auto _recoCaloPy = _model->MakeField<float>("recoCaloPy");
+    auto _recoCaloPz = _model->MakeField<float>("recoCaloPz");
 
     //track lengths
-    _tree->Branch("trackLength_IDR", &_trackLength_IDR);
-    _tree->Branch("trackLengthToEcal_SHA_phiLambda_IP", &_trackLength_SHA_phiLambda_IP);
-    _tree->Branch("trackLengthToEcal_SHA_phiZed_IP", &_trackLength_SHA_phiZed_IP);
-    _tree->Branch("trackLengthToEcal_SHA_zedLambda_IP", &_trackLength_SHA_zedLambda_IP);
-    _tree->Branch("trackLengthToEcal_SHA_phiLambda_ECAL", &_trackLength_SHA_phiLambda_ECAL);
-    _tree->Branch("trackLengthToEcal_SHA_phiZed_ECAL", &_trackLength_SHA_phiZed_ECAL);
-    _tree->Branch("trackLengthToEcal_SHA_zedLambda_ECAL", &_trackLength_SHA_zedLambda_ECAL);
+    auto _trackLength_IDR = _model->MakeField<float>("trackLength_IDR");
+    auto _trackLength_SHA_phiLambda_IP = _model->MakeField<float>("trackLengthToEcal_SHA_phiLambda_IP");
+    auto _trackLength_SHA_phiZed_IP = _model->MakeField<float>("trackLengthToEcal_SHA_phiZed_IP");
+    auto _trackLength_SHA_zedLambda_IP = _model->MakeField<float>("trackLengthToEcal_SHA_phiZed_IP");
+    auto _trackLength_SHA_phiLambda_ECAL = _model->MakeField<float>("trackLengthToEcal_SHA_phiLambda_ECAL");
+    auto _trackLength_SHA_phiZed_ECAL = _model->MakeField<float>("trackLengthToEcal_SHA_phiZed_ECAL");
+    auto _trackLength_SHA_zedLambda_ECAL = _model->MakeField<float>("trackLengthToEcal_SHA_zedLambda_ECAL");
+    
+    auto _trackLength_IKF_phiLambda_trackLengthToEcal = _model->MakeField<float>("trackLengthToEcal_IKF_phiLambda");
+    auto _trackLength_IKF_phiLambda_trackLengthToSET = _model->MakeField<float>("trackLengthToSET_IKF_phiLambda");
+    auto _trackLength_IKF_phiLambda_harmonicMomToEcal = _model->MakeField<float>("harmonicMomToEcal_IKF_phiLambda");
+    auto _trackLength_IKF_phiLambda_harmonicMomToSET = _model->MakeField<float>("harmonicMomToSET_IKF_phiLambda");
 
-    _tree->Branch("trackLengthToEcal_IKF_phiLambda", &_trackLength_IKF_phiLambda.trackLengthToEcal);
-    _tree->Branch("trackLengthToSET_IKF_phiLambda", &_trackLength_IKF_phiLambda.trackLengthToSET);
-    _tree->Branch("harmonicMomToEcal_IKF_phiLambda", &_trackLength_IKF_phiLambda.harmonicMomToEcal);
-    _tree->Branch("harmonicMomToSET_IKF_phiLambda", &_trackLength_IKF_phiLambda.harmonicMomToSET);
+    auto _trackLength_IKF_phiZed_trackLengthToEcal = _model->MakeField<float>("trackLengthToEcal_IKF_phiZed");
+    auto _trackLength_IKF_phiZed_trackLengthToSET = _model->MakeField<float>("trackLengthToSET_IKF_phiZed");
+    auto _trackLength_IKF_phiZed_harmonicMomToEcal = _model->MakeField<float>("harmonicMomToEcal_IKF_phiZed");
+    auto _trackLength_IKF_phiZed_harmonicMomToSET = _model->MakeField<float>("harmonicMomToSET_IKF_phiZed");
 
-    _tree->Branch("trackLengthToEcal_IKF_phiZed", &_trackLength_IKF_phiZed.trackLengthToEcal);
-    _tree->Branch("trackLengthToSET_IKF_phiZed", &_trackLength_IKF_phiZed.trackLengthToSET);
-    _tree->Branch("harmonicMomToEcal_IKF_phiZed", &_trackLength_IKF_phiZed.harmonicMomToEcal);
-    _tree->Branch("harmonicMomToSET_IKF_phiZed", &_trackLength_IKF_phiZed.harmonicMomToSET);
+    auto _trackLength_IKF_zedLambda_trackLengthToEcal = _model->MakeField<float>("trackLengthToEcal_IKF_zedLambda");
+    auto _trackLength_IKF_zedLambda_trackLengthToSET = _model->MakeField<float>("trackLengthToSET_IKF_zedLambda");
+    auto _trackLength_IKF_zedLambda_harmonicMomToEcal = _model->MakeField<float>("harmonicMomToEcal_IKF_zedLambda");
+    auto _trackLength_IKF_zedLambda_harmonicMomToSET = _model->MakeField<float>("harmonicMomToSET_IKF_zedLambda");
 
-    _tree->Branch("trackLengthToEcal_IKF_zedLambda", &_trackLength_IKF_zedLambda.trackLengthToEcal);
-    _tree->Branch("trackLengthToSET_IKF_zedLambda", &_trackLength_IKF_zedLambda.trackLengthToSET);
-    _tree->Branch("harmonicMomToEcal_IKF_zedLambda", &_trackLength_IKF_zedLambda.harmonicMomToEcal);
-    _tree->Branch("harmonicMomToSET_IKF_zedLambda", &_trackLength_IKF_zedLambda.harmonicMomToSET);
-    _tree->Branch("cleanTrack", &_cleanTrack);
+    auto _cleanTrack = _model->MakeField<bool>("cleanTrack");
 
     //tofs
-    _tree->Branch("typeClosest", &_typeClosest);
-    _tree->Branch("caloIDClosest", &_caloIDClosest);
-    _tree->Branch("layoutClosest", &_layoutClosest);
-    _tree->Branch("layerClosest", &_layerClosest);
-    _tree->Branch("cleanClosestHit", &_cleanClosestHit);
+    auto _typeClosest = _model->MakeField<int>("typeClosest");
+    auto _caloIDClosest = _model->MakeField<int>("caloIDClosest");
+    auto _layoutClosest = _model->MakeField<int>("layoutClosest");
+    auto _layerClosest = _model->MakeField<int>("layerClosest");
+    auto _cleanClosestHit = _model->MakeField<bool>("cleanClosestHit");
+
+    
     for (size_t i = 0; i < _resolutions.size(); i++){
         int res = int(_resolutions[i]);
+        auto _tofClosest = _model->MakeField<float>( ( "tofClosest"+std::to_string(res) ).c_str() );
+
+
         _tree->Branch(( "tofClosest"+std::to_string(res) ).c_str(), &( _tofClosest[i]) );
         _tree->Branch(( "tofAverage"+std::to_string(res) ).c_str(), &( _tofAverage[i]) );
         _tree->Branch(( "tofSET"+std::to_string(res) ).c_str(), &( _tofSET[i]) );
@@ -126,7 +129,9 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
         Cluster* cluster = pfo->getClusters().at(0);
         MCParticle* mc = getMC(pfo, pfo2mc);
         _pdg = mc->getPDG();
-        for(int j=0; j<3; j++) _mcMom.at(j) = mc->getMomentum()[j];
+        _mcPx = mc->getMomentum()[0];
+        _mcPy = mc->getMomentum()[1];
+        _mcPz = mc->getMomentum()[2];
 
         bool isHadron = std::abs(_pdg) == 211 || std::abs(_pdg) == 321 || std::abs(_pdg) == 2212;
         bool isPhoton = std::abs(_pdg) == 22;
@@ -161,9 +166,17 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
             std::array<double, 3> mom = UTIL::getTrackMomentum(tsCalo, _bField);
             Vector3D trackMomAtCalo(mom[0], mom[1], mom[2]);
 
-            for(int j=0; j<3; j++) _recoIpMom.at(j) = pfo->getMomentum()[j];
-            for(int j=0; j<3; j++) _recoCaloPos.at(j) = trackPosAtCalo[j];
-            for(int j=0; j<3; j++) _recoCaloMom.at(j) = trackMomAtCalo[j];
+            _recoIpPx = pfo->getMomentum()[0];
+            _recoIpPy = pfo->getMomentum()[1];
+            _recoIpPz = pfo->getMomentum()[2];
+
+            _recoCaloX = trackPosAtCalo[0];
+            _recoCaloY = trackPosAtCalo[1];
+            _recoCaloZ = trackPosAtCalo[2];
+
+            _recoCaloPx = trackMomAtCalo[0];
+            _recoCaloPy = trackMomAtCalo[1];
+            _recoCaloPz = trackMomAtCalo[2];
 
             streamlog_out(DEBUG8)<<"getTrackStates()"<<std::endl;
             std::vector<HitState> trackHitStates = getTrackStates(pfo, _bField, _trkSystem, navToSimTrackerHits);
@@ -184,9 +197,25 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
             _trackLength_SHA_phiZed_ECAL = getTrackLengthSHA(track, TrackState::AtCalorimeter, TrackLengthOption::phiZed);
             _trackLength_SHA_zedLambda_ECAL = getTrackLengthSHA(track, TrackState::AtCalorimeter, TrackLengthOption::zedLambda);
             streamlog_out(DEBUG8)<<"getTrackLengthIKF()"<<std::endl;
+
             _trackLength_IKF_phiLambda = getTrackLengthIKF(trackStates, _bField, TrackLengthOption::phiLambda);
+            _trackLength_IKF_phiLambda_trackLengthToEcal = _trackLength_IKF_phiLambda.trackLengthToEcal;
+            _trackLength_IKF_phiLambda_trackLengthToSET = _trackLength_IKF_phiLambda.trackLengthToSET;
+            _trackLength_IKF_phiLambda_harmonicMomToEcal = _trackLength_IKF_phiLambda.harmonicMomToEcal;
+            _trackLength_IKF_phiLambda_harmonicMomToSET = _trackLength_IKF_phiLambda.harmonicMomToSET;
+
             _trackLength_IKF_phiZed = getTrackLengthIKF(trackStates, _bField, TrackLengthOption::phiZed);
+            _trackLength_IKF_phiZed_trackLengthToEcal = _trackLength_IKF_phiZed.trackLengthToEcal;
+            _trackLength_IKF_phiZed_trackLengthToSET = _trackLength_IKF_phiZed.trackLengthToSET;
+            _trackLength_IKF_phiZed_harmonicMomToEcal = _trackLength_IKF_phiZed.harmonicMomToEcal;
+            _trackLength_IKF_phiZed_harmonicMomToSET = _trackLength_IKF_phiZed.harmonicMomToSET;
+
             _trackLength_IKF_zedLambda = getTrackLengthIKF(trackStates, _bField, TrackLengthOption::zedLambda);
+            _trackLength_IKF_zedLambda_trackLengthToEcal = _trackLength_IKF_zedLambda.trackLengthToEcal;
+            _trackLength_IKF_zedLambda_trackLengthToSET = _trackLength_IKF_zedLambda.trackLengthToSET;
+            _trackLength_IKF_zedLambda_harmonicMomToEcal = _trackLength_IKF_zedLambda.harmonicMomToEcal;
+            _trackLength_IKF_zedLambda_harmonicMomToSET = _trackLength_IKF_zedLambda.harmonicMomToSET;
+
 
             streamlog_out(DEBUG8)<<"getTofClosest()"<<std::endl;
             CalorimeterHit* closestHit = getClosestHit(cluster, trackPosAtCalo);

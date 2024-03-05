@@ -9,7 +9,13 @@
 #include "EventDisplayer.h"
 #include "TrackLength.h"
 
+#include <ROOT/RNTupleModel.hxx>
+#include <ROOT/RNTupleReader.hxx>
+#include <ROOT/RNTupleWriter.hxx>
 
+using RNTupleModel = ROOT::Experimental::RNTupleModel;
+using RNTupleReader = ROOT::Experimental::RNTupleReader;
+using RNTupleWriter = ROOT::Experimental::RNTupleWriter;
 
 class BohdanAna : public marlin::Processor, EventDisplayer {
     friend class EventDisplayer;
@@ -28,9 +34,8 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
     private:
         int _nEvent{};
         float _bField{};
-        
-        std::unique_ptr<TFile> _file;
-        std::unique_ptr<TTree> _tree;
+    
+        auto _model = RNTupleModel::Create();
 
         int _pdg{};
         float _dEdx{};
