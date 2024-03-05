@@ -33,9 +33,12 @@ void BohdanAna::init(){
     //mc
     _tree->Branch("pdg", &_pdg);
 
-    //dEdx
+    //track parameters
     _tree->Branch("dEdx", &_dEdx);
-
+    _tree->Branch("omegaIP", &_omegaIP);
+    _tree->Branch("omegaECAL", &_omegaECAL);
+    _tree->Branch("tanLambdaIP", &_tanLambdaIP);
+    _tree->Branch("tanLambdaECAL", &_tanLambdaECAL);
 
     //momenta
     _tree->Branch("mcPx", &(_mcMom[0]) );
@@ -52,6 +55,7 @@ void BohdanAna::init(){
     _tree->Branch("recoCaloZ", &(_recoCaloPos[2]) );
 
     //track lengths
+    _tree->Branch("trackLength_IDR", &_trackLength_IDR);
     _tree->Branch("trackLengthToEcal_SHA_phiLambda_IP", &_trackLength_SHA_phiLambda_IP);
     _tree->Branch("trackLengthToEcal_SHA_phiZed_IP", &_trackLength_SHA_phiZed_IP);
     _tree->Branch("trackLengthToEcal_SHA_zedLambda_IP", &_trackLength_SHA_zedLambda_IP);
@@ -145,7 +149,14 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
             Track* track = pfo->getTracks().at(0);
             _dEdx = track->getdEdx();
 
+            auto tsIP = track->getTrackState( TrackState::AtIP );
+            _omegaIP = tsIP->getOmega();
+            _tanLambdaIP = tsIP->getTanLambda();
+
             auto tsCalo = getTrackStateAtCalorimeter( track );
+            _omegaECAL = tsCalo->getOmega();
+            _tanLambdaECAL = tsCalo->getTanLambda();
+
             Vector3D trackPosAtCalo( tsCalo->getReferencePoint() );
             std::array<double, 3> mom = UTIL::getTrackMomentum(tsCalo, _bField);
             Vector3D trackMomAtCalo(mom[0], mom[1], mom[2]);
@@ -163,6 +174,7 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
                 if ( hitState.simHit != nullptr && hitState.simHit->getMCParticle() != mc ) _cleanTrack = false;
             }
 
+            _trackLength_IDR = getTrackLengthIDR(track);
             streamlog_out(DEBUG8)<<"getTrackLengthSHA(AtIP)"<<std::endl;
             _trackLength_SHA_phiLambda_IP = getTrackLengthSHA(track, TrackState::AtIP, TrackLengthOption::phiLambda);
             _trackLength_SHA_phiZed_IP = getTrackLengthSHA(track, TrackState::AtIP, TrackLengthOption::phiZed);
@@ -230,18 +242,18 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
         _tree->Fill();
 
         //DEBUGGING
-        double mom = _trackLength_IKF_zedLambda.harmonicMomToEcal;
-        double trackLength = _trackLength_IKF_zedLambda.trackLengthToEcal;
-        double beta = trackLength/(299.792458*_tofClosest[0]);
-        double m2 = mom*mom*(1./(beta*beta) - 1.);
-        if (m2 < -1. && _tofClosest[0] > 6. && mom < 2. && _layerClosest == 0 && _cleanClosestHit && _cleanTrack){
-            streamlog_out(DEBUG8)<<" Momentum: "<<mom<<" GeV/c"<<std::endl;
-            streamlog_out(DEBUG8)<<" Track length: "<<trackLength<<" mm"<<std::endl;
-            streamlog_out(DEBUG8)<<" TOF: "<<_tofClosest[0]<<" ns"<<std::endl;
-            streamlog_out(DEBUG8)<<" Beta: "<<beta<<std::endl;
-            streamlog_out(DEBUG8)<<" m^2: "<<m2<<" GeV/c^2"<<std::endl;
-            drawDisplay(this, evt, displayPFO, pfo, true);
-        }
+        // double mom = _trackLength_IKF_zedLambda.harmonicMomToEcal;
+        // double trackLength = _trackLength_IKF_zedLambda.trackLengthToEcal;
+        // double beta = trackLength/(299.792458*_tofClosest[0]);
+        // double m2 = mom*mom*(1./(beta*beta) - 1.);
+        // if (m2 < -1. && _tofClosest[0] > 6. && mom < 2. && _layerClosest == 0 && _cleanClosestHit && _cleanTrack){
+        //     streamlog_out(DEBUG8)<<" Momentum: "<<mom<<" GeV/c"<<std::endl;
+        //     streamlog_out(DEBUG8)<<" Track length: "<<trackLength<<" mm"<<std::endl;
+        //     streamlog_out(DEBUG8)<<" TOF: "<<_tofClosest[0]<<" ns"<<std::endl;
+        //     streamlog_out(DEBUG8)<<" Beta: "<<beta<<std::endl;
+        //     streamlog_out(DEBUG8)<<" m^2: "<<m2<<" GeV/c^2"<<std::endl;
+        //     drawDisplay(this, evt, displayPFO, pfo, true);
+        // }
     }
 }
 
@@ -253,11 +265,16 @@ void BohdanAna::end(){
 void BohdanAna::resetVariables(){
     _pdg = 0;
     _dEdx = 0.;
+    _omegaIP = 0.;
+    _omegaECAL = 0.;
+    _tanLambdaIP = 0.;
+    _tanLambdaECAL = 0.;
     _mcMom.fill(0.);
     _recoIpMom.fill(0.);
     _recoCaloPos.fill(0.);
     _recoCaloMom.fill(0.);
 
+    _trackLength_IDR = 0.;
     _trackLength_SHA_phiLambda_IP = 0.;
     _trackLength_SHA_phiZed_IP = 0.;
     _trackLength_SHA_zedLambda_IP = 0.;

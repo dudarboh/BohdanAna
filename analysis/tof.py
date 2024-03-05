@@ -1,9 +1,36 @@
 import ROOT
 import numpy as np
+from utils import *
 ROOT.gStyle.SetPalette(ROOT.kBird)
 ROOT.gStyle.SetNumberContours(256)
 ROOT.gStyle.SetOptTitle(0)
 ROOT.EnableImplicitMT()
+
+def fit90(x): 
+    x = np.sort(x)
+    n10percent = int(round(len(x)*0.1))
+    n90percent = len(x) - n10percent
+    
+    def interval_quantile_(x, quant=0.9):
+        '''Calculate the shortest interval that contains the desired quantile'''
+        # the number of possible starting points
+        n_low = int(len(x) * (1. - quant))
+        # the number of events contained in the quantil
+        n_quant = len(x) - n_low
+
+        # Calculate all distances in one go
+        distances = x[-n_low:] - x[:n_low]
+        i_start = np.argmin(distances)
+
+        return i_start, i_start + n_quant
+
+    start, end = interval_quantile_(x, quant=0.9)
+    
+    rms90 = np.std(x[start:end])
+    mean90 = np.mean(x[start:end])
+    mean90_err = rms90/np.sqrt(n90percent)
+    rms90_err = rms90/np.sqrt(2*n90percent)   # estimator in root
+    return mean90, rms90, mean90_err, rms90_err
 
 
 code='''
@@ -19,7 +46,8 @@ using std::cout, std::endl, std::stringstream, std::vector, std::string, std::ru
 
 // smearing generator and distributions
 std::default_random_engine gen;
-std::normal_distribution gaus100(0., 0.1);
+std::normal_distribution<double> gaus50(0., 0.05);
+std::normal_distribution<double> gaus100(0., 0.1);
 
 RVec <XYZVector> hitPos(const RVec<double>& x, const RVec<double>& y, const RVec<double>& z){
     auto constructHit = [](double x, double y, double z) { return XYZVector(x, y, z); };
@@ -32,6 +60,12 @@ RVec <double> dToImpact(const RVec<XYZVector>& hits, const XYZVector& rImpact){
     return Map(hits, getDistance);
 }
 
+RVec <double> getTimeAtSurface(const RVec<double>& tHit, const RVec<double>& dToImpact){
+    auto correctForDistance = [](double tHit, double dToImpact) { return tHit - dToImpact/SPEED_OF_LIGHT; };
+    return Map(tHit, dToImpact, correctForDistance);
+}
+
+
 
 RVec <double> dToLine(const RVec <XYZVector>& hits, const XYZVector& p0, const XYZVector& p){
     RVec <double> distance;
@@ -40,6 +74,11 @@ RVec <double> dToLine(const RVec <XYZVector>& hits, const XYZVector& p0, const X
         distance.push_back(d);
     }
     return distance;
+}
+
+RVec <double> smear(const RVec <double>& times, std::normal_distribution<double>& gaus){
+    auto smearWithGaussian = [&](double time){ return time + gaus(gen); };
+    return Map(times, smearWithGaussian);
 }
 
 RVec <bool> selectHits(const RVec<double>& dToLine, const RVec<int>& layer_hit, bool only_closest=true, int n_layers=10, double cyl_cut=9999.){
@@ -61,28 +100,82 @@ RVec <bool> selectHits(const RVec<double>& dToLine, const RVec<int>& layer_hit, 
         }
     }
     else{
-        for (int i=0; i < nHits; ++i) selected[i] = dToLine[i] < cyl_cut && layer_hit[i] < n_layers;
+        for (int i=0; i < nHits; ++i){
+            selected[i] = dToLine[i] < cyl_cut && layer_hit[i] < n_layers;
+        }
     }
     return selected;
 }
 
-/////////////////////////////////TOFS////////////////////////////////
-RVec <double> smearTime(const RVec <double>& times){
-    auto smear = [&](double time){ return time + gaus100(gen); };
-    return Map(times, smear);
+RVec <bool> selectCylinderHits(const RVec<double>& dToLine, const RVec<int>& layer_hit, double start_radii=6., int n_layers=10){
+    // WARNING: ENSURE AT LEAST ONE HIT IS PRESENT WITHIN GIVEN n_layers! Otherwise infinite loop
+    int nHits = dToLine.size();
+    RVec <bool> selected(nHits);
+    if (nHits == 0) return selected;
+
+    double min_hit_radii = *std::min_element(dToLine.begin(), dToLine.end());
+
+    double r = max(start_radii, min_hit_radii);
+    bool foundHit = false;
+    while (not foundHit){
+        for (int i=0; i < nHits; ++i){
+            if ( dToLine[i] < r && layer_hit[i] < n_layers){
+                selected[i] = true;
+                foundHit = true;
+            }
+        }
+        if (foundHit) return selected;
+        r += 0.1;
+    }
+    return selected;
 }
+
+
+//Select hits, if their TimeAtSurface is within +/- sigma of the time resolution.
+RVec <bool> selectReasonableHits(const RVec<double> timeAtSurface, const RVec<double>& dToImpact, const RVec<double>& dToLine, const RVec<int>& layerHit, double timeResolution, double nSigma=3, int nLayers=10){
+    int nHits = timeAtSurface.size();
+
+    //use the closest hit as the initial reference time
+    int closestHitIdx = std::min_element(dToImpact.begin(), dToImpact.end()) - dToImpact.begin();
+    double referenceTime = timeAtSurface[closestHitIdx];
+
+    //Find the list of all "good" indicies/hits
+    while(true){
+        RVec <bool> selected(nHits);
+        RVec <double> selectedTimes;
+        for (int i=0; i < nHits; ++i){
+            if ( layerHit[i] >= nLayers || dToLine[i] > 7.) continue;
+            double timeDiffInPicoSeconds = (timeAtSurface[i] - referenceTime)*1000.;
+            if ( std::abs(timeDiffInPicoSeconds) < nSigma*timeResolution ){
+                selectedTimes.push_back( timeAtSurface[i] );
+                selected[i] = true;
+            }
+        }
+        if( selectedTimes.empty() ) return selected;
+        auto const count = static_cast<float>( selectedTimes.size() );
+        double tmpReferenceTime = std::reduce(selectedTimes.begin(), selectedTimes.end()) / count;
+        if (tmpReferenceTime == referenceTime) return selected;
+        else referenceTime = tmpReferenceTime;
+    }
+}
+
+/////////////////////////////////TOFS////////////////////////////////
 
 double tofClosest(const RVec<double>& tHit, const RVec<double>& dToImpact){
     int min_idx = std::min_element(dToImpact.begin(), dToImpact.end()) - dToImpact.begin();
     return tHit[min_idx] - dToImpact[min_idx]/SPEED_OF_LIGHT;
 }
 
-double tofAvg(const RVec <double>& tofHit, const RVec<double>& dToImpact){
-    int nHits = tofHit.size();
-    double tofSum = 0.;
-    for(int i=0; i < nHits; ++i) tofSum += tofHit[i] - dToImpact[i]/SPEED_OF_LIGHT;
-    return tofSum/nHits;
+double getAverage(const RVec<double>& v){
+    if( v.empty() ) return 0;
+    auto const count = static_cast<float>( v.size() );
+    return std::reduce(v.begin(), v.end()) / count;
 }
+
+int getNHitsInLayers(const RVec<int>& layer_hit, int n_layers=10){
+    return std::count_if(layer_hit.begin(), layer_hit.end(), [&](int layer){return layer < n_layers;});
+}
+
 
 '''
 ROOT.gInterpreter.Declare(code)
@@ -90,45 +183,53 @@ ROOT.gInterpreter.Declare(code)
 
 colors = [ROOT.TColor.GetColor('#1b9e77'), ROOT.TColor.GetColor('#d95f02'), ROOT.TColor.GetColor('#7570b3'), ROOT.TColor.GetColor('#e7298a')]
 
-df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna.root")
-df = df.Filter("if (rdfentry_ % 1000 == 0){ std::cout << rdfentry_ << std::endl; } return true;")
-df = df.Filter("tofClosest0 > 6. && nHits > 0").Filter("abs(pdg) == 211 || abs(pdg) == 321 || abs(pdg) == 2212")
-df = df.Define("rImpact", "ROOT::Math::XYZVector(recoCaloX, recoCaloY, recoCaloZ)")\
-       .Define("momImpact", "ROOT::Math::XYZVector(recoCaloPx, recoCaloPy, recoCaloPz)")\
-       .Define("hitPos", "hitPos(xHit, yHit, zHit)")\
-       .Define("dToImpact", "dToImpact(hitPos, rImpact)")\
-       .Define("dToLine", "dToLine(hitPos, rImpact, momImpact)")\
-       .Define("tHitSmeared", "smearTime(tHit)")\
-       .Define("trueTOF", "tofClosest(tHit, dToImpact)")
+df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna.root", ["pdg", "tofClosest0", "layerHit", "recoCaloX", "recoCaloPx", "recoCaloY", "recoCaloPy", "recoCaloZ", "recoCaloPz", "xHit", "yHit", "zHit", "tHit"] )
+df = df.Filter("if (rdfentry_ % 1000000 == 0){ std::cout << rdfentry_ << std::endl; } return true;")\
+        .Filter("abs(pdg) == 211 || abs(pdg) == 321 || abs(pdg) == 2212")\
+        .Filter("tofClosest0 > 6. && getNHitsInLayers(layerHit, 10) > 0")\
+        .Define("rImpact", "ROOT::Math::XYZVector(recoCaloX, recoCaloY, recoCaloZ)")\
+        .Define("momImpact", "ROOT::Math::XYZVector(recoCaloPx, recoCaloPy, recoCaloPz)")\
+        .Define("hitPos", "hitPos(xHit, yHit, zHit)")\
+        .Define("dToImpact", "dToImpact(hitPos, rImpact)")\
+        .Define("dToLine", "dToLine(hitPos, rImpact, momImpact)")\
+        .Define("trueTOF", "tofClosest(tHit, dToImpact)")\
+        .Define("tHit50ps", "smear(tHit, gaus50)")\
+        .Define("tSurface50ps", "getTimeAtSurface(tHit50ps, dToImpact)")\
+        .Define("tHit100ps", "smear(tHit, gaus100)")\
+        .Define("tSurface100ps", "getTimeAtSurface(tHit100ps, dToImpact)")\
+        .Define("frankHits", "selectHits(dToLine, layerHit, true, 10, 999999.)")\
+        .Define("frankTof50ps", "getAverage(tSurface50ps[frankHits])")\
+        .Define("diff_frankTof50ps", "(frankTof50ps - trueTOF) * 1000")
 
-df = df.Define("defaultSelect", "selectHits(dToLine, layerHit, true, 10, 9999.)")\
-       .Define("tof_default", "tofAvg(tHitSmeared[defaultSelect], dToImpact[defaultSelect])")\
-       .Define("select_cut5", "selectHits(dToLine, layerHit, true, 10, 5.)")\
-       .Define("tof_cut5", "tofAvg(tHitSmeared[select_cut5], dToImpact[select_cut5])")\
-       .Define("select_cut10", "selectHits(dToLine, layerHit, true, 10, 10.)")\
-       .Define("tof_cut10", "tofAvg(tHitSmeared[select_cut10], dToImpact[select_cut10])")\
-       .Define("select_cut15", "selectHits(dToLine, layerHit, true, 10, 15.)")\
-       .Define("tof_cut15", "tofAvg(tHitSmeared[select_cut15], dToImpact[select_cut15])")\
-       .Define("select_cyl_all", "selectHits(dToLine, layerHit, false, 10, 9999.)")\
-       .Define("tof_cyl", "tofAvg(tHitSmeared[select_cyl_all], dToImpact[select_cyl_all])")\
-       .Define("select_cyl_cut5", "selectHits(dToLine, layerHit, false, 10, 5.)")\
-       .Define("tof_cyl_cut5", "tofAvg(tHitSmeared[select_cyl_cut5], dToImpact[select_cyl_cut5])")\
-       .Define("select_cyl_cut10", "selectHits(dToLine, layerHit, false, 10, 10.)")\
-       .Define("tof_cyl_cut10", "tofAvg(tHitSmeared[select_cyl_cut10], dToImpact[select_cyl_cut10])")\
-       .Define("select_cyl_cut15", "selectHits(dToLine, layerHit, false, 10, 15.)")\
-       .Define("tof_cyl_cut15", "tofAvg(tHitSmeared[select_cyl_cut15], dToImpact[select_cyl_cut15])")
+names = ["diff_frankTof50ps"]
+for r in [6.]:
+    df = df.Define(f"cylinder{int(r*10)}Hits", f"selectCylinderHits(dToLine, layerHit, {r}, 10)")\
+            .Define(f"cyl{int(r*10)}Tof50ps", f"getAverage(tSurface50ps[cylinder{int(r*10)}Hits])")\
+            .Define(f"diff_cyl{int(r*10)}Tof50ps", f"(cyl{int(r*10)}Tof50ps - trueTOF) * 1000")
+    names.append(f"diff_cyl{int(r*10)}Tof50ps")
 
-names = ["tof_default", "tof_cut5", "tof_cut10", "tof_cut15", "tof_cyl", "tof_cyl_cut5", "tof_cyl_cut10", "tof_cyl_cut15"]
 histos= []
-
-for n in names:
-    h = df.Define("diff", f"({n} - trueTOF) * 1000").Histo1D((f"h_{n}", ";#Delta T (ps);N entries", 300, -100, 100), "diff")
+for name in names:
+    h = df.Histo1D((f"{name}", ";#Delta T (ps);N entries", 2000, -200, 200), f"{name}")
     histos.append(h)
 
-hs = ROOT.THStack()
+# for i, nSigma in enumerate([2.5]):
+#     df = df.Define(f"HitSelection50ps{i}", f"selectReasonableHits(tSurface50ps, dToImpact, dToLine, layerHit, 50, {nSigma}, 10)")\
+#            .Define(f"Tof50ps{i}", f"getAverage(tSurface50ps[HitSelection50ps{i}])")
+#     names.append(f"Tof50ps{i}")
+
+
+arrays = df.AsNumpy(columns=names)
+
+canvas = create_canvas()
+
 for i, h in enumerate(histos):
-    hs.Add(h.GetPtr())
+    h.Draw("" if i == 0 else "same")
     h.SetLineColor(i+1)
 
-hs.Draw("nostack")
+for name,arr in arrays.items():
+    mean90, rms90, mean90_err, rms90_err = fit90(arr)
+    print(f"Method: {name}    RMS90: {rms90:.3f}    RMS: {np.std(arr):.3f}")
+
+canvas.Update()
 input("wait")

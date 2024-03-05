@@ -139,6 +139,20 @@ double getHelixLength(Vector3D p_start, double z_start, double z_end, double bFi
     return (z_end - z_start)/pz * std::sqrt(  std::pow( pt/(c_factor*bField), 2) + pz*pz  );
 }
 
+double getTrackLengthIDR(Track* track){
+    const TrackState* tsIP = track->getTrackState( TrackState::AtIP );
+    const TrackState* tscalo = track->getTrackState( TrackState::AtCalorimeter );
+
+    float Phicalo = tscalo->getPhi();
+    float PhiIP = tsIP->getPhi();
+    
+    float Omega = tsIP->getOmega();
+    float tanL = tsIP->getTanLambda();
+    
+    float length = (PhiIP-Phicalo)*(1/Omega)*sqrt(1+tanL*tanL);
+    return length;
+}
+
 double getTrackLengthSHA(Track* track, int location=TrackState::AtCalorimeter, TrackLengthOption option=TrackLengthOption::zedLambda){
     const TrackState* tsIP = track->getTrackState( TrackState::AtIP );
     const TrackState* tsCalo = getTrackStateAtCalorimeter(track);
@@ -190,16 +204,3 @@ double getHelixNRevolutions(const TrackState& ts1, const TrackState& ts2){
 
     return circHelix/circFull;
 }
-
-
-double getTrackLengthIDR(Track* track){
-    const TrackState* tsIP = track->getTrackState( TrackState::AtIP );
-    const TrackState* tsCalo = track->getTrackState( TrackState::AtCalorimeter );
-    
-    float phiIP = tsIP->getPhi();
-    float phiCalo = tsCalo->getPhi();
-    float omega = tsIP->getOmega();
-    float tanL = tsIP->getTanLambda();    
-    return (phiIP-phiCalo)*(1/omega)*sqrt(1+tanL*tanL);
-}
-

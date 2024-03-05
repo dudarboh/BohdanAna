@@ -138,3 +138,13 @@ def create_canvas(margin=0.22, left_margin_fraction=0.8, bottom_margin_fraction=
     ROOT.gStyle.SetPadTopMargin( (1 - bottom_margin_fraction) * margin)
     canvas = ROOT.TCanvas(get_rand_string(), "", 600, 600)
     return canvas
+
+def draw_vertical_mass_lines(maxy):
+    lines = {}
+    for p in particles:
+        lines[p] = ROOT.TLine(p.mass2, 0., p.mass2, maxy)
+        lines[p].SetLineColor(15)
+        lines[p].SetLineWidth(2)
+        lines[p].SetLineStyle(1)
+        lines[p].Draw()
+    return lines

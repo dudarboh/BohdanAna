@@ -11,7 +11,7 @@ def draw_lines():
         lines[p] = ROOT.TLine(0., p.mass2, 15., p.mass2)
         lines[p].SetLineColor(2)
         lines[p].SetLineWidth(1)
-        lines[p].SetLineStyle(9)
+        lines[p].SetLineStyle(7)
         lines[p].Draw()
     return lines
 
@@ -19,19 +19,84 @@ df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna.root
 df = df.Filter("tofClosest0 > 6.").Filter("abs(pdg) == 211 || abs(pdg) == 321 || abs(pdg) == 2212")
 df = df.Define("mom2", "recoIpPx*recoIpPx + recoIpPy*recoIpPy + recoIpPz*recoIpPz")
 df = df.Define("mom", "sqrt(mom2)")
-trk_len_methods = ["trackLengthToEcal_SHA_phiLambda_IP", "trackLengthToEcal_SHA_phiZed_IP", "trackLengthToEcal_SHA_zedLambda_IP"]
 
-canvases = []
-histos = []
-x_title, y_title = "Momentum (GeV/c)", "Mass^{2} (GeV^{2}/c^{4})"
+trk_len_methods = ["trackLengthToEcal_IKF_phiLambda", "trackLengthToEcal_IKF_phiZed", "trackLengthToEcal_IKF_zedLambda"]
+text = "L=#sum_{i}L_{i}(#Omega_{i}, tan#lambda_{i})"
+
+# trk_len_methods = ["trackLengthToEcal_SHA_phiLambda_ECAL", "trackLengthToEcal_SHA_phiZed_ECAL", "trackLengthToEcal_SHA_zedLambda_ECAL"]
+# text = "#Omega_{ECAL}, tan#lambda_{ECAL}"
+
+# trk_len_methods = ["trackLengthToEcal_IKF_phiLambda", "trackLengthToEcal_IKF_phiZed", "trackLengthToEcal_IKF_zedLambda"]
+# text = "L = #sum L_{i} (#Omega_{i}, tan#lambda_{i})"
+
+histos_2d = []
+histos_1d_pi = []
+histos_1d_k = []
+histos_1d_p = []
 for trk_len in trk_len_methods:
     df_new = df.Define("beta", f"{trk_len}/(tofClosest0*299.792458)")\
                .Define("mass2", "mom2*(1./(beta*beta) - 1.)")
-    h = df_new.Histo2D( (f"h_{trk_len}", "", 1000, 0, 10, 1000, -0.3, 1.2), "mom","mass2" )
-    print( h.GetEntries() )
-    h.GetXaxis().SetTitle(x_title)
-    h.GetYaxis().SetTitle(y_title)
-    # print( h.Inspect())
-    histos.append(h)
-    canvases.append( draw_2d_plot(h) )
-    input("wait")
+    h2d = df_new.Histo2D( (get_rand_string(), "", 1000, 0, 10, 1000, -0.3, 1.2), "mom","mass2" )
+    h1d_pi = df_new.Histo1D( (get_rand_string(), "", 500, -10e-3, 50e-3), "mass2" )
+    h1d_k = df_new.Histo1D( (get_rand_string(), "", 250, 0.19, 0.31), "mass2" )
+    h1d_p = df_new.Histo1D( (get_rand_string(), "", 250, 0.78, 1.), "mass2" )
+
+    histos_2d.append(h2d)
+    histos_1d_pi.append(h1d_pi)
+    histos_1d_k.append(h1d_k)
+    histos_1d_p.append(h1d_p)
+
+canvases = []
+legends = []
+lls = []
+# for h2d in histos_2d:
+#     h2d.GetXaxis().SetTitle("Momentum (GeV/c)")
+#     h2d.GetYaxis().SetTitle("Mass^{2} (GeV^{2}/c^{4})")
+#     canvases.append( draw_2d_plot(h2d) )
+
+
+colors = [ROOT.TColor.GetColor('#000000'), ROOT.TColor.GetColor('#688E26'), ROOT.TColor.GetColor('#FAA613')]
+for p, h_to_plot in zip(particles, [histos_1d_pi, histos_1d_k, histos_1d_p]):
+    canvas = create_canvas(margin=0.33, left_margin_fraction=0.55, bottom_margin_fraction=0.65)
+    max_y = 1.18*max([hist.GetMaximum() for hist in h_to_plot])
+    for h, color in zip(h_to_plot, colors):
+        h.SetTitle(";Mass^{2} (GeV^{2}/c^{4}); N entries")
+        h.GetXaxis().SetMaxDigits(3)
+        h.GetXaxis().SetTitleOffset(1.1)
+        h.GetYaxis().SetTitleOffset(1.4)
+        h.GetYaxis().SetMaxDigits(3)
+        h.SetLineColor(color)
+        h.SetLineWidth(3)
+        h.SetMinimum( 0. )
+        h.SetMaximum( max_y )
+        h.Draw("L") if h == h_to_plot[0] else h.Draw("L same")
+
+    legend = create_legend(0.555, 0.435, 0.82, 0.88)
+
+    legend.SetTextFont(42)
+
+    leg1 = ROOT.TGraph()
+    leg1.SetFillColor(colors[0])
+    legend.AddEntry(leg1, "#left|#frac{#Delta#varphi}{#Omega}#right|#sqrt{1+tan^{2}#lambda}", "f")
+
+    leg3 = ROOT.TGraph()
+    leg3.SetFillColor(colors[1])
+    legend.AddEntry(leg3, "#sqrt{#left(#frac{#Delta#varphi}{#Omega}#right)^{2} + #Deltaz^{2}}", "f")
+
+    leg5 = ROOT.TGraph()
+    leg5.SetFillColor(colors[2])
+    legend.AddEntry(leg5, "#left|#frac{#Deltaz}{tan#lambda}#right|#sqrt{1+tan^{2}#lambda}", "f")
+
+    lines = draw_vertical_mass_lines(max_y)
+    legend.AddEntry(lines[p], f"true {p.legend} mass", "l")
+
+    legend.Draw()
+    lls.append(lines)
+    latex.SetTextSize(0.04)
+    latex.DrawLatexNDC(0.2, 0.8, text)
+    canvas.Update()
+    canvases.append(canvas)
+    legends.append(legend)
+
+input("wait")
+    

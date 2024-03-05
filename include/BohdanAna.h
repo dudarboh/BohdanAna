@@ -34,12 +34,18 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
 
         int _pdg{};
         double _dEdx{};
+        double _omegaIP{};
+        double _omegaECAL{};
+        double _tanLambdaIP{};
+        double _tanLambdaECAL{};
 
         std::array<double, 3> _mcMom{};
         std::array<double, 3> _recoIpMom{};
         std::array<double, 3> _recoCaloPos{};
         std::array<double, 3> _recoCaloMom{};
 
+
+        double _trackLength_IDR{};
         double _trackLength_SHA_phiLambda_IP{};
         double _trackLength_SHA_phiZed_IP{};
         double _trackLength_SHA_zedLambda_IP{};
