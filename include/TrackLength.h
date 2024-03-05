@@ -17,10 +17,10 @@ enum class TrackLengthOption{
 };
 
 struct TrackLengthResult{
-    double trackLengthToSET{};
-    double harmonicMomToSET{};
-    double trackLengthToEcal{};
-    double harmonicMomToEcal{};
+    float trackLengthToSET{};
+    float harmonicMomToSET{};
+    float trackLengthToEcal{};
+    float harmonicMomToEcal{};
 };
 
 struct HitState{
@@ -31,7 +31,7 @@ struct HitState{
 };
 
 template <typename TrackStateLike>
-double getHelixLength(const TrackStateLike* ts1, const TrackStateLike* ts2, int location, TrackLengthOption option){
+float getHelixLength(const TrackStateLike* ts1, const TrackStateLike* ts2, int location, TrackLengthOption option){
     float omega{}, tanL{};
     switch (location){
         case EVENT::TrackState::AtIP :
@@ -47,12 +47,12 @@ double getHelixLength(const TrackStateLike* ts1, const TrackStateLike* ts2, int 
 
     //FIXME: d0/z0 at the calorimeter should be always 0!!!
 
-    double dPhi = std::abs( ts2->getPhi() - ts1->getPhi() );
+    float dPhi = std::abs( ts2->getPhi() - ts1->getPhi() );
     if (dPhi > M_PI) dPhi = 2*M_PI - dPhi;
 
-    double zIP = ts1->getReferencePoint()[2] + ts1->getZ0();
-    double zCalo = ts2->getReferencePoint()[2] + ts2->getZ0();
-    double dz = std::abs( zCalo - zIP );
+    float zIP = ts1->getReferencePoint()[2] + ts1->getZ0();
+    float zCalo = ts2->getReferencePoint()[2] + ts2->getZ0();
+    float dz = std::abs( zCalo - zIP );
 
     switch (option){
         case TrackLengthOption::phiLambda :
@@ -70,26 +70,26 @@ double getHelixLength(const TrackStateLike* ts1, const TrackStateLike* ts2, int 
 
 
 //theoretical formula integrating helix curve from z_start to z_end using momentum p_start at z_start.
-double getHelixLength(dd4hep::rec::Vector3D p_start, double z_start, double z_end, double bField);
+float getHelixLength(dd4hep::rec::Vector3D p_start, float z_start, float z_end, float bField);
 
 // simple helix approximation (SHA)
-double getTrackLengthSHA(EVENT::Track* track, int location, TrackLengthOption option);
+float getTrackLengthSHA(EVENT::Track* track, int location, TrackLengthOption option);
 
 
-std::vector<HitState> getTrackStates(EVENT::ReconstructedParticle* pfo, double bField, MarlinTrk::IMarlinTrkSystem* trkSystem, const UTIL::LCRelationNavigator& navToSimTrackerHits);
+std::vector<HitState> getTrackStates(EVENT::ReconstructedParticle* pfo, float bField, MarlinTrk::IMarlinTrkSystem* trkSystem, const UTIL::LCRelationNavigator& navToSimTrackerHits);
 
 // iterative Kalman Filter (IKF)
-TrackLengthResult getTrackLengthIKF(const std::vector<IMPL::TrackStateImpl>& trackStates, double bField, TrackLengthOption option);
+TrackLengthResult getTrackLengthIKF(const std::vector<IMPL::TrackStateImpl>& trackStates, float bField, TrackLengthOption option);
 
 
 ////////////////////////////////////////////////////////////////
 
-double getHelixNRevolutions(const EVENT::TrackState& ts1, const EVENT::TrackState& ts2);
+float getHelixNRevolutions(const EVENT::TrackState& ts1, const EVENT::TrackState& ts2);
 
 //Track length from the IDR production version (1 September 2020)
 // It doesn't account for the phi singularity producing sometimes wrong results
 // It also doesn't take the absolute value and returns signed track length, which might be bug or a feature...
-double getTrackLengthIDR(EVENT::Track* track);
+float getTrackLengthIDR(EVENT::Track* track);
 
 
 #endif

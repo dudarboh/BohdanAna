@@ -201,7 +201,7 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
             auto selectedHits = selectFrankEcalHits(cluster, trackPosAtCalo, trackMomAtCalo, 10);
             streamlog_out(DEBUG8)<<"Calculating TOFs for all resolutions"<<std::endl;
             for (size_t j = 0; j < _resolutions.size(); j++){
-                double res = _resolutions[j]/1000.; // in ns
+                float res = _resolutions[j]/1000.; // in ns
                 _tofClosest.at(j) = getHitTof(closestHit, trackPosAtCalo, res);
                 _tofAverage.at(j) = getTofFrankAvg(selectedHits, trackPosAtCalo, res);
                 _tofFit.at(j) = getTofFrankFit(selectedHits, trackPosAtCalo, res);
@@ -229,7 +229,7 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
             auto selectedHits = selectFrankEcalHits(cluster, photonPosAtCalo, mom, 10);
             streamlog_out(DEBUG8)<<"Calculating TOFs for all resolutions"<<std::endl;
             for (size_t j = 0; j < _resolutions.size(); j++){
-                double res = _resolutions[j]/1000.; // in ns
+                float res = _resolutions[j]/1000.; // in ns
                 _tofClosest.at(j) = getHitTof(closestHit, photonPosAtCalo, res);
                 _tofAverage.at(j) = getTofFrankAvg(selectedHits, photonPosAtCalo, res);
                 _tofFit.at(j) = getTofFrankFit(selectedHits, photonPosAtCalo, res);
@@ -242,10 +242,10 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
         _tree->Fill();
 
         //DEBUGGING
-        // double mom = _trackLength_IKF_zedLambda.harmonicMomToEcal;
-        // double trackLength = _trackLength_IKF_zedLambda.trackLengthToEcal;
-        // double beta = trackLength/(299.792458*_tofClosest[0]);
-        // double m2 = mom*mom*(1./(beta*beta) - 1.);
+        // float mom = _trackLength_IKF_zedLambda.harmonicMomToEcal;
+        // float trackLength = _trackLength_IKF_zedLambda.trackLengthToEcal;
+        // float beta = trackLength/(299.792458*_tofClosest[0]);
+        // float m2 = mom*mom*(1./(beta*beta) - 1.);
         // if (m2 < -1. && _tofClosest[0] > 6. && mom < 2. && _layerClosest == 0 && _cleanClosestHit && _cleanTrack){
         //     streamlog_out(DEBUG8)<<" Momentum: "<<mom<<" GeV/c"<<std::endl;
         //     streamlog_out(DEBUG8)<<" Track length: "<<trackLength<<" mm"<<std::endl;
@@ -264,23 +264,23 @@ void BohdanAna::end(){
 
 void BohdanAna::resetVariables(){
     _pdg = 0;
-    _dEdx = 0.;
-    _omegaIP = 0.;
-    _omegaECAL = 0.;
-    _tanLambdaIP = 0.;
-    _tanLambdaECAL = 0.;
-    _mcMom.fill(0.);
-    _recoIpMom.fill(0.);
-    _recoCaloPos.fill(0.);
-    _recoCaloMom.fill(0.);
+    _dEdx = 0.f;
+    _omegaIP = 0.f;
+    _omegaECAL = 0.f;
+    _tanLambdaIP = 0.f;
+    _tanLambdaECAL = 0.f;
+    _mcMom.fill(0.f);
+    _recoIpMom.fill(0.f);
+    _recoCaloPos.fill(0.f);
+    _recoCaloMom.fill(0.f);
 
-    _trackLength_IDR = 0.;
-    _trackLength_SHA_phiLambda_IP = 0.;
-    _trackLength_SHA_phiZed_IP = 0.;
-    _trackLength_SHA_zedLambda_IP = 0.;
-    _trackLength_SHA_phiLambda_ECAL = 0.;
-    _trackLength_SHA_phiZed_ECAL = 0.;
-    _trackLength_SHA_zedLambda_ECAL = 0.;
+    _trackLength_IDR = 0.f;
+    _trackLength_SHA_phiLambda_IP = 0.f;
+    _trackLength_SHA_phiZed_IP = 0.f;
+    _trackLength_SHA_zedLambda_IP = 0.f;
+    _trackLength_SHA_phiLambda_ECAL = 0.f;
+    _trackLength_SHA_phiZed_ECAL = 0.f;
+    _trackLength_SHA_zedLambda_ECAL = 0.f;
     _trackLength_IKF_phiLambda = TrackLengthResult();
     _trackLength_IKF_phiZed = TrackLengthResult();
     _trackLength_IKF_zedLambda = TrackLengthResult();
@@ -290,10 +290,10 @@ void BohdanAna::resetVariables(){
     _layoutClosest = -1;
     _layerClosest = -1;
     _cleanClosestHit = false;
-    _tofClosest.fill(0.);
-    _tofAverage.fill(0.);
-    _tofSET.fill(0.);
-    _tofFit.fill(0.);
+    _tofClosest.fill(0.f);
+    _tofAverage.fill(0.f);
+    _tofSET.fill(0.f);
+    _tofFit.fill(0.f);
 
     _nHits = 0;
     _xHit.clear();

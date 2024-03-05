@@ -42,51 +42,51 @@ using std::cout, std::endl, std::stringstream, std::vector, std::string, std::ru
 
 // in mm/ns
 #define SPEED_OF_LIGHT 299.792458
-// const double rInner = 1804.8;
+// const float rInner = 1804.8;
 
 // smearing generator and distributions
 std::default_random_engine gen;
-std::normal_distribution<double> gaus50(0., 0.05);
-std::normal_distribution<double> gaus100(0., 0.1);
+std::normal_distribution<float> gaus50(0., 0.05);
+std::normal_distribution<float> gaus100(0., 0.1);
 
-RVec <XYZVector> hitPos(const RVec<double>& x, const RVec<double>& y, const RVec<double>& z){
-    auto constructHit = [](double x, double y, double z) { return XYZVector(x, y, z); };
+RVec <XYZVector> hitPos(const RVec<float>& x, const RVec<float>& y, const RVec<float>& z){
+    auto constructHit = [](float x, float y, float z) { return XYZVector(x, y, z); };
     return Map(x, y, z, constructHit);
 }
 
 
-RVec <double> dToImpact(const RVec<XYZVector>& hits, const XYZVector& rImpact){
+RVec <float> dToImpact(const RVec<XYZVector>& hits, const XYZVector& rImpact){
     auto getDistance = [&](const XYZVector& hit) { return (hit - rImpact).R(); };
     return Map(hits, getDistance);
 }
 
-RVec <double> getTimeAtSurface(const RVec<double>& tHit, const RVec<double>& dToImpact){
-    auto correctForDistance = [](double tHit, double dToImpact) { return tHit - dToImpact/SPEED_OF_LIGHT; };
+RVec <float> getTimeAtSurface(const RVec<float>& tHit, const RVec<float>& dToImpact){
+    auto correctForDistance = [](float tHit, float dToImpact) { return tHit - dToImpact/SPEED_OF_LIGHT; };
     return Map(tHit, dToImpact, correctForDistance);
 }
 
 
 
-RVec <double> dToLine(const RVec <XYZVector>& hits, const XYZVector& p0, const XYZVector& p){
-    RVec <double> distance;
+RVec <float> dToLine(const RVec <XYZVector>& hits, const XYZVector& p0, const XYZVector& p){
+    RVec <float> distance;
     for (const auto& hit:hits){
-        double d = (hit - p0).Cross(p.Unit()).R();
+        float d = (hit - p0).Cross(p.Unit()).R();
         distance.push_back(d);
     }
     return distance;
 }
 
-RVec <double> smear(const RVec <double>& times, std::normal_distribution<double>& gaus){
-    auto smearWithGaussian = [&](double time){ return time + gaus(gen); };
+RVec <float> smear(const RVec <float>& times, std::normal_distribution<float>& gaus){
+    auto smearWithGaussian = [&](float time){ return time + gaus(gen); };
     return Map(times, smearWithGaussian);
 }
 
-RVec <bool> selectHits(const RVec<double>& dToLine, const RVec<int>& layer_hit, bool only_closest=true, int n_layers=10, double cyl_cut=9999.){
+RVec <bool> selectHits(const RVec<float>& dToLine, const RVec<int>& layer_hit, bool only_closest=true, int n_layers=10, float cyl_cut=9999.){
     int nHits = dToLine.size();
     RVec <bool> selected(nHits);
 
     if(only_closest){
-        std::map<int, std::vector< std::pair<int, double> > > layer2hit;
+        std::map<int, std::vector< std::pair<int, float> > > layer2hit;
         for (int i=0; i < nHits; ++i){
             if( dToLine[i] < cyl_cut ){
                 layer2hit[ layer_hit[i] ].push_back( { i, dToLine[i] } );
@@ -107,15 +107,15 @@ RVec <bool> selectHits(const RVec<double>& dToLine, const RVec<int>& layer_hit, 
     return selected;
 }
 
-RVec <bool> selectCylinderHits(const RVec<double>& dToLine, const RVec<int>& layer_hit, double start_radii=6., int n_layers=10){
+RVec <bool> selectCylinderHits(const RVec<float>& dToLine, const RVec<int>& layer_hit, float start_radii=6., int n_layers=10){
     // WARNING: ENSURE AT LEAST ONE HIT IS PRESENT WITHIN GIVEN n_layers! Otherwise infinite loop
     int nHits = dToLine.size();
     RVec <bool> selected(nHits);
     if (nHits == 0) return selected;
 
-    double min_hit_radii = *std::min_element(dToLine.begin(), dToLine.end());
+    float min_hit_radii = *std::min_element(dToLine.begin(), dToLine.end());
 
-    double r = max(start_radii, min_hit_radii);
+    float r = max(start_radii, min_hit_radii);
     bool foundHit = false;
     while (not foundHit){
         for (int i=0; i < nHits; ++i){
@@ -132,20 +132,20 @@ RVec <bool> selectCylinderHits(const RVec<double>& dToLine, const RVec<int>& lay
 
 
 //Select hits, if their TimeAtSurface is within +/- sigma of the time resolution.
-RVec <bool> selectReasonableHits(const RVec<double> timeAtSurface, const RVec<double>& dToImpact, const RVec<double>& dToLine, const RVec<int>& layerHit, double timeResolution, double nSigma=3, int nLayers=10){
+RVec <bool> selectReasonableHits(const RVec<float> timeAtSurface, const RVec<float>& dToImpact, const RVec<float>& dToLine, const RVec<int>& layerHit, float timeResolution, float nSigma=3, int nLayers=10){
     int nHits = timeAtSurface.size();
 
     //use the closest hit as the initial reference time
     int closestHitIdx = std::min_element(dToImpact.begin(), dToImpact.end()) - dToImpact.begin();
-    double referenceTime = timeAtSurface[closestHitIdx];
+    float referenceTime = timeAtSurface[closestHitIdx];
 
     //Find the list of all "good" indicies/hits
     while(true){
         RVec <bool> selected(nHits);
-        RVec <double> selectedTimes;
+        RVec <float> selectedTimes;
         for (int i=0; i < nHits; ++i){
             if ( layerHit[i] >= nLayers || dToLine[i] > 7.) continue;
-            double timeDiffInPicoSeconds = (timeAtSurface[i] - referenceTime)*1000.;
+            float timeDiffInPicoSeconds = (timeAtSurface[i] - referenceTime)*1000.;
             if ( std::abs(timeDiffInPicoSeconds) < nSigma*timeResolution ){
                 selectedTimes.push_back( timeAtSurface[i] );
                 selected[i] = true;
@@ -153,7 +153,7 @@ RVec <bool> selectReasonableHits(const RVec<double> timeAtSurface, const RVec<do
         }
         if( selectedTimes.empty() ) return selected;
         auto const count = static_cast<float>( selectedTimes.size() );
-        double tmpReferenceTime = std::reduce(selectedTimes.begin(), selectedTimes.end()) / count;
+        float tmpReferenceTime = std::reduce(selectedTimes.begin(), selectedTimes.end()) / count;
         if (tmpReferenceTime == referenceTime) return selected;
         else referenceTime = tmpReferenceTime;
     }
@@ -161,12 +161,12 @@ RVec <bool> selectReasonableHits(const RVec<double> timeAtSurface, const RVec<do
 
 /////////////////////////////////TOFS////////////////////////////////
 
-double tofClosest(const RVec<double>& tHit, const RVec<double>& dToImpact){
+float tofClosest(const RVec<float>& tHit, const RVec<float>& dToImpact){
     int min_idx = std::min_element(dToImpact.begin(), dToImpact.end()) - dToImpact.begin();
     return tHit[min_idx] - dToImpact[min_idx]/SPEED_OF_LIGHT;
 }
 
-double getAverage(const RVec<double>& v){
+float getAverage(const RVec<float>& v){
     if( v.empty() ) return 0;
     auto const count = static_cast<float>( v.size() );
     return std::reduce(v.begin(), v.end()) / count;

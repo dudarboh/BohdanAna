@@ -33,9 +33,9 @@ IMPL::TrackStateImpl getTrackStateAtHit(MarlinTrk::IMarlinTrack* marlinTrack, EV
 
 EVENT::MCParticle* getMC(EVENT::ReconstructedParticle* pfo, const UTIL::LCRelationNavigator& pfo2mc);
 
-double getECALBarelRMin();
+float getECALBarelRMin();
 
-double getECALEndcapZMin();
+float getECALEndcapZMin();
 
 dd4hep::rec::Vector3D getPhotonAtCalorimeter(EVENT::MCParticle* mc);
 

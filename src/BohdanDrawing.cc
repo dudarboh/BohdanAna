@@ -159,7 +159,7 @@ TStyle* getMyStyle(){
     // myStyle->SetBarOffset(Float_t baroff = 0.5);
     // myStyle->SetBarWidth(Float_t barwidth = 0.5);
     // myStyle->SetPaintTextFormat(const char* format = "g");
-    // myStyle->SetTimeOffset(Double_t toffset);
+    // myStyle->SetTimeOffset(float_t toffset);
     // myStyle->SetHistMinimumZero(kTRUE);
 
     // myStyle->SetPalette(Int_t ncolors = 0, Int_t* colors = 0);
@@ -187,7 +187,7 @@ void displayPFO(EVENT::ReconstructedParticle* pfo, bool colorSort){
             //NOTE: after some manual event checking sorting by rho seems to work in most (all?) cases and is not a problem...
             // if (colorSort){
             //     std::cout<<"Analysing curl"<<std::endl;
-            //     double r = std::hypot( pos[0], pos[1] );
+            //     float r = std::hypot( pos[0], pos[1] );
             //     std::cout<<"Hit "<<hitIdx+1<<" r = "<<r<<"    detected rmax = "<<maxR;
             //     if (r >= maxR){
             //         std::cout<<" --- blue, rewrite maxR"<<std::endl;
@@ -252,9 +252,9 @@ void plotECALTimes(EVENT::Cluster* cluster, Vector3D posAtEcal, Vector3D momAtEc
     auto frankHits = selectFrankEcalHits(cluster, posAtEcal, momAtEcal, 10);
 
     //fill maps
-    std::map <CalorimeterHit*, double> hit2dToTrack;
-    std::map <CalorimeterHit*, double> hit2time;
-    std::map <CalorimeterHit*, double> hit2timeSmeared;
+    std::map <CalorimeterHit*, float> hit2dToTrack;
+    std::map <CalorimeterHit*, float> hit2time;
+    std::map <CalorimeterHit*, float> hit2timeSmeared;
     for(auto hit : hits){
         bool isECALHit = ( CHT( hit->getType() ).caloID() == CHT::ecal );
         if ( (!isECALHit) ) continue;
@@ -269,7 +269,7 @@ void plotECALTimes(EVENT::Cluster* cluster, Vector3D posAtEcal, Vector3D momAtEc
     gROOT->ForceStyle();
     TCanvas c = TCanvas("c", "All ECAL hits");
 
-    std::vector<double> x_all, y_all, y_all_smeared;
+    std::vector<float> x_all, y_all, y_all_smeared;
     for(auto hit : hits){
         bool isECALHit = ( CHT( hit->getType() ).caloID() == CHT::ecal );
         if ( (!isECALHit) ) continue;
@@ -277,7 +277,7 @@ void plotECALTimes(EVENT::Cluster* cluster, Vector3D posAtEcal, Vector3D momAtEc
         y_all.push_back( hit2time[hit] );
         y_all_smeared.push_back( hit2timeSmeared[hit] );
     }
-    std::vector<double> y_err(x_all.size(), 0.1);
+    std::vector<float> y_err(x_all.size(), 0.1);
     TGraphErrors gr( x_all.size(), x_all.data(), y_all.data(), nullptr, y_err.data() );
     gr.GetXaxis()->SetTitle("d to track (mm)");
     gr.GetYaxis()->SetTitle("Hit time (ns)");
@@ -311,7 +311,7 @@ void plotECALTimes(EVENT::Cluster* cluster, Vector3D posAtEcal, Vector3D momAtEc
     //     gSystem->Sleep(5);
     // }
 
-    std::vector<double> x_frank, y_frank_smeared;
+    std::vector<float> x_frank, y_frank_smeared;
     for(auto hit : frankHits){
         bool isECALHit = ( CHT( hit->getType() ).caloID() == CHT::ecal );
         if ( (!isECALHit) ) continue;
@@ -343,13 +343,13 @@ void plotECALTimes(EVENT::Cluster* cluster, Vector3D posAtEcal, Vector3D momAtEc
 
 
 
-    std::vector<double> y_frank_smeared_corr;
+    std::vector<float> y_frank_smeared_corr;
     for(size_t i=0; i < x_frank.size(); i++){
         y_frank_smeared_corr.push_back( y_frank_smeared[i] - x_frank[i]/CLHEP::c_light );
     }
 
     TGraph gr4( x_frank.size(), x_frank.data(), y_frank_smeared_corr.data() );
-    double average = std::reduce(y_frank_smeared_corr.begin(), y_frank_smeared_corr.end()) / double(y_frank_smeared_corr.size());
+    float average = std::reduce(y_frank_smeared_corr.begin(), y_frank_smeared_corr.end()) / float(y_frank_smeared_corr.size());
     TF1 f2("f", Form("%f", average), 0., *std::max_element(x_all.begin(), x_all.end()) );
 
     gr4.SetTitle("Corrected hit time;d to track (mm); Corrected hit time (ns)");
@@ -376,7 +376,7 @@ void plotECALTimes(EVENT::Cluster* cluster, Vector3D posAtEcal, Vector3D momAtEc
 
 }
 
-void plotTrackParams(const std::vector<HitState>& trackHitStates, EVENT::ReconstructedParticle* pfo, EVENT::MCParticle* mc, double bField){
+void plotTrackParams(const std::vector<HitState>& trackHitStates, EVENT::ReconstructedParticle* pfo, EVENT::MCParticle* mc, float bField){
     // DEBUG output
     int pdg = std::abs( mc->getPDG() );
     std::cout<<"PDG: "<<pdg<<std::endl;
@@ -384,22 +384,22 @@ void plotTrackParams(const std::vector<HitState>& trackHitStates, EVENT::Reconst
     Vector3D mcMom(mc->getMomentum());
     std::cout<<"Momentum: "<<mcMom.r()<<" ( "<<mcMom.rho()<<", "<<mcMom.z()<<")"<<std::endl;
 
-    auto omega2pt = [bField](double omega){
+    auto omega2pt = [bField](float omega){
         return 0.000299792458 * bField / omega;
     };
-    auto pt2omega = [bField](double pt){
+    auto pt2omega = [bField](float pt){
         return 0.000299792458 * bField / pt;
     };
 
-    auto tanL2theta = [bField](double tanL){
+    auto tanL2theta = [bField](float tanL){
         return 90. - 180.*std::atan(tanL)/M_PI;
     };
 
     TStyle* myStyle = getMyStyle();
 
     struct Margin{
-        double left, right, top, bottom;
-        Margin(double l, double r, double t, double b){
+        float left, right, top, bottom;
+        Margin(float l, float r, float t, float b){
             left = l;
             right = r;
             top = t;
@@ -417,7 +417,7 @@ void plotTrackParams(const std::vector<HitState>& trackHitStates, EVENT::Reconst
     gROOT->ForceStyle();
     TCanvas c = TCanvas("c", "Track parameters evolution through the track", 600/(1. - margin.left - margin.right), 600/(1. - margin.top - margin.bottom));
     c.SetGridx(true);
-    std::vector<double> z, omega, tanL, trueZ, trueOmega, trueTanL;
+    std::vector<float> z, omega, tanL, trueZ, trueOmega, trueTanL;
     for(auto hitState : trackHitStates){
         auto simHit = hitState.simHit;
         auto ts = hitState.ts;
@@ -454,7 +454,7 @@ void plotTrackParams(const std::vector<HitState>& trackHitStates, EVENT::Reconst
     mg.GetYaxis()->CenterTitle(true);
     mg.Draw("AL");
     c.Update();
-    double range = c.GetUymax() - c.GetUymin();
+    float range = c.GetUymax() - c.GetUymin();
     mg.GetYaxis()->SetRangeUser(c.GetUymin() - 0.5*range, c.GetUymax() + 0.5*range);
     c.Modified(); c.Update();
 
@@ -508,7 +508,7 @@ void plotTrackParams(const std::vector<HitState>& trackHitStates, EVENT::Reconst
     mg2.GetYaxis()->CenterTitle(true);
     mg2.Draw("AL");
     c2.Update();
-    double range2 = c2.GetUymax() - c2.GetUymin();
+    float range2 = c2.GetUymax() - c2.GetUymin();
     mg2.GetYaxis()->SetRangeUser(c2.GetUymin() - 0.5*range2, c2.GetUymax() + 0.5*range2);
     c2.Modified(); c2.Update();
 

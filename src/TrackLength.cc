@@ -11,7 +11,7 @@
 using namespace EVENT;
 using dd4hep::rec::Vector3D;
 
-std::vector<HitState> getTrackStates(ReconstructedParticle* pfo, double bField, MarlinTrk::IMarlinTrkSystem* trkSystem, const UTIL::LCRelationNavigator& navToSimTrackerHits){
+std::vector<HitState> getTrackStates(ReconstructedParticle* pfo, float bField, MarlinTrk::IMarlinTrkSystem* trkSystem, const UTIL::LCRelationNavigator& navToSimTrackerHits){
     // Refit the track and extract track state at every tracker hit along the track
     std::vector<HitState> trackStates;
     if ( pfo->getTracks().empty() ) return trackStates;
@@ -39,7 +39,7 @@ std::vector<HitState> getTrackStates(ReconstructedParticle* pfo, double bField, 
         covMatrix[5]  = 0.00001; //sigma_omega^2
         covMatrix[9]  = 1e+06; //sigma_z0^2
         covMatrix[14] = 100.; //sigma_tanl^2
-        double maxChi2PerHit = 100.;
+        float maxChi2PerHit = 100.;
         std::unique_ptr<MarlinTrk::IMarlinTrack> marlinTrk( trkSystem->createTrack() );
         IMPL::TrackImpl refittedTrack;
 
@@ -65,8 +65,8 @@ std::vector<HitState> getTrackStates(ReconstructedParticle* pfo, double bField, 
 
         //Find which way to loop over the array of hits. We need to loop in the direction of the track.
         bool loopForward = true;
-        double zFirst = std::abs( hitsInFit.front().first->getPosition()[2] );
-        double zLast = std::abs( hitsInFit.back().first->getPosition()[2] );
+        float zFirst = std::abs( hitsInFit.front().first->getPosition()[2] );
+        float zLast = std::abs( hitsInFit.back().first->getPosition()[2] );
 
         // OPTIMIZE: 10 mm is just a round number. With very small z difference it is more robust to use rho, to be sure z difference is not caused by tpc Z resolution or multiple scattering
         if ( std::abs(zLast - zFirst) > 10. ){
@@ -75,8 +75,8 @@ std::vector<HitState> getTrackStates(ReconstructedParticle* pfo, double bField, 
             streamlog_out(DEBUG7)<<"subTrack "<<i+1<<" zFirst: "<<hitsInFit.front().first->getPosition()[2]<<" zLast: "<<hitsInFit.back().first->getPosition()[2]<<" loop forward: "<<loopForward<<std::endl;
         }
         else{
-            double rhoFirst = std::hypot( hitsInFit.front().first->getPosition()[0], hitsInFit.front().first->getPosition()[1] );
-            double rhoLast = std::hypot( hitsInFit.back().first->getPosition()[0], hitsInFit.back().first->getPosition()[1] );
+            float rhoFirst = std::hypot( hitsInFit.front().first->getPosition()[0], hitsInFit.front().first->getPosition()[1] );
+            float rhoLast = std::hypot( hitsInFit.back().first->getPosition()[0], hitsInFit.back().first->getPosition()[1] );
             if ( rhoLast < rhoFirst ) loopForward = false;
             streamlog_out(DEBUG7)<<"Track is very perpendicular (dz < 10 mm). Using rho to define loop direction over subTrack hits."<<std::endl;
             streamlog_out(DEBUG7)<<"subTrack "<<i+1<<" zFirst: "<<hitsInFit.front().first->getPosition()[2]<<" zLast: "<<hitsInFit.back().first->getPosition()[2]<<std::endl;
@@ -132,14 +132,14 @@ std::vector<HitState> getTrackStates(ReconstructedParticle* pfo, double bField, 
     return trackStates;
 }
 
-double getHelixLength(Vector3D p_start, double z_start, double z_end, double bField){
-    double c_factor = 0.299792458;
-    double pt = p_start.rho();
-    double pz = p_start.z();
+float getHelixLength(Vector3D p_start, float z_start, float z_end, float bField){
+    float c_factor = 0.299792458;
+    float pt = p_start.rho();
+    float pz = p_start.z();
     return (z_end - z_start)/pz * std::sqrt(  std::pow( pt/(c_factor*bField), 2) + pz*pz  );
 }
 
-double getTrackLengthIDR(Track* track){
+float getTrackLengthIDR(Track* track){
     const TrackState* tsIP = track->getTrackState( TrackState::AtIP );
     const TrackState* tscalo = track->getTrackState( TrackState::AtCalorimeter );
 
@@ -153,21 +153,21 @@ double getTrackLengthIDR(Track* track){
     return length;
 }
 
-double getTrackLengthSHA(Track* track, int location=TrackState::AtCalorimeter, TrackLengthOption option=TrackLengthOption::zedLambda){
+float getTrackLengthSHA(Track* track, int location=TrackState::AtCalorimeter, TrackLengthOption option=TrackLengthOption::zedLambda){
     const TrackState* tsIP = track->getTrackState( TrackState::AtIP );
     const TrackState* tsCalo = getTrackStateAtCalorimeter(track);
     return getHelixLength( tsIP, tsCalo, location, option );
 }
 
 
-TrackLengthResult getTrackLengthIKF(const std::vector<IMPL::TrackStateImpl>& trackStates, double bField, TrackLengthOption option){
+TrackLengthResult getTrackLengthIKF(const std::vector<IMPL::TrackStateImpl>& trackStates, float bField, TrackLengthOption option){
     TrackLengthResult result;
     int nTrackStates = trackStates.size();
     streamlog_out(DEBUG7)<<"Calculating track length for"<<nTrackStates<<" track states"<<std::endl;
     if (nTrackStates <= 1) return result;
 
     for( int i=1; i < nTrackStates-1; ++i ){
-        double arcLength = getHelixLength( &trackStates[i-1], &trackStates[i], TrackState::AtIP, option );
+        float arcLength = getHelixLength( &trackStates[i-1], &trackStates[i], TrackState::AtIP, option );
         std::array<double, 3> momArr = UTIL::getTrackMomentum( &(trackStates[i-1]), bField);
         Vector3D mom(momArr[0], momArr[1], momArr[2]);
         result.trackLengthToSET += arcLength;
@@ -176,7 +176,7 @@ TrackLengthResult getTrackLengthIKF(const std::vector<IMPL::TrackStateImpl>& tra
     }
 
     //now calculate to the Ecal one more step
-    double lastArcLength = getHelixLength( &trackStates[nTrackStates - 2], &trackStates[nTrackStates - 1], TrackState::AtIP, option );
+    float lastArcLength = getHelixLength( &trackStates[nTrackStates - 2], &trackStates[nTrackStates - 1], TrackState::AtIP, option );
     std::array<double, 3> lastMomArr = UTIL::getTrackMomentum( &(trackStates[nTrackStates - 2]), bField );
     Vector3D lastMom(lastMomArr[0], lastMomArr[1], lastMomArr[2]);
     result.trackLengthToEcal = result.trackLengthToSET + lastArcLength;
@@ -192,15 +192,15 @@ TrackLengthResult getTrackLengthIKF(const std::vector<IMPL::TrackStateImpl>& tra
 
 
 ////////////////////////////////////////////////////////////////
-double getHelixNRevolutions(const TrackState& ts1, const TrackState& ts2){
-    double omega = ts1.getOmega();
-    double tanL = ts1.getTanLambda();
-    double z1 = ts1.getReferencePoint()[2] + ts1.getZ0();
-    double z2 = ts2.getReferencePoint()[2] + ts2.getZ0();
+float getHelixNRevolutions(const TrackState& ts1, const TrackState& ts2){
+    float omega = ts1.getOmega();
+    float tanL = ts1.getTanLambda();
+    float z1 = ts1.getReferencePoint()[2] + ts1.getZ0();
+    float z2 = ts2.getReferencePoint()[2] + ts2.getZ0();
 
     // helix length projected on xy
-    double circHelix = std::abs( (z2-z1)/tanL );
-    double circFull = 2*M_PI/std::abs(omega);
+    float circHelix = std::abs( (z2-z1)/tanL );
+    float circFull = 2*M_PI/std::abs(omega);
 
     return circHelix/circFull;
 }

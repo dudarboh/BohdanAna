@@ -20,7 +20,7 @@ using CLHEP::RandGauss;
 
 std::vector<EVENT::CalorimeterHit*> selectFrankEcalHits( EVENT::Cluster* cluster, const Vector3D& posAtEcal, const Vector3D& momAtEcal, int maxEcalLayer ){
     std::vector<CalorimeterHit*> selectedHits(maxEcalLayer, nullptr);
-    std::vector<double> minDistances(maxEcalLayer, std::numeric_limits<double>::max());
+    std::vector<float> minDistances(maxEcalLayer, std::numeric_limits<float>::max());
 
     for ( auto hit : cluster->getCalorimeterHits() ){
         CHT hitType( hit->getType() );
@@ -29,7 +29,7 @@ std::vector<EVENT::CalorimeterHit*> selectFrankEcalHits( EVENT::Cluster* cluster
         if ( (!isECALHit) || ( layer >= maxEcalLayer) ) continue;
 
         Vector3D hitPos( hit->getPosition() );
-        double dToLine = (hitPos - posAtEcal).cross(momAtEcal.unit()).r();
+        float dToLine = (hitPos - posAtEcal).cross(momAtEcal.unit()).r();
         if ( dToLine < minDistances[layer] ){
             minDistances[layer] = dToLine;
             selectedHits[layer] = hit;
@@ -50,7 +50,7 @@ EVENT::CalorimeterHit* getClosestHit( EVENT::Cluster* cluster, const dd4hep::rec
     return *std::min_element( hits.begin(), hits.end(), sortByDistanceToTrack);
 }
 
-double getHitTof( EVENT::CalorimeterHit* hit, const dd4hep::rec::Vector3D& posAtEcal, double timeResolution){
+float getHitTof( EVENT::CalorimeterHit* hit, const dd4hep::rec::Vector3D& posAtEcal, float timeResolution){
     if (hit == nullptr) return -1.;
     Vector3D hitPos( hit->getPosition() );
     return RandGauss::shoot(hit->getTime(), timeResolution) - (hitPos - posAtEcal).r()/CLHEP::c_light;
@@ -87,7 +87,7 @@ EVENT::MCParticle* getHitEarliestMC( EVENT::CalorimeterHit* hit, const UTIL::LCR
     EVENT::SimCalorimeterHit* simHit = static_cast<EVENT::SimCalorimeterHit*> (navToSimCalorimeterHits.getRelatedToObjects(hit)[max_i]);
 
     EVENT::MCParticle* mc = nullptr;
-    double earliestTime = std::numeric_limits<double>::max();
+    float earliestTime = std::numeric_limits<float>::max();
     for(int i=0; i < simHit->getNMCContributions(); i++){
         if (simHit->getTimeCont(i) < earliestTime){
             earliestTime = simHit->getTimeCont(i);
@@ -97,35 +97,35 @@ EVENT::MCParticle* getHitEarliestMC( EVENT::CalorimeterHit* hit, const UTIL::LCR
     return mc;
 }
 
-double getTofFrankAvg( const std::vector<EVENT::CalorimeterHit*>& selectedHits, const Vector3D& posAtEcal, double timeResolution){
-    double tof = 0.;
+float getTofFrankAvg( const std::vector<EVENT::CalorimeterHit*>& selectedHits, const Vector3D& posAtEcal, float timeResolution){
+    float tof = 0.;
     if ( selectedHits.empty() ) return tof;
 
     for ( auto hit : selectedHits ){
         Vector3D hitPos( hit->getPosition() );
-        double dToTrack = (hitPos - posAtEcal).r();
+        float dToTrack = (hitPos - posAtEcal).r();
         tof += RandGauss::shoot(hit->getTime(), timeResolution) - dToTrack/CLHEP::c_light;
     }
     return tof/selectedHits.size();
 }
 
 
-double getTofFrankFit( const std::vector<EVENT::CalorimeterHit*>& selectedHits, const Vector3D& posAtEcal, double timeResolution){
-    double tof = 0.;
+float getTofFrankFit( const std::vector<EVENT::CalorimeterHit*>& selectedHits, const Vector3D& posAtEcal, float timeResolution){
+    float tof = 0.;
     if ( selectedHits.empty() ) return tof;
     else if ( selectedHits.size() == 1 ){
         //we can't fit 1 point, but lets return something reasonable
         Vector3D hitPos( selectedHits[0]->getPosition() );
-        double dToTrack = (hitPos - posAtEcal).r();
+        float dToTrack = (hitPos - posAtEcal).r();
         return RandGauss::shoot(selectedHits[0]->getTime(), timeResolution) - dToTrack/CLHEP::c_light;
     }
 
-    std::vector <double> x, y;
+    std::vector <float> x, y;
     for ( auto hit : selectedHits ){
         Vector3D hitPos( hit->getPosition() );
-        double dToTrack = (hitPos - posAtEcal).r();
+        float dToTrack = (hitPos - posAtEcal).r();
         x.push_back(dToTrack);
-        double time = RandGauss::shoot(hit->getTime(), timeResolution);
+        float time = RandGauss::shoot(hit->getTime(), timeResolution);
         y.push_back(time);
     }
 
@@ -135,7 +135,7 @@ double getTofFrankFit( const std::vector<EVENT::CalorimeterHit*>& selectedHits, 
 }
 
 
-double getTofSET(EVENT::Track* track, double timeResolution){
+float getTofSET(EVENT::Track* track, float timeResolution){
     EVENT::TrackerHit* setHit = getSETHit(track);
     if (setHit == nullptr) return 0.;
     auto stripObjects = setHit->getRawHits();
@@ -149,13 +149,13 @@ double getTofSET(EVENT::Track* track, double timeResolution){
     if (stripObjects.size() > 2) streamlog_out(WARNING)<<"Found more than two SET strip hits, how is this possible!? TOF is an average of the first two elements."<<std::endl;
     auto stripFront = static_cast<EVENT::TrackerHitPlane*> (stripObjects[0]);
     auto stripBack = static_cast<EVENT::TrackerHitPlane*> (stripObjects[1]);
-    double timeFront = RandGauss::shoot(stripFront->getTime(), timeResolution);
-    double timeBack = RandGauss::shoot(stripBack->getTime(), timeResolution);
+    float timeFront = RandGauss::shoot(stripFront->getTime(), timeResolution);
+    float timeBack = RandGauss::shoot(stripBack->getTime(), timeResolution);
     return (timeFront + timeBack)/2.;
 }
 
 
-double getTofPhotonTrue(EVENT::MCParticle* mc){
+float getTofPhotonTrue(EVENT::MCParticle* mc){
     // ignore non photons and those who doesn't have a straight path to the calorimeter.
     if (mc->getPDG() != 22 || mc->isDecayedInTracker()) return 0.;
 

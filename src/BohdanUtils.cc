@@ -128,16 +128,16 @@ EVENT::MCParticle* getMC(EVENT::ReconstructedParticle* pfo, const UTIL::LCRelati
     return static_cast<EVENT::MCParticle*> (objects[max_i]);
 }
 
-double getECALBarelRMin(){
-    double cm2mm = 10.;
+float getECALBarelRMin(){
+    float cm2mm = 10.;
     auto ecalBarrelData = MarlinUtil::getLayeredCalorimeterData(( DetType::CALORIMETER | DetType::ELECTROMAGNETIC | DetType::BARREL),
                                                                 ( DetType::AUXILIARY | DetType::FORWARD ) );
 
     return ecalBarrelData->extent[0]*cm2mm; // rmin in mm
 }
 
-double getECALEndcapZMin(){
-    double cm2mm = 10.;
+float getECALEndcapZMin(){
+    float cm2mm = 10.;
     auto ecalEndcapData = MarlinUtil::getLayeredCalorimeterData( ( DetType::CALORIMETER | DetType::ELECTROMAGNETIC | DetType::ENDCAP),
                                                                  ( DetType::AUXILIARY | DetType::FORWARD ) );
     return ecalEndcapData->extent[2]*cm2mm; // zmin in mm
@@ -154,8 +154,8 @@ dd4hep::rec::Vector3D getPhotonAtCalorimeter(EVENT::MCParticle* mc){
 
     // rMin - minimal radial distance to the barrel ECAL surface to deduce normal vector n and point at the surface p0.
     // zMin - minimal longitudinal distance to the endcap ECAL surface to deduce normal vector n and point at the surface p0.
-    double rMin = getECALBarelRMin();
-    double zMin = getECALEndcapZMin();
+    float rMin = getECALBarelRMin();
+    float zMin = getECALEndcapZMin();
 
 
     // ENDCAP plane parameters:
@@ -166,8 +166,8 @@ dd4hep::rec::Vector3D getPhotonAtCalorimeter(EVENT::MCParticle* mc){
     // BARREL plane parameters:
     Vector3D p0Barrel, nBarrel;
     int nSides = 8;
-    double step = M_PI/nSides;
-    double phi = mom.phi();
+    float step = M_PI/nSides;
+    float phi = mom.phi();
     // phi is in the range of singularity point [pi, -pi]. Check this first.
 
     if( phi < (- M_PI + step) || phi > (M_PI - step) ){
@@ -175,7 +175,7 @@ dd4hep::rec::Vector3D getPhotonAtCalorimeter(EVENT::MCParticle* mc){
         nBarrel = p0Barrel.unit();
     }
     else{
-        double ecalPhi = -M_PI + 2*step;
+        float ecalPhi = -M_PI + 2*step;
         for ( int i=0; i < nSides-1; ++i ){
             if ( ecalPhi-step <= phi && phi < ecalPhi+step ){
                 p0Barrel = Vector3D(rMin, ecalPhi, M_PI/2., Vector3D::spherical);
@@ -188,17 +188,17 @@ dd4hep::rec::Vector3D getPhotonAtCalorimeter(EVENT::MCParticle* mc){
 
     //find intersection point, but don't divide by zero
     if ( mom.z() == 0 ){
-        double d = (p0Barrel - startPos).dot(nBarrel)/(mom.dot(nBarrel));
+        float d = (p0Barrel - startPos).dot(nBarrel)/(mom.dot(nBarrel));
         return startPos + d*mom;
     }
     else if( mom.rho() == 0 ){
-        double d = (p0Endcap - startPos).dot(nEndcap)/(mom.dot(nEndcap));
+        float d = (p0Endcap - startPos).dot(nEndcap)/(mom.dot(nEndcap));
         return startPos + d*mom;
     }
     //choose closest intersection point to the 0,0,0
-    double dBarrel = (p0Barrel - startPos).dot(nBarrel)/(mom.dot(nBarrel));
+    float dBarrel = (p0Barrel - startPos).dot(nBarrel)/(mom.dot(nBarrel));
     Vector3D intersectionBarrel = startPos + dBarrel*mom;
-    double dEndcap = (p0Endcap - startPos).dot(nEndcap)/(mom.dot(nEndcap));
+    float dEndcap = (p0Endcap - startPos).dot(nEndcap)/(mom.dot(nEndcap));
     Vector3D intersectionEndcap = startPos + dEndcap*mom;
     if ( intersectionBarrel.r() <= intersectionEndcap.r() ) return intersectionBarrel;
     return intersectionEndcap;
