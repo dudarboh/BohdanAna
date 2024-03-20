@@ -148,3 +148,35 @@ def draw_vertical_mass_lines(maxy):
         lines[p].SetLineStyle(1)
         lines[p].Draw()
     return lines
+
+
+
+
+
+##################### RMS90 ###################
+
+def interval_quantile_(x, quant=0.9):
+    '''Calculate the shortest interval that contains the desired quantile'''
+    # the number of possible starting points
+    n_low = int(len(x) * (1. - quant))
+    # the number of events contained in the quantil
+    n_quant = len(x) - n_low
+
+    # Calculate all distances in one go
+    distances = x[-n_low:] - x[:n_low]
+    i_start = np.argmin(distances)
+
+    return i_start, i_start + n_quant
+
+def fit90(x): 
+    x = np.sort(x)
+    n10percent = int(round(len(x)*0.1))
+    n90percent = len(x) - n10percent
+    
+    start, end = interval_quantile_(x, quant=0.9)
+    
+    rms90 = np.std(x[start:end])
+    mean90 = np.mean(x[start:end])
+    mean90_err = rms90/np.sqrt(n90percent)
+    rms90_err = rms90/np.sqrt(2*n90percent)   # estimator in root
+    return mean90, rms90, mean90_err, rms90_err

@@ -105,7 +105,7 @@ void BohdanAna::init(){
 
 void BohdanAna::processEvent(EVENT::LCEvent * evt){
     ++_nEvent;
-    streamlog_out(MESSAGE)<<"==========Event========== "<<_nEvent<<std::endl;
+    streamlog_out(MESSAGE)<<"==================== Event: "<<_nEvent<<std::endl;
     // int vm = getVirtualMemoryUsage();
     // int rm = getPhysicalMemoryUsage();
     // streamlog_out(MESSAGE)<<"VM usage: "<<vm/1000.<<"    PM usage: "<<rm/1000.<<"  MB"<<std::endl;
@@ -116,7 +116,7 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
     LCRelationNavigator navToSimCalorimeterHits( evt->getCollection("CalorimeterHitsRelations") );
 
     for (int i=0; i<pfos->getNumberOfElements(); ++i){
-        streamlog_out(DEBUG8)<<"Starting to analyze "<<i+1<<" PFO"<<std::endl;
+        streamlog_out(DEBUG8)<<"======== PFO: "<<i+1<<std::endl;
         resetVariables();
         ReconstructedParticle* pfo = static_cast <ReconstructedParticle*> ( pfos->getElementAt(i) );
         int nTracks = pfo->getTracks().size();
@@ -130,7 +130,10 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
 
         bool isHadron = std::abs(_pdg) == 211 || std::abs(_pdg) == 321 || std::abs(_pdg) == 2212;
         bool isPhoton = std::abs(_pdg) == 22;
+        streamlog_out(DEBUG8)<<"PDG: "<<_pdg<<"   isHadron: "<<isHadron<<"   isPhoton: "<<isPhoton<<std::endl;
+        streamlog_out(DEBUG8)<<"Cluster with N hits: "<<cluster->getCalorimeterHits().size()<<std::endl;
 
+        int nHitsIn10Layers = 0;
         for (const auto& hit:cluster->getCalorimeterHits()){
             //Count only ECAL hits
             CHT hitType( hit->getType() );
@@ -142,8 +145,13 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
             _tHit.push_back(hit->getTime());
             _layerHit.push_back( hitType.layer() );
             _energyHit.push_back( hit->getEnergy() );
+            if ( hitType.layer() < 10. ){
+                nHitsIn10Layers++;
+            }
         }
+        std::cout<<"N hits in 10 layers FIRST CHECK: "<<nHitsIn10Layers<<std::endl;
         _nHits = _tHit.size();
+        std::cout<<"N hits total FIRST CHECK: "<<_nHits<<std::endl;
 
         if (isHadron && nTracks == 1){
             Track* track = pfo->getTracks().at(0);
@@ -208,6 +216,16 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
                 _tofSET.at(j) = getTofSET(track, res);
             }
 
+            // DEBUGGING
+            if (nHitsIn10Layers > 50){
+                std::cout<<" PFO has tracks/clusters"<<nTracks<<"/"<<nClusters<<std::endl;
+                std::cout<<"N hits in 10 layers: "<<nHitsIn10Layers<<std::endl;
+                std::cout<<"N hits total: "<<_nHits<<std::endl;
+                std::cout<<"PDG: "<<_pdg<<std::endl;
+                std::cout<<"Momentum: "<<Vector3D(_recoCaloMom[0], _recoCaloMom[1], _recoCaloMom[2])<<std::endl;
+                drawDisplay(this, evt, displayPFO, pfo, true);
+            }
+
             // drawDisplay(this, evt, displayPFO, pfo, true);
             // plotCanvas(cluster, trackPosAtCalo, trackMomAtCalo, mc);
             // plotTrackParams(trackHitStates, pfo, mc, _bField);
@@ -241,19 +259,6 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
         }
         _tree->Fill();
 
-        //DEBUGGING
-        // float mom = _trackLength_IKF_zedLambda.harmonicMomToEcal;
-        // float trackLength = _trackLength_IKF_zedLambda.trackLengthToEcal;
-        // float beta = trackLength/(299.792458*_tofClosest[0]);
-        // float m2 = mom*mom*(1./(beta*beta) - 1.);
-        // if (m2 < -1. && _tofClosest[0] > 6. && mom < 2. && _layerClosest == 0 && _cleanClosestHit && _cleanTrack){
-        //     streamlog_out(DEBUG8)<<" Momentum: "<<mom<<" GeV/c"<<std::endl;
-        //     streamlog_out(DEBUG8)<<" Track length: "<<trackLength<<" mm"<<std::endl;
-        //     streamlog_out(DEBUG8)<<" TOF: "<<_tofClosest[0]<<" ns"<<std::endl;
-        //     streamlog_out(DEBUG8)<<" Beta: "<<beta<<std::endl;
-        //     streamlog_out(DEBUG8)<<" m^2: "<<m2<<" GeV/c^2"<<std::endl;
-        //     drawDisplay(this, evt, displayPFO, pfo, true);
-        // }
     }
 }
 
