@@ -6,27 +6,33 @@ ROOT.gStyle.SetNumberContours(256)
 ROOT.EnableImplicitMT()
 
 def compare_IDR_vs_latest():
-    trk_len_methods = ["trackLength_IDR", "trackLengthToEcal_IKF_zedLambda"]
-    df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna.root")\
-            .Filter("abs(pdg) == 211 || abs(pdg) == 321 || abs(pdg) == 2212").Filter("tofClosest0 > 6.")\
-            .Define("mom2", "recoIpPx*recoIpPx + recoIpPy*recoIpPy + recoIpPz*recoIpPz")\
-            .Define("mom", "sqrt(mom2)")
     histos_2d = []
     histos_1d_pi = []
     histos_1d_k = []
     histos_1d_p = []
-    for trk_len in trk_len_methods:
-        df_new = df.Define("beta", f"{trk_len}/(tofClosest0*299.792458)")\
-                .Define("mass2", "mom2*(1./(beta*beta) - 1.)")
-        h2d = df_new.Histo2D( (get_rand_string(), "", 1000, 0, 10, 1000, -0.3, 1.2), "mom","mass2" )
-        h1d_pi = df_new.Histo1D( (get_rand_string(), "", 500, -10e-3, 50e-3), "mass2" )
-        h1d_k = df_new.Histo1D( (get_rand_string(), "", 250, 0.19, 0.31), "mass2" )
-        h1d_p = df_new.Histo1D( (get_rand_string(), "", 250, 0.78, 1.), "mass2" )
 
-        histos_2d.append(h2d)
-        histos_1d_pi.append(h1d_pi)
-        histos_1d_k.append(h1d_k)
-        histos_1d_p.append(h1d_p)
+    trk_len_methods = ["trackLength_IDR", "trackLengthToEcal_IKF_zedLambda"]
+    df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna.root")\
+            .Filter("abs(pdg) == 211 || abs(pdg) == 321 || abs(pdg) == 2212").Filter("tofClosest0 > 6.")\
+
+    df_idr = df.Define("beta", "trackLength_IDR/(tofClosest0*299.792458)")\
+            .Define("mom2", "recoIpPx*recoIpPx + recoIpPy*recoIpPy + recoIpPz*recoIpPz")\
+            .Define("mom", "sqrt(mom2)")\
+            .Define("mass2", "mom2*(1./(beta*beta) - 1.)")
+    h2d = df_idr.Histo2D( (get_rand_string(), "", 1000, 0, 10, 1000, -0.3, 1.2), "mom","mass2" )
+    h1d_pi = df_idr.Histo1D( (get_rand_string(), "", 500, -10e-3, 50e-3), "mass2" )
+    h1d_k = df_idr.Histo1D( (get_rand_string(), "", 250, 0.19, 0.31), "mass2" )
+    h1d_p = df_idr.Histo1D( (get_rand_string(), "", 250, 0.78, 1.), "mass2" )
+
+    histos_2d.append(h2d)
+    histos_1d_pi.append(h1d_pi)
+    histos_1d_k.append(h1d_k)
+    histos_1d_p.append(h1d_p)
+
+    df_new = df.Define("beta", "trackLengthToEcal_IKF_zedLambda/(tofClosest0*299.792458)")\
+            .Define("mom2", "harmonicMomToEcal_IKF_zedLambda*harmonicMomToEcal_IKF_zedLambda")\
+            .Define("mom", "sqrt(mom2)")\
+            .Define("mass2", "mom2*(1./(beta*beta) - 1.)")
 
     canvases = []
     legends = []
@@ -77,14 +83,15 @@ def compare_IDR_vs_latest():
 
     input("wait")
 
-# compare_IDR_vs_latest()
+compare_IDR_vs_latest()
 
 df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna.root")\
         .Filter("abs(pdg) == 211 || abs(pdg) == 321 || abs(pdg) == 2212").Filter("tofClosest0 > 6.")\
-        .Define("mom2", "recoIpPx*recoIpPx + recoIpPy*recoIpPy + recoIpPz*recoIpPz")\
-        .Define("mom", "sqrt(mom2)")
+        .Define("mom2HM", "harmonicMomToEcal_IKF_zedLambda*harmonicMomToEcal_IKF_zedLambda")
+        # .Define("mom2", "recoIpPx*recoIpPx + recoIpPy*recoIpPy + recoIpPz*recoIpPz")\
+        # .Define("mom", "sqrt(mom2)")
 
-trk_len_methods = ["trackLength_IDR", "trackLengthToEcal_IKF_zedLambda"]
+trk_len_methods = ["trackLengthToEcal_IKF_zedLambda"]
 text = ""
 
 # trk_len_methods = ["trackLengthToEcal_IKF_phiLambda", "trackLengthToEcal_IKF_phiZed", "trackLengthToEcal_IKF_zedLambda"]
@@ -99,8 +106,9 @@ histos_1d_k = []
 histos_1d_p = []
 for trk_len in trk_len_methods:
     df_new = df.Define("beta", f"{trk_len}/(tofClosest0*299.792458)")\
-               .Define("mass2", "mom2*(1./(beta*beta) - 1.)")
-    h2d = df_new.Histo2D( (get_rand_string(), "", 1000, 0, 10, 1000, -0.3, 1.2), "mom","mass2" )
+               .Define("mass2", "mom2HM*(1./(beta*beta) - 1.)")
+            #    .Define("mass2", "mom2HM*2.*(1./beta - 1.)")
+    h2d = df_new.Histo2D( (get_rand_string(), "", 1000, 0, 10, 1000, -0.3, 1.2), "harmonicMomToEcal_IKF_zedLambda","mass2" )
     h1d_pi = df_new.Histo1D( (get_rand_string(), "", 500, -10e-3, 50e-3), "mass2" )
     h1d_k = df_new.Histo1D( (get_rand_string(), "", 250, 0.19, 0.31), "mass2" )
     h1d_p = df_new.Histo1D( (get_rand_string(), "", 250, 0.78, 1.), "mass2" )
@@ -113,10 +121,10 @@ for trk_len in trk_len_methods:
 canvases = []
 legends = []
 lls = []
-# for h2d in histos_2d:
-#     h2d.GetXaxis().SetTitle("Momentum (GeV/c)")
-#     h2d.GetYaxis().SetTitle("Mass^{2} (GeV^{2}/c^{4})")
-#     canvases.append( draw_2d_plot(h2d) )
+for h2d in histos_2d:
+    h2d.GetXaxis().SetTitle("Momentum (GeV/c)")
+    h2d.GetYaxis().SetTitle("Mass^{2} (GeV^{2}/c^{4})")
+    canvases.append( draw_2d_plot(h2d) )
 
 
 colors = [ROOT.TColor.GetColor('#000000'), ROOT.TColor.GetColor('#688E26'), ROOT.TColor.GetColor('#FAA613')]
