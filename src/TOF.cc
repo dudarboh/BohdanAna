@@ -135,23 +135,24 @@ float getTofFrankFit( const std::vector<EVENT::CalorimeterHit*>& selectedHits, c
 }
 
 
-float getTofSET(EVENT::Track* track, float timeResolution){
+std::tuple<float, float> getTofSET(EVENT::Track* track, float timeResolution){
     EVENT::TrackerHit* setHit = getSETHit(track);
-    if (setHit == nullptr) return 0.;
+    if (setHit == nullptr) return std::tuple(0.f, 0.f);
     auto stripObjects = setHit->getRawHits();
 
-    if ( stripObjects.empty() ) return 0.;
+    if ( stripObjects.empty() ) return std::tuple(0.f, 0.f);
     else if (stripObjects.size() == 1){
         streamlog_out(WARNING)<<"Found only one SET strip hit, how is this possible!? Writing TOF from a single strip."<<std::endl;
         auto strip = static_cast<EVENT::TrackerHitPlane*> (stripObjects[0]);
-        return RandGauss::shoot(strip->getTime(), timeResolution);
+        float time = RandGauss::shoot(strip->getTime(), timeResolution);
+        return std::tuple(time, time);
     }
-    if (stripObjects.size() > 2) streamlog_out(WARNING)<<"Found more than two SET strip hits, how is this possible!? TOF is an average of the first two elements."<<std::endl;
+    if (stripObjects.size() > 2) streamlog_out(WARNING)<<"Found more than two SET strip hits, how is this possible!?"<<std::endl;
     auto stripFront = static_cast<EVENT::TrackerHitPlane*> (stripObjects[0]);
     auto stripBack = static_cast<EVENT::TrackerHitPlane*> (stripObjects[1]);
     float timeFront = RandGauss::shoot(stripFront->getTime(), timeResolution);
     float timeBack = RandGauss::shoot(stripBack->getTime(), timeResolution);
-    return (timeFront + timeBack)/2.;
+    return std::tuple(timeFront, timeBack);
 }
 
 

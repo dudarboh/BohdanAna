@@ -15,7 +15,7 @@ colors = colors_3_qualitative
 
 
 algoClosest30 = Algorithm("Single ECAL layer", "harmonicMomToEcal", "trackLengthToEcal", "tofClosest30")
-algoSET50 = Algorithm("Double SET layer", "harmonicMomToSET", "trackLengthToSET", "tofSET50")
+algoSET50 = Algorithm("Double SET layer", "harmonicMomToSET", "trackLengthToSET", "tofSETFront50")
 algoAverage100 = Algorithm("Ten ECAL layers", "harmonicMomToEcal", "trackLengthToEcal", "tofAverage100")
 algorithms = [algoClosest30, algoSET50, algoAverage100]
 
@@ -33,13 +33,13 @@ def draw_lines_1d(maxy):
 
 
 df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna.root")
-df = df.Filter("tofClosest0 > 6. && tofSET0 > 0.").Filter("abs(pdg) == 211 || abs(pdg) == 321 || abs(pdg) == 2212")
+df = df.Filter("tofClosest0 > 6. && tofSETFront0 > 0.").Filter("abs(pdg) == 211 || abs(pdg) == 321 || abs(pdg) == 2212")
 
 histos = []
 for alg in algorithms:
     # NOTE beta quality cut significantly distords TOF gaussian distributions! (makes sense...)
     # df_beta = df.Define("beta", f"{alg.len}/({alg.tof}*299.792458)").Filter("beta >= 0 && beta <= 1")
-    tof_true = "tofClosest0" if "SET" not in alg.tof else "tofSET0"
+    tof_true = "tofClosest0" if "SET" not in alg.tof else "tofSETFront0"
     df_res = df.Define("res", f"({alg.tof} - {tof_true})*1000")
     h = df_res.Histo1D((f"{alg.name}", f"{alg.name}; reconstructed TOF - true TOF [ps]; N entries", 1500, -300, 300), "res")
     histos.append(h)

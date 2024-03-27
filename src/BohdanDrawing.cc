@@ -286,6 +286,10 @@ void plotECALTimes(EVENT::Cluster* cluster, Vector3D posAtEcal, Vector3D momAtEc
     t.SetNDC();
     t.DrawLatex(0.2,  0.87, Form("#splitline{PDG: %d}{p: %.1f GeV}", mc->getPDG(), Vector3D(mc->getMomentum()).r() ));
     TLegend* legend = new TLegend(0.57, 0.84, 0.91, 0.93);
+    legend->SetFillStyle(0);
+    legend->SetBorderSize(0);
+    legend->SetTextFont(62);
+
     legend->AddEntry(&gr, "ECAL hits (true time)", "pe");
     legend->Draw();
     c.Modified(); c.Update();
@@ -439,9 +443,11 @@ void plotTrackParams(const std::vector<HitState>& trackHitStates, EVENT::Reconst
 
 
     grOmega.SetLineColor(TColor::GetColor("#377eb8"));
-    grOmega.SetLineWidth(5);
+    grOmega.SetMarkerColor(TColor::GetColor("#377eb8"));
+    grOmega.SetLineWidth(3);
     grTrueOmega.SetLineColor(TColor::GetColor("#e41a1c"));
-    grTrueOmega.SetLineWidth(5);
+    grTrueOmega.SetMarkerColor(TColor::GetColor("#e41a1c"));
+    grTrueOmega.SetLineWidth(3);
     TMultiGraph mg;
     mg.Add(&grOmega);
     mg.Add(&grTrueOmega);
@@ -452,7 +458,7 @@ void plotTrackParams(const std::vector<HitState>& trackHitStates, EVENT::Reconst
     mg.GetYaxis()->SetTitleOffset(1.5);
     mg.GetXaxis()->CenterTitle(true);
     mg.GetYaxis()->CenterTitle(true);
-    mg.Draw("AL");
+    mg.Draw("APL");
     c.Update();
     float range = c.GetUymax() - c.GetUymin();
     mg.GetYaxis()->SetRangeUser(c.GetUymin() - 0.5*range, c.GetUymax() + 0.5*range);
@@ -477,6 +483,10 @@ void plotTrackParams(const std::vector<HitState>& trackHitStates, EVENT::Reconst
     axis.Draw();
 
     TLegend legend = TLegend(0.52, 0.755, 0.765, 0.895);
+    legend.SetFillStyle(0);
+    legend.SetBorderSize(0);
+    legend.SetTextFont(62);
+
     legend.SetHeader(Form("PDG: %d", pdg));
     legend.AddEntry(&grOmega, "Reconstructed", "l");
     legend.AddEntry(&grTrueOmega, "True", "l");
@@ -493,12 +503,14 @@ void plotTrackParams(const std::vector<HitState>& trackHitStates, EVENT::Reconst
     c2.SetGridx(true);
 
     grTanL.SetLineColor(TColor::GetColor("#377eb8"));
-    grTanL.SetLineWidth(5);
+    grTanL.SetMarkerColor(TColor::GetColor("#377eb8"));
+    grTanL.SetLineWidth(3);
+    grTrueTanL.SetMarkerColor(TColor::GetColor("#e41a1c"));
     grTrueTanL.SetLineColor(TColor::GetColor("#e41a1c"));
-    grTrueTanL.SetLineWidth(5);
+    grTrueTanL.SetLineWidth(3);
     TMultiGraph mg2;
-    mg2.Add(&grTanL);
-    mg2.Add(&grTrueTanL);
+    mg2.Add(&grTanL, "PL");
+    mg2.Add(&grTrueTanL, "PL");
     mg2.GetXaxis()->SetTitle("z (mm)");
     mg2.GetXaxis()->SetNdivisions(508);
     mg2.GetXaxis()->SetNoExponent(true);
@@ -506,7 +518,7 @@ void plotTrackParams(const std::vector<HitState>& trackHitStates, EVENT::Reconst
     mg2.GetYaxis()->SetTitleOffset(1.5);
     mg2.GetXaxis()->CenterTitle(true);
     mg2.GetYaxis()->CenterTitle(true);
-    mg2.Draw("AL");
+    mg2.Draw("APL");
     c2.Update();
     float range2 = c2.GetUymax() - c2.GetUymin();
     mg2.GetYaxis()->SetRangeUser(c2.GetUymin() - 0.5*range2, c2.GetUymax() + 0.5*range2);
@@ -532,15 +544,19 @@ void plotTrackParams(const std::vector<HitState>& trackHitStates, EVENT::Reconst
     axis2.Draw();
 
     TLegend legend2 = TLegend(0.52, 0.755, 0.765, 0.895);
+    legend2.SetFillStyle(0);
+    legend2.SetBorderSize(0);
+    legend2.SetTextFont(62);
+
     legend2.SetHeader(Form("PDG: %d", pdg));
     legend2.AddEntry(&grTanL, "Reconstructed", "l");
     legend2.AddEntry(&grTrueTanL, "True", "l");
     legend2.Draw();
     c2.Modified(); c2.Update();
     c2.SaveAs( Form("./plots/track_params/pdg_%d_pt_%2.0f_pz_%2.0f_tanl.png", pdg, mcMom.rho()*1000, mcMom.z()*1000) );
-    // while ( !gSystem->ProcessEvents() ){
-    //     gSystem->Sleep(5);
-    // }
+    while ( !gSystem->ProcessEvents() ){
+        gSystem->Sleep(5);
+    }
     picture_counter++;
 
 

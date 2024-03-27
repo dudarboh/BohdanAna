@@ -9,6 +9,7 @@
 #include "MarlinTrk/IMarlinTrack.h"
 #include "UTIL/LCRelationNavigator.h"
 #include "UTIL/PIDHandler.h"
+#include "UTIL/ILDConf.h"
 #include "UTIL/Operators.h" // for debuging <<
 #include "DDRec/Vector3D.h"
 #include "EVENT/SimTrackerHit.h"
@@ -43,5 +44,6 @@ EVENT::SimTrackerHit* getSimTrackerHit(EVENT::TrackerHit* hit, const UTIL::LCRel
 
 unsigned long interpolateHexColor(unsigned long startColor, unsigned long endColor, float ratio);
 
+bool isSETHit(const EVENT::TrackerHit* hit);
 
 #endif

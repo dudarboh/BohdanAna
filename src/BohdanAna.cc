@@ -63,20 +63,20 @@ void BohdanAna::init(){
     _tree->Branch("trackLengthToEcal_SHA_phiZed_ECAL", &_trackLength_SHA_phiZed_ECAL);
     _tree->Branch("trackLengthToEcal_SHA_zedLambda_ECAL", &_trackLength_SHA_zedLambda_ECAL);
 
-    _tree->Branch("trackLengthToEcal_IKF_phiLambda", &_trackLength_IKF_phiLambda.trackLengthToEcal);
-    _tree->Branch("trackLengthToSET_IKF_phiLambda", &_trackLength_IKF_phiLambda.trackLengthToSET);
-    _tree->Branch("harmonicMomToEcal_IKF_phiLambda", &_trackLength_IKF_phiLambda.harmonicMomToEcal);
-    _tree->Branch("harmonicMomToSET_IKF_phiLambda", &_trackLength_IKF_phiLambda.harmonicMomToSET);
+    _tree->Branch("trackLengthToEcal_IKF_phiLambda", &_trackLength_IKF_phiLambda);
+    _tree->Branch("trackLengthToSET_IKF_phiLambda", &_trackLengthToSET_IKF_phiLambda);
+    _tree->Branch("harmonicMomToEcal_IKF_phiLambda", &_harmonicMom_IKF_phiLambda);
+    _tree->Branch("harmonicMomToSET_IKF_phiLambda", &_harmonicMomToSET_IKF_phiLambda);
 
-    _tree->Branch("trackLengthToEcal_IKF_phiZed", &_trackLength_IKF_phiZed.trackLengthToEcal);
-    _tree->Branch("trackLengthToSET_IKF_phiZed", &_trackLength_IKF_phiZed.trackLengthToSET);
-    _tree->Branch("harmonicMomToEcal_IKF_phiZed", &_trackLength_IKF_phiZed.harmonicMomToEcal);
-    _tree->Branch("harmonicMomToSET_IKF_phiZed", &_trackLength_IKF_phiZed.harmonicMomToSET);
+    _tree->Branch("trackLengthToEcal_IKF_phiZed", &_trackLength_IKF_phiZed);
+    _tree->Branch("trackLengthToSET_IKF_phiZed", &_trackLengthToSET_IKF_phiZed);
+    _tree->Branch("harmonicMomToEcal_IKF_phiZed", &_harmonicMom_IKF_phiZed);
+    _tree->Branch("harmonicMomToSET_IKF_phiZed", &_harmonicMomToSET_IKF_phiZed);
 
-    _tree->Branch("trackLengthToEcal_IKF_zedLambda", &_trackLength_IKF_zedLambda.trackLengthToEcal);
-    _tree->Branch("trackLengthToSET_IKF_zedLambda", &_trackLength_IKF_zedLambda.trackLengthToSET);
-    _tree->Branch("harmonicMomToEcal_IKF_zedLambda", &_trackLength_IKF_zedLambda.harmonicMomToEcal);
-    _tree->Branch("harmonicMomToSET_IKF_zedLambda", &_trackLength_IKF_zedLambda.harmonicMomToSET);
+    _tree->Branch("trackLengthToEcal_IKF_zedLambda", &_trackLength_IKF_zedLambda);
+    _tree->Branch("trackLengthToSET_IKF_zedLambda", &_trackLengthToSET_IKF_zedLambda);
+    _tree->Branch("harmonicMomToEcal_IKF_zedLambda", &_harmonicMom_IKF_zedLambda);
+    _tree->Branch("harmonicMomToSET_IKF_zedLambda", &_harmonicMomToSET_IKF_zedLambda);
     _tree->Branch("cleanTrack", &_cleanTrack);
 
     //tofs
@@ -89,7 +89,8 @@ void BohdanAna::init(){
         int res = int(_resolutions[i]);
         _tree->Branch(( "tofClosest"+std::to_string(res) ).c_str(), &( _tofClosest[i]) );
         _tree->Branch(( "tofAverage"+std::to_string(res) ).c_str(), &( _tofAverage[i]) );
-        _tree->Branch(( "tofSET"+std::to_string(res) ).c_str(), &( _tofSET[i]) );
+        _tree->Branch(( "tofSETFront"+std::to_string(res) ).c_str(), &( _tofSETFront[i]) );
+        _tree->Branch(( "tofSETBack"+std::to_string(res) ).c_str(), &( _tofSETBack[i]) );
         _tree->Branch(( "tofFit"+std::to_string(res) ).c_str(), &( _tofFit[i]) );
     }
 
@@ -149,9 +150,7 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
                 nHitsIn10Layers++;
             }
         }
-        std::cout<<"N hits in 10 layers FIRST CHECK: "<<nHitsIn10Layers<<std::endl;
         _nHits = _tHit.size();
-        std::cout<<"N hits total FIRST CHECK: "<<_nHits<<std::endl;
 
         if (isHadron && nTracks == 1){
             Track* track = pfo->getTracks().at(0);
@@ -192,9 +191,19 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
             _trackLength_SHA_phiZed_ECAL = getTrackLengthSHA(track, TrackState::AtCalorimeter, TrackLengthOption::phiZed);
             _trackLength_SHA_zedLambda_ECAL = getTrackLengthSHA(track, TrackState::AtCalorimeter, TrackLengthOption::zedLambda);
             streamlog_out(DEBUG8)<<"getTrackLengthIKF()"<<std::endl;
-            _trackLength_IKF_phiLambda = getTrackLengthIKF(trackStates, _bField, TrackLengthOption::phiLambda);
-            _trackLength_IKF_phiZed = getTrackLengthIKF(trackStates, _bField, TrackLengthOption::phiZed);
-            _trackLength_IKF_zedLambda = getTrackLengthIKF(trackStates, _bField, TrackLengthOption::zedLambda);
+            std::tie(_trackLength_IKF_phiLambda, _harmonicMom_IKF_phiLambda) = getTrackLengthIKF(trackStates, _bField, TrackLengthOption::phiLambda);
+            std::tie(_trackLength_IKF_phiZed, _harmonicMom_IKF_phiZed) = getTrackLengthIKF(trackStates, _bField, TrackLengthOption::phiZed);
+            std::tie(_trackLength_IKF_zedLambda, _harmonicMom_IKF_zedLambda) = getTrackLengthIKF(trackStates, _bField, TrackLengthOption::zedLambda);
+
+            auto it = std::find_if(trackHitStates.begin(), trackHitStates.end(), [](const HitState& hitState){return isSETHit(hitState.hit);});
+            bool foundSETHit = it != trackHitStates.end();
+            if (foundSETHit){
+                int idx = it - trackHitStates.begin();
+                std::vector<IMPL::TrackStateImpl> trackStatesToSET = std::vector<IMPL::TrackStateImpl>(trackStates.begin(), trackStates.begin() + idx + 1 );
+                std::tie(_trackLengthToSET_IKF_phiLambda, _harmonicMomToSET_IKF_phiLambda) = getTrackLengthIKF(trackStatesToSET, _bField, TrackLengthOption::phiLambda);
+                std::tie(_trackLengthToSET_IKF_phiZed, _harmonicMomToSET_IKF_phiZed) = getTrackLengthIKF(trackStatesToSET, _bField, TrackLengthOption::phiZed);
+                std::tie(_trackLengthToSET_IKF_zedLambda, _harmonicMomToSET_IKF_zedLambda) = getTrackLengthIKF(trackStatesToSET, _bField, TrackLengthOption::zedLambda);
+            }
 
             streamlog_out(DEBUG8)<<"getTofClosest()"<<std::endl;
             CalorimeterHit* closestHit = getClosestHit(cluster, trackPosAtCalo);
@@ -213,22 +222,26 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
                 _tofClosest.at(j) = getHitTof(closestHit, trackPosAtCalo, res);
                 _tofAverage.at(j) = getTofFrankAvg(selectedHits, trackPosAtCalo, res);
                 _tofFit.at(j) = getTofFrankFit(selectedHits, trackPosAtCalo, res);
-                _tofSET.at(j) = getTofSET(track, res);
+                std::tie(_tofSETFront.at(j), _tofSETBack.at(j)) = getTofSET(track, res);
             }
 
             // DEBUGGING
-            if (nHitsIn10Layers > 50){
-                std::cout<<" PFO has tracks/clusters"<<nTracks<<"/"<<nClusters<<std::endl;
-                std::cout<<"N hits in 10 layers: "<<nHitsIn10Layers<<std::endl;
-                std::cout<<"N hits total: "<<_nHits<<std::endl;
-                std::cout<<"PDG: "<<_pdg<<std::endl;
-                std::cout<<"Momentum: "<<Vector3D(_recoCaloMom[0], _recoCaloMom[1], _recoCaloMom[2])<<std::endl;
-                drawDisplay(this, evt, displayPFO, pfo, true);
-            }
+            // if (nHitsIn10Layers > 50){
+            //     std::cout<<" PFO has tracks/clusters"<<nTracks<<"/"<<nClusters<<std::endl;
+            //     std::cout<<"N hits in 10 layers: "<<nHitsIn10Layers<<std::endl;
+            //     std::cout<<"N hits total: "<<_nHits<<std::endl;
+            //     std::cout<<"PDG: "<<_pdg<<std::endl;
+            //     std::cout<<"Momentum: "<<Vector3D(_recoCaloMom[0], _recoCaloMom[1], _recoCaloMom[2])<<std::endl;
+            //     drawDisplay(this, evt, displayPFO, pfo, true);
+            // }
 
             // drawDisplay(this, evt, displayPFO, pfo, true);
-            // plotCanvas(cluster, trackPosAtCalo, trackMomAtCalo, mc);
             // plotTrackParams(trackHitStates, pfo, mc, _bField);
+            // std::cout<<_trackLength_IKF_zedLambda.harmonicMomToEcal<<std::endl;
+            // std::cout<<_trackLength_IKF_zedLambda.trackLengthToEcal<<std::endl;
+            // std::cout<<_tofClosest[0]<<std::endl;
+            // std::cout<<std::sqrt(_trackLength_IKF_zedLambda.harmonicMomToEcal*_trackLength_IKF_zedLambda.harmonicMomToEcal*((299.99*_tofClosest[0]/_trackLength_IKF_zedLambda.trackLengthToEcal)*(299.99*_tofClosest[0]/_trackLength_IKF_zedLambda.trackLengthToEcal) - 1.))<<std::endl;
+            // plotCanvas(cluster, trackPosAtCalo, trackMomAtCalo, mc);
         }
         else if( isPhoton && nTracks == 0 && ( !mc->isDecayedInTracker() ) ) {
             streamlog_out(DEBUG8)<<"Photon stuff"<<std::endl;
@@ -286,9 +299,20 @@ void BohdanAna::resetVariables(){
     _trackLength_SHA_phiLambda_ECAL = 0.f;
     _trackLength_SHA_phiZed_ECAL = 0.f;
     _trackLength_SHA_zedLambda_ECAL = 0.f;
-    _trackLength_IKF_phiLambda = TrackLengthResult();
-    _trackLength_IKF_phiZed = TrackLengthResult();
-    _trackLength_IKF_zedLambda = TrackLengthResult();
+    _trackLength_IKF_phiLambda = 0.f;
+    _trackLength_IKF_phiZed = 0.f;
+    _trackLength_IKF_zedLambda = 0.f;
+    _harmonicMom_IKF_phiLambda = 0.f;
+    _harmonicMom_IKF_phiZed = 0.f;
+    _harmonicMom_IKF_zedLambda = 0.f;
+    _trackLengthToSET_IKF_phiLambda = 0.f;
+    _trackLengthToSET_IKF_phiZed = 0.f;
+    _trackLengthToSET_IKF_zedLambda = 0.f;
+    _harmonicMomToSET_IKF_phiLambda = 0.f;
+    _harmonicMomToSET_IKF_phiZed = 0.f;
+    _harmonicMomToSET_IKF_zedLambda = 0.f;
+
+
     _cleanTrack = true;
     _typeClosest = -1;
     _caloIDClosest = -1;
@@ -297,7 +321,8 @@ void BohdanAna::resetVariables(){
     _cleanClosestHit = false;
     _tofClosest.fill(0.f);
     _tofAverage.fill(0.f);
-    _tofSET.fill(0.f);
+    _tofSETFront.fill(0.f);
+    _tofSETBack.fill(0.f);
     _tofFit.fill(0.f);
 
     _nHits = 0;

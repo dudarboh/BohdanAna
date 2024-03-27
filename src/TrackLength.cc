@@ -8,6 +8,7 @@
 #include "UTIL/TrackTools.h"
 #include "IMPL/TrackImpl.h"
 
+#include <numeric>
 using namespace EVENT;
 using dd4hep::rec::Vector3D;
 
@@ -159,35 +160,22 @@ float getTrackLengthSHA(Track* track, int location=TrackState::AtCalorimeter, Tr
     return getHelixLength( tsIP, tsCalo, location, option );
 }
 
-
-TrackLengthResult getTrackLengthIKF(const std::vector<IMPL::TrackStateImpl>& trackStates, float bField, TrackLengthOption option){
-    TrackLengthResult result;
+std::tuple<float, float> getTrackLengthIKF(const std::vector<IMPL::TrackStateImpl>& trackStates, float bField, TrackLengthOption option){
     int nTrackStates = trackStates.size();
-    streamlog_out(DEBUG7)<<"Calculating track length for"<<nTrackStates<<" track states"<<std::endl;
-    if (nTrackStates <= 1) return result;
+    if (nTrackStates <= 1) return std::tuple(0.f, 0.f);
 
-    for( int i=1; i < nTrackStates-1; ++i ){
+    std::vector<float> arcLengths;
+    std::vector<float> hmWeights;
+    for( int i=1; i < nTrackStates; ++i ){
         float arcLength = getHelixLength( &trackStates[i-1], &trackStates[i], TrackState::AtIP, option );
-        std::array<double, 3> momArr = UTIL::getTrackMomentum( &(trackStates[i-1]), bField);
+        arcLengths.push_back( arcLength );
+        auto momArr = UTIL::getTrackMomentum( &(trackStates[i-1]), bField);
         Vector3D mom(momArr[0], momArr[1], momArr[2]);
-        result.trackLengthToSET += arcLength;
-        result.harmonicMomToSET += arcLength/mom.r2();
-        streamlog_out(DEBUG7)<<"Arc length "<<i<<": "<<arcLength<<"  sum: "<<result.trackLengthToSET<<std::endl;
+        hmWeights.push_back( arcLength/mom.r2() );
     }
-
-    //now calculate to the Ecal one more step
-    float lastArcLength = getHelixLength( &trackStates[nTrackStates - 2], &trackStates[nTrackStates - 1], TrackState::AtIP, option );
-    std::array<double, 3> lastMomArr = UTIL::getTrackMomentum( &(trackStates[nTrackStates - 2]), bField );
-    Vector3D lastMom(lastMomArr[0], lastMomArr[1], lastMomArr[2]);
-    result.trackLengthToEcal = result.trackLengthToSET + lastArcLength;
-    result.harmonicMomToEcal = result.harmonicMomToSET + lastArcLength/lastMom.r2();
-    streamlog_out(DEBUG7)<<"Last Arc length "<<": "<<lastArcLength<<"  sum: "<<result.trackLengthToEcal<<std::endl;
-
-    // don't forget to do the last step to properly calculate harmonic momentum!
-    result.harmonicMomToSET = std::sqrt(result.trackLengthToSET/result.harmonicMomToSET);
-    result.harmonicMomToEcal = std::sqrt(result.trackLengthToEcal/result.harmonicMomToEcal);
-
-    return result;
+    float trackLength = std::reduce( arcLengths.begin(), arcLengths.end() );
+    float harmonicMom = std::sqrt( trackLength/std::reduce( hmWeights.begin(), hmWeights.end() ) );
+    return std::tuple(trackLength, harmonicMom);
 }
 
 

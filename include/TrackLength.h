@@ -16,13 +16,6 @@ enum class TrackLengthOption{
     zedLambda, // this one latest and greatest by a margin!
 };
 
-struct TrackLengthResult{
-    float trackLengthToSET{};
-    float harmonicMomToSET{};
-    float trackLengthToEcal{};
-    float harmonicMomToEcal{};
-};
-
 struct HitState{
     // Struct which contains a combination of the simulated, reconstructed tracker hit and the track state of the track at this reconstructed hit position
     IMPL::TrackStateImpl ts;
@@ -78,9 +71,8 @@ float getTrackLengthSHA(EVENT::Track* track, int location, TrackLengthOption opt
 
 std::vector<HitState> getTrackStates(EVENT::ReconstructedParticle* pfo, float bField, MarlinTrk::IMarlinTrkSystem* trkSystem, const UTIL::LCRelationNavigator& navToSimTrackerHits);
 
-// iterative Kalman Filter (IKF)
-TrackLengthResult getTrackLengthIKF(const std::vector<IMPL::TrackStateImpl>& trackStates, float bField, TrackLengthOption option);
-
+// iterative Kalman Filter (IKF) returns the track length and square root of the harmonic momentum mean of the squared momentum.
+std::tuple<float, float> getTrackLengthIKF(const std::vector<IMPL::TrackStateImpl>& trackStates, float bField, TrackLengthOption option);
 
 ////////////////////////////////////////////////////////////////
 

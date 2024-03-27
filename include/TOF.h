@@ -26,7 +26,7 @@ float getTofFrankAvg( const std::vector<EVENT::CalorimeterHit*>& selectedHits, c
 
 float getTofFrankFit( const std::vector<EVENT::CalorimeterHit*>& selectedHits, const dd4hep::rec::Vector3D& posAtEcal, float timeResolution );
 
-float getTofSET(EVENT::Track* track, float timeResolution );
+std::tuple<float, float> getTofSET(EVENT::Track* track, float timeResolution);
 
 float getTofPhotonTrue(EVENT::MCParticle* mc );
 

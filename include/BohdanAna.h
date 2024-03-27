@@ -52,9 +52,21 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
         float _trackLength_SHA_phiLambda_ECAL{};
         float _trackLength_SHA_phiZed_ECAL{};
         float _trackLength_SHA_zedLambda_ECAL{};
-        TrackLengthResult _trackLength_IKF_phiLambda;
-        TrackLengthResult _trackLength_IKF_phiZed;
-        TrackLengthResult _trackLength_IKF_zedLambda;
+
+        float _trackLength_IKF_phiLambda{};
+        float _trackLength_IKF_phiZed{};
+        float _trackLength_IKF_zedLambda{};
+        float _harmonicMom_IKF_phiLambda{};
+        float _harmonicMom_IKF_phiZed{};
+        float _harmonicMom_IKF_zedLambda{};
+
+        float _trackLengthToSET_IKF_phiLambda{};
+        float _trackLengthToSET_IKF_phiZed{};
+        float _trackLengthToSET_IKF_zedLambda{};
+        float _harmonicMomToSET_IKF_phiLambda{};
+        float _harmonicMomToSET_IKF_phiZed{};
+        float _harmonicMomToSET_IKF_zedLambda{};
+
         bool _cleanTrack = true;
 
         //each element per time resolution from 0 to 100 ps
@@ -66,7 +78,8 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
         std::vector<float> _resolutions = {0, 1, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 300};
         std::array<float, 15> _tofClosest{};
         std::array<float, 15> _tofAverage{};
-        std::array<float, 15> _tofSET{};
+        std::array<float, 15> _tofSETFront{};
+        std::array<float, 15> _tofSETBack{};
         std::array<float, 15> _tofFit{};
 
         int _nHits;

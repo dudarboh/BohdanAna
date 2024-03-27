@@ -1,5 +1,4 @@
 #include "BohdanUtils.h"
-#include "UTIL/ILDConf.h"
 #include "marlinutil/GeometryUtil.h"
 
 #include <cstring>
@@ -231,4 +230,12 @@ unsigned long interpolateHexColor(unsigned long startColor, unsigned long endCol
     unsigned char interpolatedB = static_cast<unsigned char>(startB + ratio * (endB - startB));
 
     return (interpolatedR << 16) | (interpolatedG << 8) | interpolatedB;
+}
+
+bool isSETHit(const EVENT::TrackerHit* hit){
+    if (hit == nullptr) return false;
+    UTIL::BitField64 encoder( UTIL::LCTrackerCellID::encoding_string() ) ;
+    encoder.setValue( hit->getCellID0() ) ;
+    int subdet = encoder[ UTIL::LCTrackerCellID::subdet() ];
+    return subdet == UTIL::ILDDetID::SET;
 }

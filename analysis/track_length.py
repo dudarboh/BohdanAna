@@ -11,7 +11,6 @@ def compare_IDR_vs_latest():
     histos_1d_k = []
     histos_1d_p = []
 
-    trk_len_methods = ["trackLength_IDR", "trackLengthToEcal_IKF_zedLambda"]
     df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna.root")\
             .Filter("abs(pdg) == 211 || abs(pdg) == 321 || abs(pdg) == 2212").Filter("tofClosest0 > 6.")\
 
@@ -33,6 +32,17 @@ def compare_IDR_vs_latest():
             .Define("mom2", "harmonicMomToEcal_IKF_zedLambda*harmonicMomToEcal_IKF_zedLambda")\
             .Define("mom", "sqrt(mom2)")\
             .Define("mass2", "mom2*(1./(beta*beta) - 1.)")
+
+    h2d = df_new.Histo2D( (get_rand_string(), "", 1000, 0, 10, 1000, -0.3, 1.2), "mom","mass2" )
+    h1d_pi = df_new.Histo1D( (get_rand_string(), "", 500, -10e-3, 50e-3), "mass2" )
+    h1d_k = df_new.Histo1D( (get_rand_string(), "", 250, 0.19, 0.31), "mass2" )
+    h1d_p = df_new.Histo1D( (get_rand_string(), "", 250, 0.78, 1.), "mass2" )
+
+    histos_2d.append(h2d)
+    histos_1d_pi.append(h1d_pi)
+    histos_1d_k.append(h1d_k)
+    histos_1d_p.append(h1d_p)
+
 
     canvases = []
     legends = []
