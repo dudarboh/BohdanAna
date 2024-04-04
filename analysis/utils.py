@@ -17,7 +17,7 @@ latex.SetTextFont(52)
 latex.SetTextSize(0.04)
 
 class Particle:
-    def __init__(self, name, legend, color, mass, momentum, track_length):
+    def __init__(self, name, legend, color, mass, momentum, track_length, pdg):
         self.name = name
         self.legend = legend
         self.color = color
@@ -25,6 +25,7 @@ class Particle:
         self.mass2 = mass*mass
         self.momentum = momentum
         self.track_length = track_length
+        self.pdg = pdg
         self.tof = track_length/SPEED_OF_LIGHT * np.sqrt( 1 + (mass/momentum)**2 )
         self.beta = track_length/(SPEED_OF_LIGHT * self.tof)
         self.gamma = 1/np.sqrt(1 - self.beta**2)
@@ -32,9 +33,9 @@ class Particle:
         self.legend_graph.SetFillColor(self.color)
 
 def create_list_of_particles(momentum, track_length):
-    pion = Particle('pion', ' #pi^{#pm}', ROOT.TColor.GetColor('#1b9e77'), PION_MASS, momentum, track_length)
-    kaon = Particle('kaon', ' K^{#pm}', ROOT.TColor.GetColor('#d95f02'), KAON_MASS, momentum, track_length)
-    proton = Particle('proton', ' p', ROOT.TColor.GetColor('#7570b3'), PROTON_MASS, momentum, track_length)
+    pion = Particle('pion', ' #pi^{#pm}', ROOT.TColor.GetColor('#1b9e77'), PION_MASS, momentum, track_length, 211)
+    kaon = Particle('kaon', ' K^{#pm}', ROOT.TColor.GetColor('#d95f02'), KAON_MASS, momentum, track_length, 321)
+    proton = Particle('proton', ' p', ROOT.TColor.GetColor('#7570b3'), PROTON_MASS, momentum, track_length, 2212)
     return [pion, kaon, proton]
 
 particles = create_list_of_particles(1., 1) # just for colours! overwrite when studying mass_uncertainty!
@@ -91,10 +92,8 @@ def get_uncertainty(particle, dp, dl, dt, func="m"):
 ######################## DRAWING #################
 
 def draw_2d_plot(h, maximum=1e4):
-    '''
-    Draw a 2D histogram in the appropriate styling and pause.
-    '''
-    canvas = create_canvas(0.33, 0.6, 0.65)
+    '''Draw a 2D histogram in the appropriate styling and pause.'''
+    canvas = create_canvas(0.33, 0.58, 0.65)
 
     h.Draw("colz")
     h.GetXaxis().SetTitleOffset(1.1)
@@ -115,7 +114,8 @@ def draw_2d_plot(h, maximum=1e4):
     x_max = h.GetXaxis().GetXmax()
     palette.SetX1(x_min + 1.01*(x_max-x_min))
     palette.SetX2(x_min + 1.05*(x_max-x_min))
-    palette.SetLabelOffset(0.001)
+    palette.SetMaxDigits(3)
+    palette.SetLabelOffset(0.006)
 
     canvas.Modified()
     canvas.Update()

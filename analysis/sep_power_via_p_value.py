@@ -1,28 +1,32 @@
-import ROOT
-import numpy as np
+#!/usr/bin/env python3
 
+"""Produces separation power plots"""
+
+import numpy as np
+import ROOT
 from utils import *
 
-ROOT.gStyle.SetPalette(ROOT.kBird)
-ROOT.gStyle.SetNumberContours(256)
 ROOT.EnableImplicitMT()
 
+N_MOMENTUM_BINS, MIN_MOMENTUM, MAX_MOMENTUM = 70, 0, 20 # GeV/c
+Y_AXIS = "mass2"
+N_Y_AXIS_BINS, MIN_Y_AXIS, MAX_Y_AXIS = 3000, -3, 3  # GeV^2/c^4 if mass2
+MOMENTUM_COLUMN = "harmonicMomToEcal_IKF_zedLambda" 
+TRACK_LENGTH_COLUMN = "trackLengthToEcal_IKF_zedLambda"
+RESOLUTIONS = [0, 1, 5, 10, 30, 50, 100, 300] # ps
+COLORS = [ ROOT.TColor.GetColor(c) for c in ["#00aaff", "#0091ea", "#0079d3", "#0061bd", "#004aa5", "#00348d", "#001d75", "#00045c"] ]
+MIN_SEP_POWER, MAX_SEP_POWER = 0, 6
 
-def get_pdg_histogram(df, pdg="all", y_name="mass2"):
-    n_x_bins, x_min, x_max = 70, 0, 20
-    if y_name == "mass2":
-        n_y_bins, y_min, y_max = 3000, -3, 3
-    elif y_name == "beta":
-        n_y_bins, y_min, y_max = 3000, 0, 2
+def convert_p_value_to_sep_power(p_value):
+    '''Return separation power equivalent to the given p-value (1 - efficiency)'''
+    return 2*ROOT.Math.gaussian_quantile_c(p_value, 1)
 
-    df_filtered = df.Filter(f"abs(pdg) == {pdg}") if pdg != "all" else df
-    h = df_filtered.Histo2D((f"h_{pdg}", "", n_x_bins, x_min, x_max, n_y_bins, y_min, y_max), "harmonicMomToEcal_IKF_zedLambda",y_name)
-    return h
+def convert_sep_power_to_eff(sep_power):
+    '''Return efficiency from the given sep power'''
+    return ROOT.Math.gaussian_cdf(0.5*sep_power)
 
-def analyse_optimal_cut(h1, h2, debug=False):
-    '''
-        h1, h2 - 1D histograms in a given momentum slice
-    '''
+def find_optimal_cut(h1, h2, debug=False):
+    '''Calcualte the x value between the two histograms where eff=1-misid'''
     cut_mass = []
     efficiencies = []
     mis_ids = []
@@ -50,17 +54,15 @@ def analyse_optimal_cut(h1, h2, debug=False):
     optimal_eff = efficiencies[optimal_idx]
     optimal_mis_id = mis_ids[optimal_idx]
 
-    print(f"Cut: {round(optimal_cut, 2)} / eff: {round(optimal_eff, 2)} / mis id: {round(optimal_mis_id, 2)}")
+    # print(f"Cut: {round(optimal_cut, 2)} / eff: {round(optimal_eff, 2)} / mis id: {round(optimal_mis_id, 2)}")
     if debug:
         draw_optimal_cut(h1, h2, optimal_cut)
 
     return optimal_cut, optimal_eff, optimal_mis_id
 
 def draw_optimal_cut(h1, h2, cut):
+    '''Draw two histograms and the calculated cut wehere eff=1-misid. Used for debugging'''
     # my default pi/k/p colours
-    colors = ['#1b9e77', '#d95f02', '#7570b3']
-    colors = [ ROOT.TColor.GetColor(c) for c in colors]
-
     h1, h2 = h1.Clone(), h2.Clone()
     h1.Scale(1./h1.GetEntries())
     h2.Scale(1./h2.GetEntries())
@@ -93,16 +95,16 @@ def draw_optimal_cut(h1, h2, cut):
     h1.SetMaximum(ymax)
 
     h1.SetLineWidth(4)
-    h1.SetLineColor(colors[0])
+    h1.SetLineColor(pion.color)
     h1_fill.SetFillStyle(3001)
-    h1_fill.SetFillColor(colors[0])
-    h1_fill.SetLineColor(colors[0])
+    h1_fill.SetFillColor(pion.color)
+    h1_fill.SetLineColor(pion.color)
 
     h2.SetLineWidth(4)
-    h2.SetLineColor(colors[1])
+    h2.SetLineColor(kaon.color)
     h2_fill.SetFillStyle(3001)
-    h2_fill.SetFillColor(colors[1])
-    h2_fill.SetLineColor(colors[1])
+    h2_fill.SetFillColor(kaon.color)
+    h2_fill.SetLineColor(kaon.color)
 
     line = ROOT.TLine(cut, 0., cut, ymax)
     line.SetLineColor(15)
@@ -113,15 +115,9 @@ def draw_optimal_cut(h1, h2, cut):
     canvas.Update()
     input("wait")
 
-def get_separation_power(p_value):
-    '''p-value == 1 - efficiency'''
-    return 2*ROOT.Math.gaussian_quantile_c(p_value, 1)
 
-
-def analyse_pid(h1, h2):
-    '''
-        h1,h2 - 2D histogram of something vs momentum
-    '''
+def calculate_pid_graphs(h1, h2):
+    '''Return graphs of the separation power, efficiency, mis-id, cut values versus momentum based on two 2D histograms'''
     gr_cut = ROOT.TGraph()
     gr_eff = ROOT.TGraph()
     gr_misid = ROOT.TGraph()
@@ -132,9 +128,9 @@ def analyse_pid(h1, h2):
         h1_proj = h1.ProjectionY("h1_proj", i, i)
         h2_proj = h2.ProjectionY("h2_proj", i, i)
 
-        print(f"Momentum: {x_low:.2f} -- {x_up:.2f}")
-        cut, eff, misid = analyse_optimal_cut(h1_proj, h2_proj)
-        sep_power = get_separation_power(1-eff)
+        # print(f"Momentum: {x_low:.2f} -- {x_up:.2f}")
+        cut, eff, misid = find_optimal_cut(h1_proj, h2_proj)
+        sep_power = convert_p_value_to_sep_power(1-eff)
 
         gr_cut.SetPoint(i-1, x, cut)
         gr_eff.SetPoint(i-1, x, eff)
@@ -143,90 +139,87 @@ def analyse_pid(h1, h2):
     return gr_cut, gr_eff, gr_misid, gr_sep_power
 
 def draw_sep_powers(graphs):
-    # colors = ["#03045e","#023e8a","#0077b6","#0096c7","#00b4d8","#48cae4"]
-    # colors = ["#690000", "#850e0f", "#a21d19", "#c02b25", "#df3831", "#ff463d"]
-    colors = ['#0444b3', '#0068cc', '#008add', '#1caaea', '#61caf4', '#98e8ff']
-    colors = ["#0099ff", "#128ce9", "#1d77c5", "#225d98", "#214772", "#1f3c5f", "#1c314d", "#19273b"]
-    colors = [ ROOT.TColor.GetColor(c) for c in colors]
-
-    canvas = create_canvas()
+    '''Draw the separation power graphs'''
+    canvas = create_canvas(0.38, 0.4, 0.65)
+    canvas.SetTicky(False)
 
     legend = create_legend(0.4, 0.63, 0.98, 0.94)
     for i, (res, gr) in enumerate(graphs.items()):
         if i == 0:
+            # canvas.DrawFrame(0., MIN_SEP_POWER, 19., MAX_SEP_POWER)
             gr.Draw("ALP")
-            gr.SetTitle(";Momentum (GeV/c); Z")
+            gr.GetYaxis().SetTitleOffset(0.9)
             gr.GetXaxis().SetRangeUser(0, 19)
-            gr.GetYaxis().SetRangeUser(0, 6)
-            gr.GetYaxis().SetTitleOffset(1.1)
+            gr.GetXaxis().SetNdivisions(506)
+            gr.GetYaxis().SetRangeUser(MIN_SEP_POWER, MAX_SEP_POWER)
+            canvas.Modified()
+            canvas.Update()
+            # draw an axis on the right side
+            x_pos = canvas.GetUxmax()
+            axis_eff = ROOT.TGaxis(x_pos, canvas.GetUymin(), x_pos-0.001, canvas.GetUymax(), MIN_SEP_POWER, MAX_SEP_POWER)
+            axis_eff.SetTitleColor( ROOT.gStyle.GetTitleColor("Y") )
+            axis_eff.SetTitleFont( ROOT.gStyle.GetTitleFont("Y") )
+            axis_eff.SetTitleSize( ROOT.gStyle.GetTitleSize("Y") )
+            axis_eff.CenterTitle(True)
+            axis_eff.SetTitleOffset(2.2)
+            axis_eff.SetTitle("Efficiency (%)")
+            axis_eff.SetLabelColor( ROOT.gStyle.GetLabelColor("Y") )
+            axis_eff.SetLabelFont( ROOT.gStyle.GetLabelFont("Y") )
+            axis_eff.SetLabelOffset(-0.14)
+            axis_eff.SetLabelSize( ROOT.gStyle.GetLabelSize("Y") )
+            axis_eff.SetTickLength(0.03)
+            for j in range(MIN_SEP_POWER, MAX_SEP_POWER+1):
+                axis_eff.ChangeLabel(j+1, -1, -1, -1, ROOT.kBlack, -1, f"{convert_sep_power_to_eff(j)*100:.2f}")
+            axis_eff.DrawClone()
         else:
             gr.Draw("LPsame")
-        gr.SetLineColor(colors[i])
-        gr.SetMarkerColor(colors[i])
+        gr.SetLineColor(COLORS[i])
+        gr.SetMarkerColor(COLORS[i])
         gr.SetLineWidth(4)
         gr.SetMarkerStyle(20)
+        print(COLORS[i])
         legend.AddEntry(gr, f"{res} ps","lp")
 
-    legend.Draw()
+    legend.DrawClone()
 
-    latex = ROOT.TLatex()
-    latex.SetTextFont(52)
-    latex.DrawLatex(12, 6.06, "ILD preliminary")
+    # latex = ROOT.TLatex()
+    # latex.SetTextFont(52)
+    # latex.DrawLatex(12, 6.06, "ILD preliminary")
 
     canvas.Update()
-    return canvas, legend
-
+    return canvas
 
 def main():
     df_init = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna.root")\
-                  .Filter("abs(pdg) == 211 || abs(pdg) == 321 || abs(pdg) == 2212")\
-                  .Filter("tofClosest0 > 6.")
+                  .Filter("abs(pdg) == 211 || abs(pdg) == 321 || abs(pdg) == 2212").Filter("tofClosest0 > 6.")
 
-    h_pis, h_ks, h_ps = {}, {}, {}
-    graphs_sep_power_pik = {}
-    graphs_sep_power_kp = {}
+    histos = {}
+    for RES in RESOLUTIONS:
+        histos[RES] = {}
+        df = df_init.Define("beta", f"{TRACK_LENGTH_COLUMN}/(tofClosest{RES}*299.792458)")\
+                    .Define("mass2", f"{MOMENTUM_COLUMN}*{MOMENTUM_COLUMN}*( 1./(beta*beta) - 1.)")
+        for p in particles:
+            df_p = df.Filter(f"abs(pdg) == {p.pdg}")
+            h = df_p.Histo2D((get_rand_string(), "", N_MOMENTUM_BINS, MIN_MOMENTUM, MAX_MOMENTUM, N_Y_AXIS_BINS, MIN_Y_AXIS, MAX_Y_AXIS), MOMENTUM_COLUMN, Y_AXIS)
+            histos[RES][p] = h
 
-    resolutions = [1, 5, 10, 30, 50, 100, 300]
-    # [0, 20, 40, 60, 80, 100]
-    # [0, 1, 5, 10, 30, 50, 80, 100, 300]
-    for res in resolutions:
-        df = df_init.Define("beta", f"trackLengthToEcal_IKF_zedLambda/(tofClosest{res}*299.792458)")\
-               .Define("mass2", "harmonicMomToEcal_IKF_zedLambda*harmonicMomToEcal_IKF_zedLambda*( 1./(beta*beta) - 1.)")
+    graphs = { "pik" : {}, "kp" : {} }
+    for RES in RESOLUTIONS:
+        print(f"Calculating for {RES} resolution")
+        _, _, _, gr_sep_power_pik = calculate_pid_graphs(histos[RES][pion], histos[RES][kaon])
+        graphs["pik"][RES] = gr_sep_power_pik
+        _, _, _, gr_sep_power_kp = calculate_pid_graphs(histos[RES][kaon], histos[RES][proton])
+        graphs["kp"][RES] = gr_sep_power_kp
 
-        y_name = "mass2"
-        h_all = get_pdg_histogram(df, "all", y_name)
-        h_pi = get_pdg_histogram(df, "211", y_name)
-        h_k = get_pdg_histogram(df, "321", y_name)
-        h_p = get_pdg_histogram(df, "2212", y_name)
-        h_pis[res], h_ks[res], h_ps[res] = h_pi, h_k, h_p
-
-    for res in resolutions:
-        # c_all = draw_2d_plot(h_all, 1e6)
-        # c_pi=  draw_2d_plot(h_pi, 1e6)
-        # c_k = draw_2d_plot(h_k, 1e6)
-        # c_p = draw_2d_plot(h_p, 1e6)
-        # input("wait")
-
-        gr_cut_pik, gr_eff_pik, gr_misid_pik, gr_sep_power_pik = analyse_pid(h_pis[res], h_ks[res])
-        gr_cut_kp, gr_eff_kp, gr_misid_kp, gr_sep_power_kp = analyse_pid(h_ks[res], h_ps[res])
-
-        graphs_sep_power_pik[res] = gr_sep_power_pik
-        graphs_sep_power_kp[res] = gr_sep_power_kp
-
-        # canvas = create_canvas()
-        # gr_sep_power_pik.Draw("AL")
-        # gr_sep_power_pik.SetLineWidth(3)
-        # gr_sep_power_pik.SetLineColor(pion.color)
-        # gr_sep_power_pik.GetXaxis().SetRangeUser(0.,10.)
-        # gr_sep_power_kp.Draw("Lsame")
-        # gr_sep_power_kp.SetLineWidth(3)
-        # gr_sep_power_kp.SetLineColor(kaon.color)
-        # canvas.Update()
-        # input("wait")
-
-    c1, leg1 = draw_sep_powers(graphs_sep_power_pik)
-    input("wait")
-    c2, leg2 = draw_sep_powers(graphs_sep_power_kp)
+    c1 = draw_sep_powers(graphs["pik"])
+    graphs["pik"][0].SetTitle(";Momentum (GeV/c);#pi/K separation power")
+    c1.Modified()
+    c1.Update()
+    c2 = draw_sep_powers(graphs["kp"])
+    graphs["kp"][0].SetTitle(";Momentum (GeV/c);K/p separation power")
+    c2.Modified()
+    c2.Update()
     input("wait")
 
-main()
+if __name__ == "__main__":
+    main()

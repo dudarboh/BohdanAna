@@ -236,11 +236,11 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
             // }
 
             // drawDisplay(this, evt, displayPFO, pfo, true);
-            // plotTrackParams(trackHitStates, pfo, mc, _bField);
-            // std::cout<<_trackLength_IKF_zedLambda.harmonicMomToEcal<<std::endl;
-            // std::cout<<_trackLength_IKF_zedLambda.trackLengthToEcal<<std::endl;
-            // std::cout<<_tofClosest[0]<<std::endl;
-            // std::cout<<std::sqrt(_trackLength_IKF_zedLambda.harmonicMomToEcal*_trackLength_IKF_zedLambda.harmonicMomToEcal*((299.99*_tofClosest[0]/_trackLength_IKF_zedLambda.trackLengthToEcal)*(299.99*_tofClosest[0]/_trackLength_IKF_zedLambda.trackLengthToEcal) - 1.))<<std::endl;
+            std::cout<<_trackLength_IKF_zedLambda<<std::endl;
+            std::cout<<_harmonicMom_IKF_zedLambda<<std::endl;
+            std::cout<<_tofClosest[0]<<std::endl;
+            std::cout<<std::sqrt(_harmonicMom_IKF_zedLambda*_harmonicMom_IKF_zedLambda*((299.99*_tofClosest[0]/_trackLength_IKF_zedLambda)*(299.99*_tofClosest[0]/_trackLength_IKF_zedLambda) - 1.))<<std::endl;
+            plotTrackParams(trackHitStates, pfo, mc, _bField);
             // plotCanvas(cluster, trackPosAtCalo, trackMomAtCalo, mc);
         }
         else if( isPhoton && nTracks == 0 && ( !mc->isDecayedInTracker() ) ) {

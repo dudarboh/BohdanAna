@@ -101,10 +101,13 @@ TStyle* getMyStyle(){
     // myStyle->SetStatY(Float_t y = 0);
 
     // Margins:
-    myStyle->SetPadTopMargin(0.05); // ILD 0.08
-    myStyle->SetPadBottomMargin(0.13); // ILD 0.18
-    myStyle->SetPadLeftMargin(0.16); // ILD 0.17
-    myStyle->SetPadRightMargin(0.02); // ILD 0.08
+    auto margin = 0.18;
+    auto leftMarginFraction = 0.89
+    auto bottomMarginFraction = 0.72
+    myStyle->SetPadTopMargin((1-bottomMarginFraction)*margin);
+    myStyle->SetPadBottomMargin(bottomMarginFraction*margin);
+    myStyle->SetPadLeftMargin(leftMarginFraction*margin);
+    myStyle->SetPadRightMargin((1-leftMarginFraction)*margin);
 
     // For the Global title:
     myStyle->SetOptTitle(0);    // 0=No Title
