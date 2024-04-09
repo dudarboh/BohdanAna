@@ -136,7 +136,7 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
 
         int nHitsIn10Layers = 0;
         for (const auto& hit:cluster->getCalorimeterHits()){
-            //Count only ECAL hits
+            //Count only ECAL hits. No LumiCal, BeamCal, HCAL, Yoke hits are recorded!
             CHT hitType( hit->getType() );
             bool isEcal = (hitType.caloID() == CHT::ecal);
             if (!isEcal) continue;

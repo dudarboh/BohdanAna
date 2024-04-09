@@ -103,7 +103,7 @@ RVec <bool> selectFrankHits(const RVec<float>& dToLine, const RVec<int>& layer_h
     return selected;
 }
 
-RVec <bool> selectCylinderHits(const RVec<float>& dPerp, float cutR=6.){
+RVec <bool> selectCylinderHits(const RVec<float>& dPerp, float cutR){
     int nHits = dPerp.size();
     RVec <bool> selected(nHits);
     if (nHits == 0) return selected;
