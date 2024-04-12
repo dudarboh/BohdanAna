@@ -236,12 +236,21 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
             // }
 
             // drawDisplay(this, evt, displayPFO, pfo, true);
-            std::cout<<_trackLength_IKF_zedLambda<<std::endl;
-            std::cout<<_harmonicMom_IKF_zedLambda<<std::endl;
-            std::cout<<_tofClosest[0]<<std::endl;
-            std::cout<<std::sqrt(_harmonicMom_IKF_zedLambda*_harmonicMom_IKF_zedLambda*((299.99*_tofClosest[0]/_trackLength_IKF_zedLambda)*(299.99*_tofClosest[0]/_trackLength_IKF_zedLambda) - 1.))<<std::endl;
-            plotTrackParams(trackHitStates, pfo, mc, _bField);
+            // drawDisplay(this, evt, displayPFO, pfo, true);
+            // std::cout<<_trackLength_IKF_zedLambda<<std::endl;
+            // std::cout<<_harmonicMom_IKF_zedLambda<<std::endl;
+            // std::cout<<_tofClosest[0]<<std::endl;
+            // std::cout<<std::sqrt(_harmonicMom_IKF_zedLambda*_harmonicMom_IKF_zedLambda*((299.99*_tofClosest[0]/_trackLength_IKF_zedLambda)*(299.99*_tofClosest[0]/_trackLength_IKF_zedLambda) - 1.))<<std::endl;
+            // plotTrackParams(trackHitStates, pfo, mc, _bField);
             // plotCanvas(cluster, trackPosAtCalo, trackMomAtCalo, mc);
+            if(std::abs( trackPosAtCalo.z() ) < 2000.){
+                std::cout<<"***** PDG: "<<_pdg<<std::endl;
+                std::cout<<"***** MOM: "<<trackMomAtCalo<<std::endl;
+            
+                // std::cout<<"***** pt: "<<_pdg<<std::endl;
+                drawDisplay(this, evt, displayTOFExplanation, cluster->getCalorimeterHits(), selectedHits, trackPosAtCalo.x(), trackPosAtCalo.y(), trackPosAtCalo.z(), trackMomAtCalo.x(), trackMomAtCalo.y(), trackMomAtCalo.z());
+            }
+
         }
         else if( isPhoton && nTracks == 0 && ( !mc->isDecayedInTracker() ) ) {
             streamlog_out(DEBUG8)<<"Photon stuff"<<std::endl;

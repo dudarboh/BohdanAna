@@ -102,8 +102,8 @@ TStyle* getMyStyle(){
 
     // Margins:
     auto margin = 0.18;
-    auto leftMarginFraction = 0.89
-    auto bottomMarginFraction = 0.72
+    auto leftMarginFraction = 0.89;
+    auto bottomMarginFraction = 0.72;
     myStyle->SetPadTopMargin((1-bottomMarginFraction)*margin);
     myStyle->SetPadBottomMargin(bottomMarginFraction*margin);
     myStyle->SetPadLeftMargin(leftMarginFraction*margin);
@@ -171,7 +171,7 @@ TStyle* getMyStyle(){
     return myStyle;
 }
 
-void displayPFO(EVENT::ReconstructedParticle* pfo, bool colorSort){
+void displayPFO(EVENT::ReconstructedParticle* pfo){
     std::vector<EVENT::Track*> tracks;
     if ( not pfo->getTracks().empty() )
         tracks = getSubTracks(pfo->getTracks()[0]);
@@ -182,29 +182,8 @@ void displayPFO(EVENT::ReconstructedParticle* pfo, bool colorSort){
     unsigned long color = 0x000000;
     for(auto* track: tracks){
         auto hits = track->getTrackerHits();
-        // int maxR = -1;
-        // int hitIdx = 0;
         for (auto* hit : hits ){
             auto pos = hit->getPosition();
-
-            //NOTE: after some manual event checking sorting by rho seems to work in most (all?) cases and is not a problem...
-            // if (colorSort){
-            //     std::cout<<"Analysing curl"<<std::endl;
-            //     float r = std::hypot( pos[0], pos[1] );
-            //     std::cout<<"Hit "<<hitIdx+1<<" r = "<<r<<"    detected rmax = "<<maxR;
-            //     if (r >= maxR){
-            //         std::cout<<" --- blue, rewrite maxR"<<std::endl;
-            //         color = 0x0000FF;
-            //         maxR = r;
-            //     }
-            //     else{
-            //         color = 0xFF0000;
-            //         std::cout<<" --- red"<<std::endl;
-            //     }
-
-            //     // from red to blue dividing by N tracker hits                
-            //     // color = interpolateHexColor( 0xFF0000, 0x0000FF, static_cast<float>(hitIdx) / (hits.size() - 1) );
-            // }
     
             ced_hit(pos[0], pos[1], pos[2], type, size, color);
             // hitIdx++;
@@ -383,7 +362,7 @@ void plotECALTimes(EVENT::Cluster* cluster, Vector3D posAtEcal, Vector3D momAtEc
 
 }
 
-void plotTrackParams(const std::vector<HitState>& trackHitStates, EVENT::ReconstructedParticle* pfo, EVENT::MCParticle* mc, float bField){
+void plotTrackParams(const std::vector<HitState>& trackHitStates, EVENT::MCParticle* mc, float bField){
     // DEBUG output
     int pdg = std::abs( mc->getPDG() );
     std::cout<<"PDG: "<<pdg<<std::endl;
@@ -561,16 +540,19 @@ void plotTrackParams(const std::vector<HitState>& trackHitStates, EVENT::Reconst
         gSystem->Sleep(5);
     }
     picture_counter++;
+}
 
+void displayTOFExplanation(std::vector<EVENT::CalorimeterHit*> allHits, std::vector<EVENT::CalorimeterHit*> selectedHits, double x, double y, double z, double px, double py, double pz){
 
+    int type = 0; // point
+    int size = 4; // larger point
+    unsigned long color = 0x000000;
+    ced_line(x, y, z, x+px*100, y+py*100, z+pz*100 , type , 1., color);
 
-
-
-
-
-
-
-
-
-}    
+    for (auto hit:allHits){
+        auto pos = hit->getPosition();
+        bool isSelectedHit = std::find(selectedHits.begin(), selectedHits.end(), hit) != selectedHits.end();
+        ced_hit(pos[0], pos[1], pos[2], type, size*2, isSelectedHit ? 0xfc0303 : 0x000000);
+    }
+}
 
