@@ -2,16 +2,17 @@ import ROOT
 import numpy as np
 from sklearn import linear_model
 from utils import *
-ROOT.gStyle.SetPalette(ROOT.kBird)
+import time
+ROOT.gStyle.SetPalette(1)
 ROOT.gStyle.SetNumberContours(256)
 ROOT.gStyle.SetOptTitle(0)
 ROOT.EnableImplicitMT()
 
+t = time.time()
 ROOT.gInterpreter.Declare('#include "tof.hpp"')
 df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/tof_studies.root")\
-    .Filter("if (rdfentry_ % 1000000 == 0){ std::cout << rdfentry_ << std::endl; } return true;")\
-    .Filter("sqrt(recoCaloPx*recoCaloPx + recoCaloPy*recoCaloPy + recoCaloPz*recoCaloPz) < 10.")\
-    .Filter("rdfentry_ < 100000")
+    .Filter("if (rdfentry_ % 1000000 == 0){ std::cout << rdfentry_ << std::endl; } return true;")
+    # .Filter("rdfentry_ < 200000")
 
 def filter_n_layers(df, n_layers):
     '''Return df with hits only within first n_layers'''
@@ -32,8 +33,8 @@ def smear_time(df):
 
 def scan_cuts(df):
     '''Return numpy array of the dt results using scan cuts'''
-    d_perp_cuts = np.linspace(7, 11, 20)
-    dt_cuts = np.linspace(120, 300, 20)
+    d_perp_cuts = np.linspace(4, 14, 20)
+    dt_cuts = np.linspace(100, 250, 20)
     results = []
     for i, d_perp_cut in enumerate(d_perp_cuts):
         for j, dt_cut in enumerate(dt_cuts):
@@ -45,6 +46,48 @@ def scan_cuts(df):
 
 df = filter_n_layers(df, 10)
 df = smear_time(df)
+
+canvas = create_canvas()
+df_frank = df.Define("dt", "1000*(Mean( tSurface[selectFrankHits(dToLine, layerHit)]) - tofClosest0)") 
+h_frank = df_frank.Histo1D((get_rand_string(), "; T_{reco} - T_{true} (ps); N entries", 1500, -300, 300), "dt")
+df_new = df.Define("tSurface_cyl_mask", "tSurface[selectCylinderHits(dToLine, 10.3)]")\
+            .Define("tSurface_both_masks", "tSurface_cyl_mask[selectMedianHits(tSurface_cyl_mask, 171)]")\
+            .Define("dt", "1000*(Mean(tSurface_both_masks) - tofClosest0)")
+h_new = df_new.Histo1D((get_rand_string(), "; T_{reco} - T_{true} (ps); N entries", 1500, -300, 300), "dt")
+arr_frank = df_frank.AsNumpy(["dt"])
+arr_new = df_new.AsNumpy(["dt"])
+
+
+_, rms90, _, _ = fit90( arr_frank["dt"] )
+print("RMS:", np.std(arr_frank["dt"]))
+print("RMS90:", rms90)
+h_frank.Draw()
+h_frank.GetYaxis().SetMaxDigits(3)
+h_frank.GetXaxis().SetTitleOffset(1)
+fit = ROOT.TF1("fit", "gaus", -20., 20.)
+fit.SetNpx(500)
+h_frank.Fit("fit", "QR0")
+fit.SetRange(-300, 300)
+fit.Draw("same")
+print("RMS fit:", h_frank.GetFunction("fit").GetParameter(2))
+
+_, rms90, _, _ = fit90( arr_new["dt"] )
+print("RMS new:", np.std(arr_new["dt"]))
+print("RMS90 new:", rms90)
+h_new.Draw("same")
+h_new.SetLineColor(4)
+h_new.GetYaxis().SetMaxDigits(3)
+h_new.GetXaxis().SetTitleOffset(1)
+fit_new = ROOT.TF1("fit_new", "gaus", -20., 20.)
+fit_new.SetNpx(500)
+h_new.Fit("fit_new", "QR0")
+fit_new.SetRange(-300, 300)
+fit_new.SetLineColor(6)
+fit_new.Draw("same")
+print("RMS fit_new new:", h_new.GetFunction("fit_new").GetParameter(2))
+
+input("waut")
+
 print("Scanning...")
 d_perp_cuts, dt_cuts, results = scan_cuts(df)
 
@@ -54,6 +97,31 @@ for i, d_perp_cut in enumerate(d_perp_cuts):
     for j, dt_cut in enumerate(dt_cuts):
         _, rms90, _, _ = fit90( results[f"dt_{i}_{j}"] )
         gr.SetPoint( i*len(d_perp_cuts) + j, d_perp_cut, dt_cut, rms90 )
-gr.Draw("COLZ")
 
+canvas = create_canvas(0.33, 0.58, 0.65)
+gr.Draw("colz")
+canvas.Update()
+h = gr.GetHistogram()
+h.GetXaxis().SetTitle("R (mm)")
+h.GetYaxis().SetTitle("T_{cut} (ps)")
+h.GetXaxis().SetTitleOffset(1.1)
+h.GetYaxis().SetTitleOffset(1.4)
+palette = h.GetListOfFunctions().FindObject("palette")
+x_min = h.GetXaxis().GetXmin()
+x_max = h.GetXaxis().GetXmax()
+palette.SetX1(x_min + 1.01*(x_max-x_min))
+palette.SetX2(x_min + 1.05*(x_max-x_min))
+palette.SetMaxDigits(3)
+palette.SetLabelOffset(0.006)
+
+canvas.Modified()
+canvas.Update()
+
+minbin = h.GetMinimumBin()
+for i, d_perp_cut in enumerate(d_perp_cuts):
+    for j, dt_cut in enumerate(dt_cuts):
+        if h.FindBin(d_perp_cut, dt_cut) == minbin:
+            print("R: ", d_perp_cut, "    dt: ", dt_cut)
+print( h.GetMinimum())
+print("Time:", time.time() - t)
 input("wait")

@@ -5,13 +5,11 @@ from utils import *
 ROOT.gStyle.SetPalette(ROOT.kBird)
 ROOT.gStyle.SetNumberContours(256)
 ROOT.gStyle.SetOptTitle(0)
-# ROOT.EnableImplicitMT()
+ROOT.EnableImplicitMT()
 
 ROOT.gInterpreter.Declare('#include "tof.hpp"')
 df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/tof_studies.root")\
     .Filter("if (rdfentry_ % 1000000 == 0){ std::cout << rdfentry_ << std::endl; } return true;")\
-    .Filter("sqrt(recoCaloPx*recoCaloPx + recoCaloPy*recoCaloPy + recoCaloPz*recoCaloPz) < 10.")\
-    .Range(100000)
 
 # Only n_layers layers!
 n_layers = 10
