@@ -124,17 +124,17 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
         int nClusters = pfo->getClusters().size();
         // only simple cases
         if( nTracks > 1 || nClusters != 1) continue;
-        Cluster* cluster = pfo->getClusters().at(0);
         MCParticle* mc = getMC(pfo, pfo2mc);
+        if (mc == nullptr) continue;
         _pdg = mc->getPDG();
         for(int j=0; j<3; j++) _mcMom.at(j) = mc->getMomentum()[j];
 
         bool isHadron = std::abs(_pdg) == 211 || std::abs(_pdg) == 321 || std::abs(_pdg) == 2212;
         bool isPhoton = std::abs(_pdg) == 22;
         streamlog_out(DEBUG8)<<"PDG: "<<_pdg<<"   isHadron: "<<isHadron<<"   isPhoton: "<<isPhoton<<std::endl;
-        streamlog_out(DEBUG8)<<"Cluster with N hits: "<<cluster->getCalorimeterHits().size()<<std::endl;
 
-        int nHitsIn10Layers = 0;
+        Cluster* cluster = pfo->getClusters().at(0);
+        streamlog_out(DEBUG8)<<"Cluster with N hits: "<<cluster->getCalorimeterHits().size()<<std::endl;
         for (const auto& hit:cluster->getCalorimeterHits()){
             //Count only ECAL hits. No LumiCal, BeamCal, HCAL, Yoke hits are recorded!
             CHT hitType( hit->getType() );
@@ -146,9 +146,6 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
             _tHit.push_back(hit->getTime());
             _layerHit.push_back( hitType.layer() );
             _energyHit.push_back( hit->getEnergy() );
-            if ( hitType.layer() < 10. ){
-                nHitsIn10Layers++;
-            }
         }
         _nHits = _tHit.size();
 
@@ -207,6 +204,11 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
 
             streamlog_out(DEBUG8)<<"getTofClosest()"<<std::endl;
             CalorimeterHit* closestHit = getClosestHit(cluster, trackPosAtCalo);
+            //NOTE: We assume no time measurementin the LumiCal! This cut should be consistent with one in the loop!
+            // We ignore the particle if the closest hit is not in the ECAL, e.g. LumiCal.
+            CHT hitType( closestHit->getType() );
+            bool isEcal = (hitType.caloID() == CHT::ecal);
+            if (!isEcal) continue;
 
             _typeClosest = getHitCaloType(closestHit);
             _caloIDClosest = getHitCaloID(closestHit);
@@ -225,32 +227,6 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
                 std::tie(_tofSETFront.at(j), _tofSETBack.at(j)) = getTofSET(track, res);
             }
 
-            // DEBUGGING
-            // if (nHitsIn10Layers > 50){
-            //     std::cout<<" PFO has tracks/clusters"<<nTracks<<"/"<<nClusters<<std::endl;
-            //     std::cout<<"N hits in 10 layers: "<<nHitsIn10Layers<<std::endl;
-            //     std::cout<<"N hits total: "<<_nHits<<std::endl;
-            //     std::cout<<"PDG: "<<_pdg<<std::endl;
-            //     std::cout<<"Momentum: "<<Vector3D(_recoCaloMom[0], _recoCaloMom[1], _recoCaloMom[2])<<std::endl;
-            //     drawDisplay(this, evt, displayPFO, pfo, true);
-            // }
-
-            // drawDisplay(this, evt, displayPFO, pfo, true);
-            // drawDisplay(this, evt, displayPFO, pfo, true);
-            // std::cout<<_trackLength_IKF_zedLambda<<std::endl;
-            // std::cout<<_harmonicMom_IKF_zedLambda<<std::endl;
-            // std::cout<<_tofClosest[0]<<std::endl;
-            // std::cout<<std::sqrt(_harmonicMom_IKF_zedLambda*_harmonicMom_IKF_zedLambda*((299.99*_tofClosest[0]/_trackLength_IKF_zedLambda)*(299.99*_tofClosest[0]/_trackLength_IKF_zedLambda) - 1.))<<std::endl;
-            // plotTrackParams(trackHitStates, pfo, mc, _bField);
-            // plotCanvas(cluster, trackPosAtCalo, trackMomAtCalo, mc);
-            if(std::abs( trackPosAtCalo.z() ) < 2000.){
-                std::cout<<"***** PDG: "<<_pdg<<std::endl;
-                std::cout<<"***** MOM: "<<trackMomAtCalo<<std::endl;
-            
-                // std::cout<<"***** pt: "<<_pdg<<std::endl;
-                drawDisplay(this, evt, displayTOFExplanation, cluster->getCalorimeterHits(), selectedHits, trackPosAtCalo.x(), trackPosAtCalo.y(), trackPosAtCalo.z(), trackMomAtCalo.x(), trackMomAtCalo.y(), trackMomAtCalo.z());
-            }
-
         }
         else if( isPhoton && nTracks == 0 && ( !mc->isDecayedInTracker() ) ) {
             streamlog_out(DEBUG8)<<"Photon stuff"<<std::endl;
@@ -259,6 +235,10 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
             Vector3D mom( mc->getMomentum() );
 
             CalorimeterHit* closestHit = getClosestHit(cluster, photonPosAtCalo);
+            CHT hitType( closestHit->getType() );
+            bool isEcal = (hitType.caloID() == CHT::ecal);
+            if (!isEcal) continue;
+
             _typeClosest = getHitCaloType(closestHit);
             _caloIDClosest = getHitCaloID(closestHit);
             _layoutClosest = getHitCaloLayout(closestHit);
