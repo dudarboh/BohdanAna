@@ -9,6 +9,7 @@
 #include "UTIL/LCRelationNavigator.h"
 #include "UTIL/TrackTools.h"
 #include "MarlinTrk/Factory.h"
+#include "CLHEP/Random/Randomize.h"
 
 using dd4hep::rec::Vector3D;
 
@@ -231,9 +232,8 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
             CalorimeterHit* closestHit = getClosestHit(cluster, trackPosAtCalo);
             //NOTE: We assume no time measurementin the LumiCal! This cut should be consistent with one in the loops over ECAL hits!
             // We ignore the particle if the closest hit is not in the ECAL, e.g. LumiCal.
-            CHT hitType( closestHit->getType() );
-            bool isEcal = (hitType.caloID() == CHT::ecal);
-            if (!isEcal) continue;
+            bool notEcalClosestHit = ! (CHT( closestHit->getType() ).caloID() == CHT::ecal);
+            if ( notEcalClosestHit ) continue;
 
             _typeClosest = getHitCaloType(closestHit);
             _caloIDClosest = getHitCaloID(closestHit);
@@ -253,13 +253,12 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
             }
 
             if (_produce_csv_output){
-                _global_pfo_number++
+                _global_pfo_number++;
 
                 for (const auto& hit:cluster->getCalorimeterHits()){
                     //Count only ECAL hits. No LumiCal, BeamCal, HCAL, Yoke hits are recorded!
-                    CHT hitType( hit->getType() );
-                    bool isEcal = (hitType.caloID() == CHT::ecal);
-                    if (!isEcal) continue;
+                    bool notEcalHit = ! (CHT( hit->getType() ).caloID() == CHT::ecal);
+                    if ( notEcalHit ) continue;
 
                     auto hitCaloID = getHitCaloID(hit);
                     auto hitLayout = getHitCaloLayout(hit);
@@ -334,7 +333,7 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
 
 void BohdanAna::end(){
     _file->Write();
-    if (_produce_csv_output) _csv_output_file.close()
+    if (_produce_csv_output) _csv_output_file.close();
     // _application.Run(true);
 }
 

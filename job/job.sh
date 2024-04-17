@@ -20,4 +20,5 @@ mkdir job_${process} && cd job_${process}
 Marlin ${project_folder}/xml/steer.xml --global.LCIOInputFiles="${file}"
 # # Marlin sometimes seg. faults after successful finish so don't do &&...
 mv *.root ../../final/${process}.root
+mv *.csv ../../final/${process}.csv
 cd .. && rm -r job_${process}

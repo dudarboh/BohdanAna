@@ -34,7 +34,7 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
 
         int _global_pfo_number{};
         bool _produce_csv_output = true;
-        if ( _produce_csv_output) std::ofstream _csv_output_file = std::ofstream("output.csv");
+        std::ofstream _csv_output_file = std::ofstream("output.csv");
 
         int _pdg{};
         float _dEdx{};

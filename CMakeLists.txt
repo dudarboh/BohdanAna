@@ -8,8 +8,8 @@ find_package(ILCUTIL REQUIRED COMPONENTS ILCSOFT_CMAKE_MODULES)
 include(ilcsoft_default_settings)
 
 # Remove this ugly warning
-set(CMAKE_BUILD_TYPE Release)
-# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-effc++ -O3 -g")
+set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-effc++ -O3")
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
 add_library(${PROJECT_NAME} SHARED ${PROJECT_SOURCE_DIR}/src/BohdanAna.cc
