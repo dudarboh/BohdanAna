@@ -1,3 +1,4 @@
+import sys
 import ROOT
 import numpy as np
 from sklearn import linear_model
@@ -7,12 +8,31 @@ ROOT.gStyle.SetPalette(1)
 ROOT.gStyle.SetNumberContours(256)
 ROOT.gStyle.SetOptTitle(0)
 ROOT.EnableImplicitMT()
-
-t = time.time()
 ROOT.gInterpreter.Declare('#include "tof.hpp"')
-df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/tof_studies.root")\
-    .Filter("if (rdfentry_ % 1000000 == 0){ std::cout << rdfentry_ << std::endl; } return true;")
-    # .Filter("rdfentry_ < 200000")
+
+def create_tof_studies_file():
+    '''Create tof_studies.root that containes stripped information from BohdanAna specifically for TOF reconstruction studies'''
+    df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna.root")
+    # Filtering
+    df = df.Filter("if (rdfentry_ % 1000000 == 0){ std::cout << rdfentry_ << std::endl; } return true;")\
+            .Filter("abs(pdg) == 211 || abs(pdg) == 321 || abs(pdg) == 2212")\
+            .Filter("caloIDClosest == 1")\
+            .Filter("tofClosest0 > 6.")\
+            .Define("nHitsIn10Layers", "getNHitsInLayers(layerHit, 10)")\
+            .Filter("nHitsIn10Layers > 0")
+
+    # Defining 3D vectors
+    df = df.Define("rImpact", "ROOT::Math::XYZVector(recoCaloX, recoCaloY, recoCaloZ)")\
+            .Define("momImpact", "ROOT::Math::XYZVector(recoCaloPx, recoCaloPy, recoCaloPz)")\
+            .Define("hitPos", "hitPos(xHit, yHit, zHit)")
+
+    df = df.Define("dToImpact", "dToImpact(hitPos, rImpact)")\
+            .Define("dToLine", "dToLine(hitPos, rImpact, momImpact)")\
+            .Define("dl", "sqrt(dToImpact*dToImpact - dToLine*dToLine)")
+            
+    write_columns = ["tHit", "layerHit", "dToImpact", "dToLine", "dl", "pdg", "tofClosest0"]
+    df.Snapshot("treename", "/nfs/dust/ilc/user/dudarboh/tof/tof_studies_UPDATE_ME.root", write_columns)
+    sys.exit("Done!")
 
 def filter_n_layers(df, n_layers):
     '''Return df with hits only within first n_layers'''
@@ -20,7 +40,6 @@ def filter_n_layers(df, n_layers):
             .Redefine("dToImpact", f"dToImpact[layerHit<{n_layers}]")\
             .Redefine("dToLine", f"dToLine[layerHit<{n_layers}]")\
             .Redefine("tHit", f"tHit[layerHit<{n_layers}]")\
-            .Redefine("tSurface", f"tSurface[layerHit<{n_layers}]")\
             .Redefine("layerHit", f"layerHit[layerHit<{n_layers}]")
     return df
 
@@ -28,7 +47,7 @@ def smear_time(df):
     '''Return df with time smeared with time_resolution (in ps)'''
     # Only with 50 ps for now
     df = df.Redefine("tHit", "smear(rdfslot_, tHit, gaus50)")\
-            .Redefine("tSurface", "getTimeAtSurface(tHit, dToImpact)")
+            .Define("tSurface", "getTimeAtSurface(tHit, dToImpact)")
     return df
 
 def scan_cuts(df):
@@ -44,6 +63,11 @@ def scan_cuts(df):
             .Define(f"dt_{i}_{j}", f"1000*(Mean(tSurface_both_masks_{i}_{j}) - tofClosest0)")
     return d_perp_cuts, dt_cuts, df.AsNumpy(results)
 
+
+t = time.time()
+df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/tof_studies.root")\
+    .Filter("if (rdfentry_ % 1000000 == 0){ std::cout << rdfentry_ << std::endl; } return true;")\
+    .Filter("rdfentry_ < 200000")
 df = filter_n_layers(df, 10)
 df = smear_time(df)
 

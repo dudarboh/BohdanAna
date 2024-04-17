@@ -2,3 +2,6 @@ build/
 lib/
 *.png
 *.gif
+plots/
+.vscode/
+analysis/__pycache__/
