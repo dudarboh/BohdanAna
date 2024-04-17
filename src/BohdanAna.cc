@@ -102,6 +102,30 @@ void BohdanAna::init(){
     _tree->Branch("layerHit", &_layerHit);
     _tree->Branch("energyHit", &_energyHit);
 
+    if(_produce_csv_output)
+        _csv_output_file<<"PFO #,"
+                    "PDG,"
+                    "trk length (mm),"
+                    "trk p (GeV),"
+                    "trk pT (GeV),"
+                    "trk px (GeV),"
+                    "trk py (GeV),"
+                    "trk pz (GeV),"
+                    "trk Ecal x (mm),"
+                    "trk Ecal y (mm),"
+                    "trk Ecal z (mm),"
+                    "true TOF (ns),"
+                    "Hit type,"
+                    "Hit Layout,"
+                    "true hit time (ns),"
+                    "hit time 50ps (ns),"
+                    "hit time 100ps (ns),"
+                    "hit energy (GeV),"
+                    "hit layer,"
+                    "x hit pos (mm),"
+                    "y hit pos (mm),"
+                    "z hit pos (mm)\n";
+
 }
 
 void BohdanAna::processEvent(EVENT::LCEvent * evt){
@@ -135,6 +159,7 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
 
         Cluster* cluster = pfo->getClusters().at(0);
         streamlog_out(DEBUG8)<<"Cluster with N hits: "<<cluster->getCalorimeterHits().size()<<std::endl;
+
         for (const auto& hit:cluster->getCalorimeterHits()){
             //Count only ECAL hits. No LumiCal, BeamCal, HCAL, Yoke hits are recorded!
             CHT hitType( hit->getType() );
@@ -204,7 +229,7 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
 
             streamlog_out(DEBUG8)<<"getTofClosest()"<<std::endl;
             CalorimeterHit* closestHit = getClosestHit(cluster, trackPosAtCalo);
-            //NOTE: We assume no time measurementin the LumiCal! This cut should be consistent with one in the loop!
+            //NOTE: We assume no time measurementin the LumiCal! This cut should be consistent with one in the loops over ECAL hits!
             // We ignore the particle if the closest hit is not in the ECAL, e.g. LumiCal.
             CHT hitType( closestHit->getType() );
             bool isEcal = (hitType.caloID() == CHT::ecal);
@@ -225,6 +250,49 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
                 _tofAverage.at(j) = getTofFrankAvg(selectedHits, trackPosAtCalo, res);
                 _tofFit.at(j) = getTofFrankFit(selectedHits, trackPosAtCalo, res);
                 std::tie(_tofSETFront.at(j), _tofSETBack.at(j)) = getTofSET(track, res);
+            }
+
+            if (_produce_csv_output){
+                _global_pfo_number++
+
+                for (const auto& hit:cluster->getCalorimeterHits()){
+                    //Count only ECAL hits. No LumiCal, BeamCal, HCAL, Yoke hits are recorded!
+                    CHT hitType( hit->getType() );
+                    bool isEcal = (hitType.caloID() == CHT::ecal);
+                    if (!isEcal) continue;
+
+                    auto hitCaloID = getHitCaloID(hit);
+                    auto hitLayout = getHitCaloLayout(hit);
+                    auto hitLayer = getHitCaloLayer(hit);
+
+                    std::stringstream ss;
+                    ss<<_global_pfo_number<<", ";
+                    ss<<_pdg<<", ";
+                    ss<<std::scientific<<std::setprecision(5)<<_trackLength_IKF_zedLambda<<", ";
+
+                    ss<<std::scientific<<std::setprecision(4)<<trackMomAtCalo.r()<<", ";
+                    ss<<std::scientific<<std::setprecision(4)<<trackMomAtCalo.trans()<<", ";
+                    ss<<std::scientific<<std::setprecision(4)<<trackMomAtCalo[0]<<", ";
+                    ss<<std::scientific<<std::setprecision(4)<<trackMomAtCalo[1]<<", ";
+                    ss<<std::scientific<<std::setprecision(4)<<trackMomAtCalo[2]<<", ";
+
+                    ss<<std::scientific<<std::setprecision(4)<<trackPosAtCalo[0]<<", ";
+                    ss<<std::scientific<<std::setprecision(4)<<trackPosAtCalo[1]<<", ";
+                    ss<<std::scientific<<std::setprecision(4)<<trackPosAtCalo[2]<<", ";
+                    ss<<std::scientific<<std::setprecision(6)<<_tofClosest[0]<<", ";
+                    ss<<hitCaloID<<", "; // type of hit, i.e. ECal, LumiCal etc. hit
+                    ss<<hitLayout<<", ";
+                    ss<<std::scientific<<std::setprecision(6)<<hit->getTime()<<", ";
+                    ss<<std::scientific<<std::setprecision(6)<<CLHEP::RandGauss::shoot(hit->getTime(), 0.05)<<", ";
+                    ss<<std::scientific<<std::setprecision(6)<<CLHEP::RandGauss::shoot(hit->getTime(), 0.1)<<", ";
+                    ss<<std::scientific<<std::setprecision(6)<<hit->getEnergy()<<", ";
+                    ss<<hitLayer<<", ";
+                    ss<<std::scientific<<std::setprecision(6)<<hit->getPosition()[0]<<", ";
+                    ss<<std::scientific<<std::setprecision(6)<<hit->getPosition()[1]<<", ";
+                    ss<<std::scientific<<std::setprecision(6)<<hit->getPosition()[2]<<"\n";
+
+                    _csv_output_file << ss.str();
+                }
             }
 
         }
@@ -266,6 +334,7 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
 
 void BohdanAna::end(){
     _file->Write();
+    if (_produce_csv_output) _csv_output_file.close()
     // _application.Run(true);
 }
 
