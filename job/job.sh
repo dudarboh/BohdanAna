@@ -10,7 +10,9 @@ project_folder=${3}
 # source /cvmfs/ilc.desy.de/key4hep/setup.sh &&
 source /cvmfs/sw-nightlies.hsf.org/key4hep/setup.sh &&
 export MARLIN_DLL=$MARLIN_DLL:${project_folder}/lib/libBohdanAna.so
+export MARLIN_DLL=$MARLIN_DLL:${project_folder}/lib/libCreateRefitPFO.so
 
+mkdir -rf job_${process}
 mkdir job_${process} && cd job_${process}
 
 # cp ${1} .
