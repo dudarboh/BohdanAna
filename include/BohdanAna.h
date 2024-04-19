@@ -33,8 +33,8 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
         std::unique_ptr<TTree> _tree;
 
         int _global_pfo_number{};
-        bool _produce_csv_output = true;
-        std::ofstream _csv_output_file = std::ofstream("output.csv");
+        bool _produce_csv_output{};
+        std::ofstream _csv_output_file;
 
         int _pdg{};
         float _dEdx{};
@@ -47,6 +47,14 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
         std::array<float, 3> _recoIpMom{};
         std::array<float, 3> _recoCaloPos{};
         std::array<float, 3> _recoCaloMom{};
+
+        float _refittedOmegaIP{};
+        float _refittedOmegaECAL{};
+        float _refittedTanLambdaIP{};
+        float _refittedTanLambdaECAL{};
+        std::array<float, 3> _refittedRecoIpMom{};
+        std::array<float, 3> _refittedRecoCaloPos{};
+        std::array<float, 3> _refittedRecoCaloMom{};
 
 
         float _trackLength_IDR{};

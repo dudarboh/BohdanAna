@@ -17,6 +17,11 @@ BohdanAna theBohdanAna;
 
 BohdanAna::BohdanAna() : marlin::Processor("BohdanAna"), EventDisplayer(this){
     _description = "Main analysis of the track length and time-of-flight and momentum methods for time-of-flight pID";
+
+    registerProcessorParameter( "produce_csv_output",
+                                "Produce csv output file for Konrad or not",
+                                _produce_csv_output,
+                                false);
 }
 
 
@@ -41,6 +46,11 @@ void BohdanAna::init(){
     _tree->Branch("tanLambdaIP", &_tanLambdaIP);
     _tree->Branch("tanLambdaECAL", &_tanLambdaECAL);
 
+    _tree->Branch("refittedOmegaIP", &_refittedOmegaIP);
+    _tree->Branch("refittedOmegaECAL", &_refittedOmegaECAL);
+    _tree->Branch("refittedTanLambdaIP", &_refittedTanLambdaIP);
+    _tree->Branch("refittedTanLambdaECAL", &_refittedTanLambdaECAL);
+
     //momenta
     _tree->Branch("mcPx", &(_mcMom[0]) );
     _tree->Branch("mcPy", &(_mcMom[1]) );
@@ -54,6 +64,16 @@ void BohdanAna::init(){
     _tree->Branch("recoCaloX", &(_recoCaloPos[0]) );
     _tree->Branch("recoCaloY", &(_recoCaloPos[1]) );
     _tree->Branch("recoCaloZ", &(_recoCaloPos[2]) );
+
+    _tree->Branch("refittedRecoIpPx", &(_refittedRecoIpMom[0]) );
+    _tree->Branch("refittedRecoIpPy", &(_refittedRecoIpMom[1]) );
+    _tree->Branch("refittedRecoIpPz", &(_refittedRecoIpMom[2]) );
+    _tree->Branch("refittedRecoCaloPx", &(_refittedRecoCaloMom[0]) );
+    _tree->Branch("refittedRecoCaloPy", &(_refittedRecoCaloMom[1]) );
+    _tree->Branch("refittedRecoCaloPz", &(_refittedRecoCaloMom[2]) );
+    _tree->Branch("refittedRecoCaloX", &(_refittedRecoCaloPos[0]) );
+    _tree->Branch("refittedRecoCaloY", &(_refittedRecoCaloPos[1]) );
+    _tree->Branch("refittedRecoCaloZ", &(_refittedRecoCaloPos[2]) );
 
     //track lengths
     _tree->Branch("trackLength_IDR", &_trackLength_IDR);
@@ -103,7 +123,8 @@ void BohdanAna::init(){
     _tree->Branch("layerHit", &_layerHit);
     _tree->Branch("energyHit", &_energyHit);
 
-    if(_produce_csv_output)
+    if(_produce_csv_output){
+        _csv_output_file = std::ofstream("output.csv");
         _csv_output_file<<"PFO #,"
                     "PDG,"
                     "trk length (mm),"
@@ -126,7 +147,7 @@ void BohdanAna::init(){
                     "x hit pos (mm),"
                     "y hit pos (mm),"
                     "z hit pos (mm)\n";
-
+    }
 }
 
 void BohdanAna::processEvent(EVENT::LCEvent * evt){
@@ -137,6 +158,7 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
     // streamlog_out(MESSAGE)<<"VM usage: "<<vm/1000.<<"    PM usage: "<<rm/1000.<<"  MB"<<std::endl;
 
     LCCollection* pfos = evt->getCollection("PandoraPFOs");
+    LCCollection* updatedPfos = evt->getCollection("updatedPandoraPFOs");
     LCRelationNavigator pfo2mc ( evt->getCollection("RecoMCTruthLink") );
     LCRelationNavigator navToSimTrackerHits( evt->getCollection("TrackerHitsRelations") );
     LCRelationNavigator navToSimCalorimeterHits( evt->getCollection("CalorimeterHitsRelations") );
@@ -194,6 +216,27 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
             for(int j=0; j<3; j++) _recoIpMom.at(j) = pfo->getMomentum()[j];
             for(int j=0; j<3; j++) _recoCaloPos.at(j) = trackPosAtCalo[j];
             for(int j=0; j<3; j++) _recoCaloMom.at(j) = trackMomAtCalo[j];
+
+            // Now fill the same for the refitted track.
+            ReconstructedParticle* updatedPfo = static_cast <ReconstructedParticle*> ( updatedPfos->getElementAt(i) );
+            Track* refittedTrack = updatedPfo->getTracks().at(0);
+
+            auto refittedTsIP = refittedTrack->getTrackState( TrackState::AtIP );
+            _refittedOmegaIP = refittedTsIP->getOmega();
+            _refittedTanLambdaIP = refittedTsIP->getTanLambda();
+
+            auto refittedTsCalo = getTrackStateAtCalorimeter( refittedTrack );
+            _refittedOmegaECAL = refittedTsCalo->getOmega();
+            _refittedTanLambdaECAL = refittedTsCalo->getTanLambda();
+
+            Vector3D refittedTrackPosAtCalo( refittedTsCalo->getReferencePoint() );
+            std::array<double, 3> refittedMom = UTIL::getTrackMomentum(refittedTsCalo, _bField);
+            Vector3D refittedTrackMomAtCalo(refittedMom[0], refittedMom[1], refittedMom[2]);
+
+            for(int j=0; j<3; j++) _refittedRecoIpMom.at(j) = updatedPfo->getMomentum()[j];
+            for(int j=0; j<3; j++) _refittedRecoCaloPos.at(j) = refittedTrackPosAtCalo[j];
+            for(int j=0; j<3; j++) _refittedRecoCaloMom.at(j) = refittedTrackMomAtCalo[j];
+
 
             streamlog_out(DEBUG8)<<"getTrackStates()"<<std::endl;
             std::vector<HitState> trackHitStates = getTrackStates(pfo, _bField, _trkSystem, navToSimTrackerHits);
@@ -348,6 +391,13 @@ void BohdanAna::resetVariables(){
     _recoIpMom.fill(0.f);
     _recoCaloPos.fill(0.f);
     _recoCaloMom.fill(0.f);
+    _refittedOmegaIP = 0.f;
+    _refittedOmegaECAL = 0.f;
+    _refittedTanLambdaIP = 0.f;
+    _refittedTanLambdaECAL = 0.f;
+    _refittedRecoIpMom.fill(0.f);
+    _refittedRecoCaloPos.fill(0.f);
+    _refittedRecoCaloMom.fill(0.f);
 
     _trackLength_IDR = 0.f;
     _trackLength_SHA_phiLambda_IP = 0.f;
