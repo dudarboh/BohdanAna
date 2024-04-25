@@ -91,18 +91,16 @@ def get_uncertainty(particle, dp, dl, dt, func="m"):
 
 ######################## DRAWING #################
 
-def draw_2d_plot(h, maximum=1e4):
+def draw_2d_plot(h, margin=0.33, left_margin_fraction=0.58, bottom_margin_fraction=0.65):
     '''Draw a 2D histogram in the appropriate styling and pause.'''
-    canvas = create_canvas(0.33, 0.58, 0.65)
+    canvas = create_canvas(margin, left_margin_fraction, bottom_margin_fraction)
 
     h.Draw("colz")
     h.GetXaxis().SetTitleOffset(1.1)
-    h.GetYaxis().SetTitleOffset(1.4)
+    if h.GetYaxis().GetTitleOffset() < 1.4:
+         h.GetYaxis().SetTitleOffset(1.4)
 
     print(f"The highest bin is: {h.GetMaximum()}", end=" ")
-    h.SetMinimum(1)
-    h.SetMaximum(maximum)
-    print(f", the maximum is set to: {h.GetMaximum()}")
 
     canvas.SetLogz()
     canvas.SetGridx(0)

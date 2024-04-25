@@ -12,7 +12,7 @@ source /cvmfs/sw-nightlies.hsf.org/key4hep/setup.sh &&
 export MARLIN_DLL=$MARLIN_DLL:${project_folder}/lib/libBohdanAna.so
 export MARLIN_DLL=$MARLIN_DLL:${project_folder}/lib/libCreateRefitPFO.so
 
-mkdir -rf job_${process}
+rm -rf job_${process}
 mkdir job_${process} && cd job_${process}
 
 # cp ${1} .

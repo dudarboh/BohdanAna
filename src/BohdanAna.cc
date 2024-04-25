@@ -220,22 +220,33 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
             // Now fill the same for the refitted track.
             ReconstructedParticle* updatedPfo = static_cast <ReconstructedParticle*> ( updatedPfos->getElementAt(i) );
             Track* refittedTrack = updatedPfo->getTracks().at(0);
+            if (refittedTrack->getOmega() == 0.f && refittedTrack->getTanLambda() == 0.f){
+                //This is empty track! Fit has failed!?
+                _refittedOmegaIP = 0.f;
+                _refittedTanLambdaIP = 0.f;
+                _refittedOmegaECAL = 0.f;
+                _refittedTanLambdaECAL = 0.f;
+                for(int j=0; j<3; j++) _refittedRecoIpMom.at(j) = 0.f;
+                for(int j=0; j<3; j++) _refittedRecoCaloPos.at(j) = 0.f;
+                for(int j=0; j<3; j++) _refittedRecoCaloMom.at(j) = 0.f;
+            }
+            else{
+                auto refittedTsIP = refittedTrack->getTrackState( TrackState::AtIP );
+                _refittedOmegaIP = refittedTsIP->getOmega();
+                _refittedTanLambdaIP = refittedTsIP->getTanLambda();
 
-            auto refittedTsIP = refittedTrack->getTrackState( TrackState::AtIP );
-            _refittedOmegaIP = refittedTsIP->getOmega();
-            _refittedTanLambdaIP = refittedTsIP->getTanLambda();
+                auto refittedTsCalo = getTrackStateAtCalorimeter( refittedTrack );
+                _refittedOmegaECAL = refittedTsCalo->getOmega();
+                _refittedTanLambdaECAL = refittedTsCalo->getTanLambda();
 
-            auto refittedTsCalo = getTrackStateAtCalorimeter( refittedTrack );
-            _refittedOmegaECAL = refittedTsCalo->getOmega();
-            _refittedTanLambdaECAL = refittedTsCalo->getTanLambda();
+                Vector3D refittedTrackPosAtCalo( refittedTsCalo->getReferencePoint() );
+                std::array<double, 3> refittedMom = UTIL::getTrackMomentum(refittedTsCalo, _bField);
+                Vector3D refittedTrackMomAtCalo(refittedMom[0], refittedMom[1], refittedMom[2]);
 
-            Vector3D refittedTrackPosAtCalo( refittedTsCalo->getReferencePoint() );
-            std::array<double, 3> refittedMom = UTIL::getTrackMomentum(refittedTsCalo, _bField);
-            Vector3D refittedTrackMomAtCalo(refittedMom[0], refittedMom[1], refittedMom[2]);
-
-            for(int j=0; j<3; j++) _refittedRecoIpMom.at(j) = updatedPfo->getMomentum()[j];
-            for(int j=0; j<3; j++) _refittedRecoCaloPos.at(j) = refittedTrackPosAtCalo[j];
-            for(int j=0; j<3; j++) _refittedRecoCaloMom.at(j) = refittedTrackMomAtCalo[j];
+                for(int j=0; j<3; j++) _refittedRecoIpMom.at(j) = updatedPfo->getMomentum()[j];
+                for(int j=0; j<3; j++) _refittedRecoCaloPos.at(j) = refittedTrackPosAtCalo[j];
+                for(int j=0; j<3; j++) _refittedRecoCaloMom.at(j) = refittedTrackMomAtCalo[j];
+            }
 
 
             streamlog_out(DEBUG8)<<"getTrackStates()"<<std::endl;
