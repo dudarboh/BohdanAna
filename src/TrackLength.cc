@@ -12,10 +12,10 @@
 using namespace EVENT;
 using dd4hep::rec::Vector3D;
 
-std::vector<HitState> getTrackStates(ReconstructedParticle* pfo, float bField, MarlinTrk::IMarlinTrkSystem* trkSystem, const UTIL::LCRelationNavigator& navToSimTrackerHits){
+std::vector<HitState> getTrackStates(EVENT::ReconstructedParticle* pfo, float bField, MarlinTrk::IMarlinTrkSystem* trkSystem, const UTIL::LCRelationNavigator& navToSimTrackerHits){
     // Refit the track and extract track state at every tracker hit along the track
     std::vector<HitState> trackStates;
-    if ( pfo->getTracks().empty() ) return trackStates;
+    if ( pfo->getTracks().size() != 1 ) return trackStates;
     std::vector<Track*> subTracks = getSubTracks( pfo->getTracks()[0] );
 
     IMPL::TrackImpl lastGoodRefittedTrack;

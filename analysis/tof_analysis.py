@@ -57,6 +57,7 @@ def scan_cuts(df):
     results = []
     for i, d_perp_cut in enumerate(d_perp_cuts):
         for j, dt_cut in enumerate(dt_cuts):
+
             results.append(f"dt_{i}_{j}")
             df = df.Define(f"tSurface_cyl_mask_{i}_{j}", f"tSurface[selectCylinderHits(dToLine, {d_perp_cut})]")\
             .Define(f"tSurface_both_masks_{i}_{j}", f"tSurface_cyl_mask_{i}_{j}[selectMedianHits(tSurface_cyl_mask_{i}_{j}, {dt_cut})]")\
@@ -71,56 +72,61 @@ df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/tof_studies.ro
 df = filter_n_layers(df, 10)
 df = smear_time(df)
 
-canvas = create_canvas()
-df_frank = df.Define("dt", "1000*(Mean( tSurface[selectFrankHits(dToLine, layerHit)]) - tofClosest0)") 
-h_frank = df_frank.Histo1D((get_rand_string(), "; T_{reco} - T_{true} (ps); N entries", 1500, -300, 300), "dt")
-df_new = df.Define("tSurface_cyl_mask", "tSurface[selectCylinderHits(dToLine, 10.3)]")\
-            .Define("tSurface_both_masks", "tSurface_cyl_mask[selectMedianHits(tSurface_cyl_mask, 171)]")\
-            .Define("dt", "1000*(Mean(tSurface_both_masks) - tofClosest0)")
-h_new = df_new.Histo1D((get_rand_string(), "; T_{reco} - T_{true} (ps); N entries", 1500, -300, 300), "dt")
-arr_frank = df_frank.AsNumpy(["dt"])
-arr_new = df_new.AsNumpy(["dt"])
+# canvas = create_canvas()
+# df_frank = df.Define("dt", "1000*(Mean( tSurface[selectFrankHits(dToLine, layerHit)]) - tofClosest0)") 
+# h_frank = df_frank.Histo1D((get_rand_string(), "; T_{reco} - T_{true} (ps); N entries", 1500, -300, 300), "dt")
+# df_new = df.Define("tSurface_cyl_mask", "tSurface[selectCylinderHits(dToLine, 10.3)]")\
+#             .Define("tSurface_both_masks", "tSurface_cyl_mask[selectMedianHits(tSurface_cyl_mask, 171)]")\
+#             .Define("dt", "1000*(Mean(tSurface_both_masks) - tofClosest0)")
+# h_new = df_new.Histo1D((get_rand_string(), "; T_{reco} - T_{true} (ps); N entries", 1500, -300, 300), "dt")
+# arr_frank = df_frank.AsNumpy(["dt"])
+# arr_new = df_new.AsNumpy(["dt"])
 
 
-_, rms90, _, _ = fit90( arr_frank["dt"] )
-print("RMS:", np.std(arr_frank["dt"]))
-print("RMS90:", rms90)
-h_frank.Draw()
-h_frank.GetYaxis().SetMaxDigits(3)
-h_frank.GetXaxis().SetTitleOffset(1)
-fit = ROOT.TF1("fit", "gaus", -20., 20.)
-fit.SetNpx(500)
-h_frank.Fit("fit", "QR0")
-fit.SetRange(-300, 300)
-fit.Draw("same")
-print("RMS fit:", h_frank.GetFunction("fit").GetParameter(2))
+# _, rms90, _, _ = fit90( arr_frank["dt"] )
+# print("RMS:", np.std(arr_frank["dt"]))
+# print("RMS90:", rms90)
+# h_frank.Draw()
+# h_frank.GetYaxis().SetMaxDigits(3)
+# h_frank.GetXaxis().SetTitleOffset(1)
+# fit = ROOT.TF1("fit", "gaus", -20., 20.)
+# fit.SetNpx(500)
+# h_frank.Fit("fit", "QR0")
+# fit.SetRange(-300, 300)
+# fit.Draw("same")
+# print("RMS fit:", h_frank.GetFunction("fit").GetParameter(2))
 
-_, rms90, _, _ = fit90( arr_new["dt"] )
-print("RMS new:", np.std(arr_new["dt"]))
-print("RMS90 new:", rms90)
-h_new.Draw("same")
-h_new.SetLineColor(4)
-h_new.GetYaxis().SetMaxDigits(3)
-h_new.GetXaxis().SetTitleOffset(1)
-fit_new = ROOT.TF1("fit_new", "gaus", -20., 20.)
-fit_new.SetNpx(500)
-h_new.Fit("fit_new", "QR0")
-fit_new.SetRange(-300, 300)
-fit_new.SetLineColor(6)
-fit_new.Draw("same")
-print("RMS fit_new new:", h_new.GetFunction("fit_new").GetParameter(2))
+# _, rms90, _, _ = fit90( arr_new["dt"] )
+# print("RMS new:", np.std(arr_new["dt"]))
+# print("RMS90 new:", rms90)
+# h_new.Draw("same")
+# h_new.SetLineColor(4)
+# h_new.GetYaxis().SetMaxDigits(3)
+# h_new.GetXaxis().SetTitleOffset(1)
+# fit_new = ROOT.TF1("fit_new", "gaus", -20., 20.)
+# fit_new.SetNpx(500)
+# h_new.Fit("fit_new", "QR0")
+# fit_new.SetRange(-300, 300)
+# fit_new.SetLineColor(6)
+# fit_new.Draw("same")
+# print("RMS fit_new new:", h_new.GetFunction("fit_new").GetParameter(2))
 
-input("waut")
+# input("waut")
 
 print("Scanning...")
 d_perp_cuts, dt_cuts, results = scan_cuts(df)
 
+
 print("Plotting...")
 gr = ROOT.TGraph2D()
+scan_results_for_konrad = []
 for i, d_perp_cut in enumerate(d_perp_cuts):
     for j, dt_cut in enumerate(dt_cuts):
         _, rms90, _, _ = fit90( results[f"dt_{i}_{j}"] )
+        scan_results_for_konrad.append([d_perp_cut, dt_cut, rms90])
         gr.SetPoint( i*len(d_perp_cuts) + j, d_perp_cut, dt_cut, rms90 )
+
+np.save("scan.npy", np.array(scan_results_for_konrad) )
 
 canvas = create_canvas(0.33, 0.58, 0.65)
 gr.Draw("colz")

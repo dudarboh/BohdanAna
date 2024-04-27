@@ -1,5 +1,7 @@
 #include "BohdanUtils.h"
 #include "marlinutil/GeometryUtil.h"
+#include "marlinutil/CalorimeterHitType.h"
+#include "marlin/VerbosityLevels.h"
 
 #include <cstring>
 #include <iomanip>
@@ -46,6 +48,12 @@ int getPhysicalMemoryUsage(){ //Note: this value is in KB!
     }
     fclose(file);
     return result;
+}
+
+void printMemoryUsage(){
+    int vm = getVirtualMemoryUsage();
+    int rm = getPhysicalMemoryUsage();
+    streamlog_out(MESSAGE)<<"VM usage: "<<vm/1000.<<"    PM usage: "<<rm/1000.<<"  MB"<<std::endl;
 }
 
 std::vector<EVENT::Track*> getSubTracks(EVENT::Track* track){
@@ -111,21 +119,61 @@ IMPL::TrackStateImpl getTrackStateAtHit(MarlinTrk::IMarlinTrack* marlinTrack, EV
     return ts;
 }
 
+float getTrackWeight(float encodedWeight){
+    return float( int(encodedWeight) % 10000 ) / 1000.f;
+}
+
+float getClusterWeight(float encodedWeight){
+    return float( int(encodedWeight) / 10000 ) / 1000.f;
+}
+
+EVENT::ReconstructedParticle* getRelatedReconstructedParticle(EVENT::MCParticle* mc, const UTIL::LCRelationNavigator& mc2pfo, const UTIL::LCRelationNavigator& pfo2mc){
+    const std::vector<EVENT::LCObject*>& objects = mc2pfo.getRelatedToObjects(mc);
+    const std::vector<float>& encodedWeights = mc2pfo.getRelatedToWeights(mc);
+    if ( objects.empty() ) return nullptr; // has NO linked recosntructed particle
+
+    //Decode track and cluster weights
+    std::vector<float> trackWeights{};
+    std::vector<float> clusterWeights{};
+    for (auto encodedWeight : encodedWeights ){
+        trackWeights.push_back( getTrackWeight(encodedWeight) );
+        clusterWeights.push_back( getClusterWeight(encodedWeight) );
+    }
+
+    //Find PFO with the highest track weight. If no track, find highest cluster weight
+    auto maxTrackWeightIt = std::max_element( trackWeights.begin(), trackWeights.end() );
+    auto maxClusterWeightIt = std::max_element( clusterWeights.begin(), clusterWeights.end() );
+    int maxIdx = std::distance(trackWeights.begin(), maxTrackWeightIt);
+    if ( *maxTrackWeightIt == 0.f ) maxIdx = std::distance(clusterWeights.begin(), maxClusterWeightIt);
+
+    EVENT::ReconstructedParticle* pfo = static_cast<EVENT::ReconstructedParticle*> (objects[maxIdx]);
+    EVENT::MCParticle* mcTest = getMC(pfo, pfo2mc);
+    // If MCParticle contributes, but it is not the largest contribution, consider it lost.
+    if ( mc != mcTest ) return nullptr;
+    return pfo;
+}
 
 EVENT::MCParticle* getMC(EVENT::ReconstructedParticle* pfo, const UTIL::LCRelationNavigator& pfo2mc){
     const std::vector<EVENT::LCObject*>& objects = pfo2mc.getRelatedToObjects(pfo);
-    const std::vector<float>& weights = pfo2mc.getRelatedToWeights(pfo);
-    if ( objects.empty() ) return nullptr;
+    const std::vector<float>& encodedWeights = pfo2mc.getRelatedToWeights(pfo);
+    if ( objects.empty() ) return nullptr; // has NO linked MCParticles
 
-    auto getTrackWeight = [](float encodedWeight){ return float( int(encodedWeight) % 10000 ) / 1000.f;};
-    auto getClusterWeight = [](float encodedWeight){ return float( int(encodedWeight) / 10000 ) / 1000.f;};
-
-    int max_i = std::max_element(weights.begin(), weights.end(), [getTrackWeight](float lhs, float rhs){return getTrackWeight(lhs) < getTrackWeight(rhs);}) - weights.begin();
-    if (getTrackWeight(max_i) == 0.f){
-        max_i = std::max_element(weights.begin(), weights.end(), [getClusterWeight](float lhs, float rhs){return getClusterWeight(lhs) < getClusterWeight(rhs);}) - weights.begin();
+    //Decode track and cluster weights
+    std::vector<float> trackWeights{};
+    std::vector<float> clusterWeights{};
+    for (auto encodedWeight : encodedWeights ){
+        trackWeights.push_back( getTrackWeight(encodedWeight) );
+        clusterWeights.push_back( getClusterWeight(encodedWeight) );
     }
-    return static_cast<EVENT::MCParticle*> (objects[max_i]);
+
+    //Find MC with the highest track weight. If no track, find highest cluster weight
+    auto maxTrackWeightIt = std::max_element( trackWeights.begin(), trackWeights.end() );
+    auto maxClusterWeightIt = std::max_element( clusterWeights.begin(), clusterWeights.end() );
+    int maxIdx = std::distance(trackWeights.begin(), maxTrackWeightIt);
+    if ( *maxTrackWeightIt == 0.f ) maxIdx = std::distance(clusterWeights.begin(), maxClusterWeightIt);
+    return static_cast<EVENT::MCParticle*> (objects[maxIdx]);
 }
+
 
 float getECALBarelRMin(){
     float cm2mm = 10.;
@@ -238,4 +286,264 @@ bool isSETHit(const EVENT::TrackerHit* hit){
     encoder.setValue( hit->getCellID0() ) ;
     int subdet = encoder[ UTIL::LCTrackerCellID::subdet() ];
     return subdet == UTIL::ILDDetID::SET;
+}
+
+float getD0True(EVENT::MCParticle* mc){
+    //Return d0 of the particle given the MC truth infromation of the vertex and momentum
+    //Copied from somewhere I hope it has no bugs...
+    double bField = MarlinUtil::getBzAtOrigin();
+    double ct = 2.99792458E-4;
+    Vector3D pos( mc->getVertex() );
+    Vector3D mom( mc->getMomentum() );
+    double q = mc->getCharge();
+    if (std::abs(q) != 1) return -1;
+    double radius = mom.rho() / (bField*ct);
+    double momPhi = std::atan2( mom.y(), mom.x() );
+    double xC = pos.x() + radius*std::cos(momPhi - q * M_PI/2.);
+    double yC = pos.y() + radius*std::sin(momPhi - q * M_PI/2.);
+
+    return q*(radius - std::hypot(xC,yC));
+}
+
+float getZ0True(EVENT::MCParticle* mc){
+    //Return z0 of the particle given the MC truth infromation of the vertex and momentum
+    //Copied from somewhere I hope it has no bugs...
+    double bField = MarlinUtil::getBzAtOrigin();
+    double ct = 2.99792458E-4;
+    Vector3D pos( mc->getVertex() );
+    Vector3D mom( mc->getMomentum() );
+
+    double q = mc->getCharge();
+    if (std::abs(q) != 1) return -1;
+    double radius = mom.rho() / (bField*ct);
+    double tanL = mom.z()/mom.rho();
+    double momPhi = std::atan2( mom.y(), mom.x() );
+    double xC = pos.x() + radius*std::cos(momPhi - q * M_PI/2.);
+    double yC = pos.y() + radius*std::sin(momPhi - q * M_PI/2.);
+
+    double phiRefPoint = std::atan2( pos.y()-yC, pos.x()-xC );
+    double phiAtPCA = std::atan2( -yC, -xC );
+    double deltaPhi = phiRefPoint - phiAtPCA;    
+    double xCircles = ( -pos.z()*q/(radius*tanL) - deltaPhi) / (2.*M_PI);
+    int nCircles, n1, n2;
+    if (xCircles >= 0.){
+        n1 = int(xCircles);
+        n2 = n1+1;
+    }
+    else{
+        n1 = int(xCircles)-1;
+        n2 = n1+1;
+    }
+    if ( std::abs(n1-xCircles) < std::abs(n2-xCircles) ) nCircles = n1;
+    else nCircles = n2;
+
+    return pos.z() + q*radius*tanL*(deltaPhi + 2.*M_PI*nCircles);
+}
+
+float getOmegaTrue(EVENT::MCParticle* mc){
+    double bField = MarlinUtil::getBzAtOrigin();
+    double ct = 2.99792458E-4;
+    Vector3D mom( mc->getMomentum() );
+    return ct*bField / mom.rho();    
+}
+
+float getTanLTrue(EVENT::MCParticle* mc){
+    Vector3D mom( mc->getMomentum() );
+    return mom.z()/mom.rho();
+}
+
+EVENT::MCParticle* getFirstStableParent(EVENT::MCParticle* mc){
+    //Return first parent up the chain, which is not short-lived resonance but somewhat stable
+    // pi/k/p are always assumed to have exactly ONE parent! If not overlay.
+    if ( mc->getParents().size() != 1 ) return nullptr;
+    EVENT::MCParticle* parent = mc->getParents()[0];
+    Vector3D parentStartPoint( parent->getVertex() );
+    Vector3D parentEndPoint( parent->getEndpoint() );
+    bool isMCInternal =  80 < parent->getPDG() && parent->getPDG() < 101;
+    bool isNotShortResonance = (parentEndPoint - parentStartPoint).r() > 0.003;
+    if ( isNotShortResonance || isMCInternal ) return parent;
+    return getFirstStableParent(parent);
+}
+
+bool isBottomPDG(unsigned int pdg){
+    std::vector<unsigned int> bottomPDGs = { 511, 521, 10511, 10521, 513, 523, 10513, 10523, 20513, 20523, 515, 525, 531, 10531, 533, 10533, 20533, 535, 541, 10541, 543, 10543, 20543, 545, 551, 10551, 100551, 110551, 200551, 210551, 553, 10553, 20553, 30553, 100553, 110553, 120553, 130553, 200553, 210553, 220553, 300553, 9000553, 9010553, 555, 10555, 20555, 100555, 110555, 120555, 200555, 557, 100557, 5122, 5112, 5212, 5222, 5114, 5214, 5224, 5132, 5232, 5312, 5322, 5314, 5324, 5332, 5334, 5142, 5242, 5412, 5422, 5414, 5424, 5342, 5432, 5434, 5442, 5444, 5512, 5522, 5514, 5524, 5532, 5534, 5542, 5544, 5554 };
+    return std::find(bottomPDGs.begin(), bottomPDGs.end(), pdg) != bottomPDGs.end();
+}
+
+bool isCharmPDG(unsigned int pdg){
+    std::vector<unsigned int> charmPDGs = { 411, 421, 10411, 10421, 413, 423, 10413, 10423, 20413, 20423, 415, 425, 431, 10431, 433, 10433, 20433, 435, 441, 10441, 100441, 443, 10443, 20443, 100443, 30443, 9000443, 9010443, 9020443, 445, 100445, 4122, 4222, 4212, 4112, 4224, 4214, 4114, 4232, 4132, 4322, 4312, 4324, 4314, 4332, 4334, 4412, 4422, 4414, 4424, 4432, 4434, 4444 };
+    return std::find(charmPDGs.begin(), charmPDGs.end(), pdg) != charmPDGs.end();
+}
+
+bool isStrangePDG(unsigned int pdg){
+    std::vector<unsigned int> strangePDGs = { 3122, 3222, 3212, 3112, 3224, 3214, 3114, 3322, 3312, 3324, 3314, 3334, 130, 310, 311, 321, 9000311, 9000321, 10311, 10321, 100311, 100321, 9010311, 9010321, 9020311, 9020321, 313, 323, 10313, 10323, 20313, 20323, 100313, 100323, 9000313, 9000323, 30313, 30323, 315, 325, 9000315, 9000325, 10315, 10325, 20315, 20325, 9010315, 9010325, 9020315, 9020325, 317, 327, 9010317, 9010327, 319, 329, 9000319, 9000329 };
+    return std::find(strangePDGs.begin(), strangePDGs.end(), pdg) != strangePDGs.end();
+}
+
+bool isMCInternalPDG(unsigned int pdg){
+    return (80 < pdg && pdg < 101) || (900 < pdg && pdg < 931) || (997 < pdg && pdg < 999) || (1900 < pdg && pdg < 1931) || (2900 < pdg && pdg < 2931) || (3900 < pdg && pdg < 3931);
+}
+
+unsigned int getQuarkTypeDecay(EVENT::MCParticle* mc){
+    //guess quark type decay. 0 - overlay, 2 - light, 3 - strange, 4 - charm, 5 - bottom
+    std::vector<unsigned int> pdgs = {};
+
+    //get PDGs of all the particles up the chain until MC internal or no parents is met.
+    EVENT::MCParticle* parent = mc;
+    pdgs.push_back( std::abs( parent->getPDG() ) );
+    if ( parent->getParents().size() != 1 ) return 0; // probably overlay
+    while ( true ){
+        parent = parent->getParents()[0];
+        if ( isMCInternalPDG( std::abs( parent->getPDG() ) ) ) break;
+        pdgs.push_back( std::abs( parent->getPDG() ) );
+        if ( parent->getParents().size() != 1 ) return 0; // probably overlay
+    }
+
+    if ( std::find_if(pdgs.begin(), pdgs.end(), [](unsigned int pdg){return isBottomPDG(pdg);}) != pdgs.end() ) return 5;
+    else if ( std::find_if(pdgs.begin(), pdgs.end(), [](unsigned int pdg){return isCharmPDG(pdg);}) != pdgs.end() ) return 4;
+    return 1;
+}
+
+std::map< dd4hep::rec::Vector3D, std::vector<EVENT::MCParticle*>, CompareVectors > getReconstructableTrueVertices(EVENT::LCEvent * evt){
+    EVENT::LCCollection* mcs = evt->getCollection("MCParticle");
+    UTIL::LCRelationNavigator mc2pfo ( evt->getCollection("MCTruthRecoLink") );
+    UTIL::LCRelationNavigator pfo2mc ( evt->getCollection("RecoMCTruthLink") );
+
+
+    std::map< Vector3D, std::vector<EVENT::MCParticle*>, CompareVectors > vtx2mcs;
+    //Find all MCParticles with reconstructed track.
+    for (int i=0; i<mcs->getNumberOfElements(); ++i){
+        EVENT::MCParticle* mc = static_cast <EVENT::MCParticle*> ( mcs->getElementAt(i) );
+        if (mc == nullptr) continue;
+        EVENT::ReconstructedParticle* pfo = getRelatedReconstructedParticle(mc, mc2pfo, pfo2mc);
+        if( pfo == nullptr || pfo->getTracks().size() == 0) continue;
+        vtx2mcs[ Vector3D( mc->getVertex() ) ].push_back(mc);
+    }
+
+    // DEBUG OUTPUT
+    streamlog_out(DEBUG2)<<"List of raw true vertices:"<<std::endl;
+    for( auto const& [vtx, mcsInVertex] : vtx2mcs ){
+        streamlog_out(DEBUG2)<<" Vertex at ("<<vtx.r()<<")  MCs:  ";
+        for(auto mc : mcsInVertex) streamlog_out(DEBUG2)<<mc<<"    ";
+        streamlog_out(DEBUG2)<<std::endl;
+    }
+
+    // Merge all vertices within 3 um. And recalculate vertex position as a weighted average
+    for(auto iter1=vtx2mcs.begin(); iter1!=vtx2mcs.end();){
+        bool isMerged = false;
+        for(auto iter2=std::next(iter1); iter2!=vtx2mcs.end();){
+            // streamlog_out(DEBUG1)<<"Beginning merge loop Iter1: "<<std::distance(vtx2mcs.begin(), iter1)<<"/"<<vtx2mcs.size()<<endl;
+            // streamlog_out(DEBUG1)<<"Beginning merge loop Iter2: "<<std::distance(vtx2mcs.begin(), iter2)<<"/"<<vtx2mcs.size()<<endl;
+            Vector3D vtx1 = iter1->first;
+            Vector3D vtx2 = iter2->first;
+            double distance = (vtx1-vtx2).r();
+            //Assuming vertex detector resolution 3um, merge vertices within 3um and recalculate vertex position as a weighted average.
+            //NOTE: I merge them in arbitrary order. Practially it doesn't matter, but this may cause a difference in some cases.
+            if (distance < 0.003){
+                isMerged = true;
+                streamlog_out(DEBUG1)<<" Vertices are being merged! Resetting the loop iterators!"<<std::endl;
+                std::vector<EVENT::MCParticle*> mcs1 = iter1->second;
+                int nMCs1 = mcs1.size();
+                std::vector<EVENT::MCParticle*> mcs2 = iter2->second;
+                int nMCs2 = mcs2.size();
+                Vector3D avgPos = (1./(nMCs1+nMCs2))*(nMCs1*vtx1 + nMCs2*vtx2);
+                std::vector<EVENT::MCParticle*> mergedMCs = mcs1;
+                mergedMCs.insert( mergedMCs.end(), mcs2.begin(), mcs2.end() );
+                vtx2mcs.erase(vtx1);
+                vtx2mcs.erase(vtx2);
+                vtx2mcs[avgPos] = mergedMCs;
+                break;
+            }
+            else{
+                ++iter2;
+            }
+        }
+        if (isMerged) iter1 = vtx2mcs.begin();
+        else ++iter1;
+    }
+
+    // DEBUG OUTPUT
+    streamlog_out(DEBUG2)<<"List of true vertices after merging:"<<std::endl;
+    for( auto const& [vtx, mcsInVertex] : vtx2mcs ){
+        streamlog_out(DEBUG2)<<" Vertex at ("<<vtx.r()<<")  MCs:  ";
+        for(auto mc : mcsInVertex) streamlog_out(DEBUG2)<<mc<<"    ";
+        streamlog_out(DEBUG2)<<std::endl;
+    }
+
+
+    // Remove any vertices with only single track as they are unfindable
+    for (auto iter = vtx2mcs.begin() ; iter != vtx2mcs.end(); ){
+        if ( (iter->second).size() < 2 ) iter = vtx2mcs.erase(iter);
+        else ++iter;
+    }
+
+    // DEBUG OUTPUT
+    streamlog_out(DEBUG2)<<"List of true vertices after merging and removing 1-track vertices:"<<std::endl;
+    for( auto const& [vtx, mcsInVertex] : vtx2mcs ){
+        streamlog_out(DEBUG2)<<" Vertex at ("<<vtx.r()<<")  MCs:  ";
+        for(auto mc : mcsInVertex) streamlog_out(DEBUG2)<<mc<<"    ";
+        streamlog_out(DEBUG2)<<std::endl;
+    }
+
+    return vtx2mcs;
+}
+
+
+unsigned int getQuarksToPythia(EVENT::LCEvent * evt){
+    // Return int, where each quark flavour goes as a separate input digit.
+    // 55 - bb, 44 - cc, 33 - ss, ..., 5423 - bcus, etc... Signs are ignored
+    std::vector<unsigned int> pdgs;
+    EVENT::LCCollection* mcs = evt->getCollection("MCParticle");
+    for (int i=0; i<mcs->getNumberOfElements(); ++i){
+        EVENT::MCParticle* mc = static_cast <EVENT::MCParticle*> ( mcs->getElementAt(i) );
+        if ( mc == nullptr || mc->getPDG() != 94 ) continue;
+        auto parents = mc->getParents();
+        for (auto parent:parents){
+            unsigned int quarkPDG = std::abs( parent->getPDG() );
+            if ( not ( 0 < quarkPDG && quarkPDG < 9 ) ){
+                streamlog_out(WARNING)<<"Unexpected not quark input to the pythia!!!"<<std::endl;
+                continue;
+            }
+            pdgs.push_back( quarkPDG );
+        }
+    }
+    unsigned int encodedPDGs = 0;
+    for(size_t i=0; i < pdgs.size(); i++) encodedPDGs += pdgs[i] * int(std::pow(10, i));
+    return encodedPDGs;
+}
+
+int getHitCaloType( EVENT::CalorimeterHit* hit ){
+    if (hit == nullptr) return -1;
+    return CHT( hit->getType() ).caloType();
+}
+int getHitCaloID( EVENT::CalorimeterHit* hit ){
+    if (hit == nullptr) return -1;
+    return CHT( hit->getType() ).caloID();
+}
+int getHitCaloLayout( EVENT::CalorimeterHit* hit ){
+    if (hit == nullptr) return -1;
+    return CHT( hit->getType() ).layout();
+}
+
+int getHitCaloLayer( EVENT::CalorimeterHit* hit ){
+    if (hit == nullptr) return -1;
+    return CHT( hit->getType() ).layer();
+}
+
+bool isEcalHit(EVENT::CalorimeterHit* hit){
+    //NOTE: This does NOT include LumiCal/BeamCal/LHCAL
+    //It is not the same as hitType.caloType() == CHT::em
+    return ( getHitCaloID(hit) == CHT::ecal);
+}
+
+EVENT::ReconstructedParticle* getRefittedPFO(EVENT::LCCollection* pfos, EVENT::LCCollection* refittedPFOs, EVENT::ReconstructedParticle* pfo){
+    int pfoIndexInCollection = -1;
+    for (int j=0; j<pfos->getNumberOfElements(); ++j){
+        auto testPFO = static_cast<EVENT::ReconstructedParticle*>( pfos->getElementAt(j) );
+        if ( pfo == testPFO ){
+            pfoIndexInCollection = j;
+            break;
+        }
+    }
+    return static_cast <EVENT::ReconstructedParticle*> ( refittedPFOs->getElementAt( pfoIndexInCollection ) );
 }

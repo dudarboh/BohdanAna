@@ -16,11 +16,18 @@
 #include <string>
 #include <vector>
 
+struct CompareVectors{
+    bool operator()(const dd4hep::rec::Vector3D& a, const dd4hep::rec::Vector3D& b) const { return a.r() < b.r(); }
+};
+
+
 int parseLine(char* line);
 
 int getVirtualMemoryUsage();
 
 int getPhysicalMemoryUsage();
+
+void printMemoryUsage();
 
 std::vector<EVENT::Track*> getSubTracks(EVENT::Track* track);
 
@@ -31,6 +38,12 @@ EVENT::TrackerHit* getSETHit(EVENT::Track* track);
 const EVENT::TrackState* getTrackStateAtCalorimeter(EVENT::Track* track);
 
 IMPL::TrackStateImpl getTrackStateAtHit(MarlinTrk::IMarlinTrack* marlinTrack, EVENT::TrackerHit* hit);
+
+float getTrackWeight(float encodedWeight);
+
+float getClusterWeight(float encodedWeight);
+
+EVENT::ReconstructedParticle* getRelatedReconstructedParticle(EVENT::MCParticle* mc, const UTIL::LCRelationNavigator& mc2pfo, const UTIL::LCRelationNavigator& pfo2mc);
 
 EVENT::MCParticle* getMC(EVENT::ReconstructedParticle* pfo, const UTIL::LCRelationNavigator& pfo2mc);
 
@@ -45,5 +58,28 @@ EVENT::SimTrackerHit* getSimTrackerHit(EVENT::TrackerHit* hit, const UTIL::LCRel
 unsigned long interpolateHexColor(unsigned long startColor, unsigned long endColor, float ratio);
 
 bool isSETHit(const EVENT::TrackerHit* hit);
+
+float getD0True(EVENT::MCParticle* mc);
+float getZ0True(EVENT::MCParticle* mc);
+float getOmegaTrue(EVENT::MCParticle* mc);
+float getTanLTrue(EVENT::MCParticle* mc);
+EVENT::MCParticle* getFirstStableParent(EVENT::MCParticle* mc);
+
+bool isBottomPDG(unsigned int pdg);
+bool isCharmPDG(unsigned int pdg);
+bool isStrangePDG(unsigned int pdg);
+bool isMCInternalPDG(unsigned int pdg);
+unsigned int getQuarkTypeDecay(EVENT::MCParticle* mc);
+unsigned int getQuarksToPythia(EVENT::LCEvent * evt);
+
+int getHitCaloType( EVENT::CalorimeterHit* hit );
+int getHitCaloID( EVENT::CalorimeterHit* hit );
+int getHitCaloLayout( EVENT::CalorimeterHit* hit );
+int getHitCaloLayer( EVENT::CalorimeterHit* hit );
+bool isEcalHit(EVENT::CalorimeterHit* hit);
+
+std::map< dd4hep::rec::Vector3D, std::vector<EVENT::MCParticle*>, CompareVectors > getReconstructableTrueVertices(EVENT::LCEvent * evt);
+
+EVENT::ReconstructedParticle* getRefittedPFO(EVENT::LCCollection* pfos, EVENT::LCCollection* refittedPFOs, EVENT::ReconstructedParticle* pfo);
 
 #endif

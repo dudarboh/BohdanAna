@@ -172,6 +172,7 @@ TStyle* getMyStyle(){
 }
 
 void displayPFO(EVENT::ReconstructedParticle* pfo){
+    if (pfo == nullptr) return;
     std::vector<EVENT::Track*> tracks;
     if ( not pfo->getTracks().empty() )
         tracks = getSubTracks(pfo->getTracks()[0]);

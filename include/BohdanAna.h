@@ -24,6 +24,13 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
         void processEvent(EVENT::LCEvent* evt);
         void end();
 
+        void fillMCTrueInfo(EVENT::MCParticle* mc, EVENT::ReconstructedParticle* pfo, bool isInReconstructablePrimaryVertex, bool isInReconstructableSecondaryVertex);
+        void fillTOFInfo(EVENT::Cluster* cluster, EVENT::Track* track, EVENT::CalorimeterHit* closestHit, const dd4hep::rec::Vector3D& trackPosAtCalo, const dd4hep::rec::Vector3D& trackMomAtCalo);
+        void fillTrackLengthInfo(EVENT::ReconstructedParticle* pfo, EVENT::MCParticle* mc, const UTIL::LCRelationNavigator& navToSimTrackerHits);
+        void fillCsvForKonrad(EVENT::Cluster* cluster, int pdg, double trueTOF, double trackLength, const dd4hep::rec::Vector3D& trackPosAtCalo, const dd4hep::rec::Vector3D& trackMomAtCalo);
+        void fillTrackStates(EVENT::ReconstructedParticle* pfo, EVENT::ReconstructedParticle* refittedPfo);
+
+
         void resetVariables();
     private:
         int _nEvent{};
@@ -32,18 +39,48 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
         std::unique_ptr<TFile> _file;
         std::unique_ptr<TTree> _tree;
 
-        int _global_pfo_number{};
         bool _produce_csv_output{};
         std::ofstream _csv_output_file;
+        int _global_pfo_number{};
 
+        int _quarksToPythia{}; // event information!
+        // True infromation of MCParticle
         int _pdg{};
+        std::array<float, 3> _mcVtx{};
+        std::array<float, 3> _mcMom{};
+        float _d0True{};
+        float _z0True{};
+        float _omegaTrue{};
+        float _tanLambdaTrue{};
+        float _timeTrue{};
+        bool _isOverlay{};
+        bool _isSimulated{};
+        int _imidiateParentPDG{};
+        int _firstStableParentPDG{};
+        bool _isBottomQuarkDecay{};
+        bool _isCharmQuarkDecay{};
+        bool _isHadronisationDecay{};
+        bool _isInReconstructablePrimaryVertex{};
+        bool _isInReconstructableSecondaryVertex{};
+        bool _isReconstructed{};
+        bool _hasTrack{};
+        bool _hasShower{};
+
+        //True vertex information
+        int _nTracksInVertexTrue{};
+        bool _isV0True{};
+        bool _oppositeChargeTrue{};
+        float _invMassTrue{};
+        float _minEnergyTrue{};
+        float _cosThetaTrue{};
+        float _cosThetaIPTrue{};
+
         float _dEdx{};
         float _omegaIP{};
         float _omegaECAL{};
         float _tanLambdaIP{};
         float _tanLambdaECAL{};
 
-        std::array<float, 3> _mcMom{};
         std::array<float, 3> _recoIpMom{};
         std::array<float, 3> _recoCaloPos{};
         std::array<float, 3> _recoCaloMom{};

@@ -56,23 +56,6 @@ float getHitTof( EVENT::CalorimeterHit* hit, const dd4hep::rec::Vector3D& posAtE
     return RandGauss::shoot(hit->getTime(), timeResolution) - (hitPos - posAtEcal).r()/CLHEP::c_light;
 }
 
-int getHitCaloType( EVENT::CalorimeterHit* hit ){
-    if (hit == nullptr) return -1;
-    return CHT( hit->getType() ).caloType();
-}
-int getHitCaloID( EVENT::CalorimeterHit* hit ){
-    if (hit == nullptr) return -1;
-    return CHT( hit->getType() ).caloID();
-}
-int getHitCaloLayout( EVENT::CalorimeterHit* hit ){
-    if (hit == nullptr) return -1;
-    return CHT( hit->getType() ).layout();
-}
-
-int getHitCaloLayer( EVENT::CalorimeterHit* hit ){
-    if (hit == nullptr) return -1;
-    return CHT( hit->getType() ).layer();
-}
 
 EVENT::MCParticle* getHitEarliestMC( EVENT::CalorimeterHit* hit, const UTIL::LCRelationNavigator& navToSimCalorimeterHits ){
     // I merge all Calorimeter hit relation collections in the steering file. ENSURE this happens!

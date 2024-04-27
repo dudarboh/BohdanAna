@@ -150,239 +150,312 @@ void BohdanAna::init(){
     }
 }
 
+void BohdanAna::fillMCTrueInfo(EVENT::MCParticle* mc, EVENT::ReconstructedParticle* pfo, bool isInReconstructablePrimaryVertex, bool isInReconstructableSecondaryVertex){
+    _pdg = mc->getPDG();
+    for(int j=0; j<3; j++) _mcVtx.at(j) = mc->getVertex()[j];
+    for(int j=0; j<3; j++) _mcMom.at(j) = mc->getMomentum()[j];
+    _d0True = getD0True(mc);
+    _z0True = getZ0True(mc);
+    _omegaTrue = getOmegaTrue(mc);
+    _tanLambdaTrue = getTanLTrue(mc);
+    _timeTrue = mc->getTime();
+    _isOverlay = mc->isOverlay();
+    _isSimulated = mc->isCreatedInSimulation();
+    if ( not mc->getParents().empty() ){
+        _imidiateParentPDG = mc->getParents()[0]->getPDG();
+        MCParticle* firstStableParent = getFirstStableParent(mc);
+        if ( firstStableParent != nullptr ) _firstStableParentPDG = firstStableParent->getPDG();
+    }
+    unsigned int quarkTypeDecay = getQuarkTypeDecay(mc);
+    _isBottomQuarkDecay = quarkTypeDecay == 5;
+    _isCharmQuarkDecay = quarkTypeDecay == 4;
+    _isHadronisationDecay = not _isBottomQuarkDecay && not _isCharmQuarkDecay;
+
+    _isInReconstructablePrimaryVertex = isInReconstructablePrimaryVertex;
+    _isInReconstructableSecondaryVertex = isInReconstructableSecondaryVertex;
+    _isReconstructed = pfo != nullptr;
+
+    if ( _isReconstructed ){
+        // Have a WELL-DEFINED track/cluster. I do not store reco infromation of weird PFOs with 2 tracks/showers...
+        _hasTrack = pfo->getTracks().size() == 1;
+        _hasShower = pfo->getClusters().size() == 1;
+    }
+
+    std::cout<<"Checking MC particle information"<<std::endl;
+    std::cout<<"_pdg: "<<_pdg<<std::endl;
+    std::cout<<"_vtxPos: ("<<_mcVtx[0]<<", "<<_mcVtx[1]<<", "<<_mcVtx[2]<<")"<<std::endl;
+    std::cout<<"_vtxMom: ("<<_mcMom[0]<<", "<<_mcMom[1]<<", "<<_mcMom[2]<<")"<<std::endl;
+    std::cout<<"_d0True: "<<_d0True<<std::endl;
+    std::cout<<"_z0True: "<<_z0True<<std::endl;
+    std::cout<<"_omegaTrue: "<<_omegaTrue<<std::endl;
+    std::cout<<"_tanLambdaTrue: "<<_tanLambdaTrue<<std::endl;
+    std::cout<<"_timeTrue: "<<_timeTrue<<std::endl;
+    std::cout<<"_isOverlay: "<<_isOverlay<<std::endl;
+    std::cout<<"_isSimulated: "<<_isSimulated<<std::endl;
+    std::cout<<"_imidiateParentPDG: "<<_imidiateParentPDG<<std::endl;
+    std::cout<<"_firstStableParentPDG: "<<_firstStableParentPDG<<std::endl;
+    std::cout<<"_isBottomQuarkDecay: "<<_isBottomQuarkDecay<<std::endl;
+    std::cout<<"_isCharmQuarkDecay: "<<_isCharmQuarkDecay<<std::endl;
+    std::cout<<"_isHadronisationDecay: "<<_isHadronisationDecay<<std::endl;
+    std::cout<<"_isInReconstructablePrimaryVertex: "<<_isInReconstructablePrimaryVertex<<std::endl;
+    std::cout<<"_isInReconstructableSecondaryVertex: "<<_isInReconstructableSecondaryVertex<<std::endl;
+    std::cout<<"_isReconstructed: "<<_isReconstructed<<std::endl;
+    std::cout<<"_hasTrack: "<<_hasTrack<<std::endl;
+    std::cout<<"_hasShower: "<<_hasShower<<std::endl;
+
+}
+
+void BohdanAna::fillTOFInfo(EVENT::Cluster* cluster, EVENT::Track* track, EVENT::CalorimeterHit* closestHit, const dd4hep::rec::Vector3D& trackPosAtCalo, const dd4hep::rec::Vector3D& trackMomAtCalo){
+    auto selectedFrankHits = selectFrankEcalHits(cluster, trackPosAtCalo, trackMomAtCalo, 10);
+
+    for (size_t j = 0; j < _resolutions.size(); j++){
+        float res = _resolutions[j]/1000.; // in ns
+        _tofClosest.at(j) = getHitTof(closestHit, trackPosAtCalo, res);
+        _tofAverage.at(j) = getTofFrankAvg(selectedFrankHits, trackPosAtCalo, res);
+        _tofFit.at(j) = getTofFrankFit(selectedFrankHits, trackPosAtCalo, res);
+        std::tie(_tofSETFront.at(j), _tofSETBack.at(j)) = getTofSET(track, res);
+    }
+
+    for (auto* hit: cluster->getCalorimeterHits()){
+        //Count only ECAL hits. No LumiCal, BeamCal, HCAL, Yoke hits are recorded!
+        if (not isEcalHit(hit) ) continue;
+        _xHit.push_back(hit->getPosition()[0]);
+        _yHit.push_back(hit->getPosition()[1]);
+        _zHit.push_back(hit->getPosition()[2]);
+        _tHit.push_back(hit->getTime());
+        _layerHit.push_back( CHT( hit->getType() ).layer() );
+        _energyHit.push_back( hit->getEnergy() );
+    }
+    _nHits = _tHit.size();
+}
+
+void BohdanAna::fillTrackLengthInfo(EVENT::ReconstructedParticle* pfo, EVENT::MCParticle* mc, const UTIL::LCRelationNavigator& navToSimTrackerHits){
+    if (pfo == nullptr || pfo->getTracks().size() != 1) return;
+    auto track = pfo->getTracks()[0];
+    _trackLength_IDR = getTrackLengthIDR(track);
+    _trackLength_SHA_phiLambda_IP = getTrackLengthSHA(track, TrackState::AtIP, TrackLengthOption::phiLambda);
+    _trackLength_SHA_phiZed_IP = getTrackLengthSHA(track, TrackState::AtIP, TrackLengthOption::phiZed);
+    _trackLength_SHA_zedLambda_IP = getTrackLengthSHA(track, TrackState::AtIP, TrackLengthOption::zedLambda);
+    _trackLength_SHA_phiLambda_ECAL = getTrackLengthSHA(track, TrackState::AtCalorimeter, TrackLengthOption::phiLambda);
+    _trackLength_SHA_phiZed_ECAL = getTrackLengthSHA(track, TrackState::AtCalorimeter, TrackLengthOption::phiZed);
+    _trackLength_SHA_zedLambda_ECAL = getTrackLengthSHA(track, TrackState::AtCalorimeter, TrackLengthOption::zedLambda);
+
+    std::vector<HitState> trackHitStates = getTrackStates(pfo, _bField, _trkSystem, navToSimTrackerHits);
+    std::vector<IMPL::TrackStateImpl> trackStates;
+    for(auto& hitState: trackHitStates){
+        trackStates.push_back(hitState.ts);
+
+        if ( hitState.simHit != nullptr && hitState.simHit->getMCParticle() != mc ) _cleanTrack = false;
+    }
+
+    std::tie(_trackLength_IKF_phiLambda, _harmonicMom_IKF_phiLambda) = getTrackLengthIKF(trackStates, _bField, TrackLengthOption::phiLambda);
+    std::tie(_trackLength_IKF_phiZed, _harmonicMom_IKF_phiZed) = getTrackLengthIKF(trackStates, _bField, TrackLengthOption::phiZed);
+    std::tie(_trackLength_IKF_zedLambda, _harmonicMom_IKF_zedLambda) = getTrackLengthIKF(trackStates, _bField, TrackLengthOption::zedLambda);
+
+    auto it = std::find_if(trackHitStates.begin(), trackHitStates.end(), [](const HitState& hitState){return isSETHit(hitState.hit);});
+    bool foundSETHit = it != trackHitStates.end();
+    if (foundSETHit){
+        int idx = it - trackHitStates.begin();
+        std::vector<IMPL::TrackStateImpl> trackStatesToSET = std::vector<IMPL::TrackStateImpl>(trackStates.begin(), trackStates.begin() + idx + 1 );
+        std::tie(_trackLengthToSET_IKF_phiLambda, _harmonicMomToSET_IKF_phiLambda) = getTrackLengthIKF(trackStatesToSET, _bField, TrackLengthOption::phiLambda);
+        std::tie(_trackLengthToSET_IKF_phiZed, _harmonicMomToSET_IKF_phiZed) = getTrackLengthIKF(trackStatesToSET, _bField, TrackLengthOption::phiZed);
+        std::tie(_trackLengthToSET_IKF_zedLambda, _harmonicMomToSET_IKF_zedLambda) = getTrackLengthIKF(trackStatesToSET, _bField, TrackLengthOption::zedLambda);
+    }
+
+}
+void BohdanAna::fillCsvForKonrad(EVENT::Cluster* cluster, int pdg, double trueTOF, double trackLength, const dd4hep::rec::Vector3D& trackPosAtCalo, const dd4hep::rec::Vector3D& trackMomAtCalo){
+    _global_pfo_number++;
+    for (auto* hit:cluster->getCalorimeterHits()){
+        //Count only ECAL hits. No LumiCal, BeamCal, HCAL, Yoke hits are recorded!
+        if ( not isEcalHit(hit) ) continue;
+
+        auto hitCaloID = getHitCaloID(hit);
+        auto hitLayout = getHitCaloLayout(hit);
+        auto hitLayer = getHitCaloLayer(hit);
+
+        std::stringstream ss;
+        ss<<_global_pfo_number<<", ";
+        ss<<pdg<<", ";
+        ss<<std::scientific<<std::setprecision(5)<<trackLength<<", ";
+
+        ss<<std::scientific<<std::setprecision(4)<<trackMomAtCalo.r()<<", ";
+        ss<<std::scientific<<std::setprecision(4)<<trackMomAtCalo.trans()<<", ";
+        ss<<std::scientific<<std::setprecision(4)<<trackMomAtCalo.x()<<", ";
+        ss<<std::scientific<<std::setprecision(4)<<trackMomAtCalo.y()<<", ";
+        ss<<std::scientific<<std::setprecision(4)<<trackMomAtCalo.z()<<", ";
+
+        ss<<std::scientific<<std::setprecision(4)<<trackPosAtCalo.x()<<", ";
+        ss<<std::scientific<<std::setprecision(4)<<trackPosAtCalo.y()<<", ";
+        ss<<std::scientific<<std::setprecision(4)<<trackPosAtCalo.z()<<", ";
+        ss<<std::scientific<<std::setprecision(6)<<trueTOF<<", ";
+        ss<<hitCaloID<<", "; // type of hit, i.e. ECal, LumiCal etc. hit
+        ss<<hitLayout<<", ";
+        ss<<std::scientific<<std::setprecision(6)<<hit->getTime()<<", ";
+        ss<<std::scientific<<std::setprecision(6)<<CLHEP::RandGauss::shoot(hit->getTime(), 0.05)<<", ";
+        ss<<std::scientific<<std::setprecision(6)<<CLHEP::RandGauss::shoot(hit->getTime(), 0.1)<<", ";
+        ss<<std::scientific<<std::setprecision(6)<<hit->getEnergy()<<", ";
+        ss<<hitLayer<<", ";
+        ss<<std::scientific<<std::setprecision(6)<<hit->getPosition()[0]<<", ";
+        ss<<std::scientific<<std::setprecision(6)<<hit->getPosition()[1]<<", ";
+        ss<<std::scientific<<std::setprecision(6)<<hit->getPosition()[2]<<"\n";
+
+        _csv_output_file << ss.str();
+    }
+}
+
+void BohdanAna::fillTrackStates(EVENT::ReconstructedParticle* pfo, EVENT::ReconstructedParticle* refittedPfo){
+    if (pfo == nullptr || pfo->getTracks().size() != 1) return;
+    auto track = pfo->getTracks()[0];
+    _dEdx = track->getdEdx();
+    auto tsIP = track->getTrackState( TrackState::AtIP );
+    _omegaIP = tsIP->getOmega();
+    _tanLambdaIP = tsIP->getTanLambda();
+    _d0IP = tsIP->getD0();
+    _z0IP = tsIP->getZ0();
+    _phiIP = tsIP->getPhi();
+
+    _d0ErrBefore = std::sqrt( track->getCovMatrix()[0] );
+    _d0ErrAfter = std::sqrt( trackAfter->getCovMatrix()[0] );
+    _z0ErrBefore = std::sqrt( track->getCovMatrix()[9] );
+    _z0ErrAfter = std::sqrt( trackAfter->getCovMatrix()[9] );
+
+    auto tsECAL = getTrackStateAtCalorimeter( track );
+    _omegaECAL = tsECAL->getOmega();
+    _tanLambdaECAL = tsECAL->getTanLambda();
+    _d0ECAL = tsECAL->getD0();
+    _z0ECAL = tsECAL->getZ0();
+    _phiECAL = tsECAL->getPhi();
+
+
+    auto refittedTrack = refittedPfo->getTracks()[0];
+
+    std::array<double, 3> mom = UTIL::getTrackMomentum(tsCalo, _bField);
+    Vector3D trackMomAtCalo(mom[0], mom[1], mom[2]);
+
+    for(int j=0; j<3; j++) _recoIpMom.at(j) = pfo->getMomentum()[j];
+    for(int j=0; j<3; j++) _recoCaloPos.at(j) = trackPosAtCalo[j];
+    for(int j=0; j<3; j++) _recoCaloMom.at(j) = trackMomAtCalo[j];
+
+    // Now fill the same for the refitted track.
+    ReconstructedParticle* updatedPfo = static_cast <ReconstructedParticle*> ( updatedPfos->getElementAt(i) );
+    if (refittedTrack->getOmega() == 0.f && refittedTrack->getTanLambda() == 0.f){
+        //This is empty track! Fit has failed!?
+        _refittedOmegaIP = 0.f;
+        _refittedTanLambdaIP = 0.f;
+        _refittedOmegaECAL = 0.f;
+        _refittedTanLambdaECAL = 0.f;
+        for(int j=0; j<3; j++) _refittedRecoIpMom.at(j) = 0.f;
+        for(int j=0; j<3; j++) _refittedRecoCaloPos.at(j) = 0.f;
+        for(int j=0; j<3; j++) _refittedRecoCaloMom.at(j) = 0.f;
+    }
+    else{
+        auto refittedTsIP = refittedTrack->getTrackState( TrackState::AtIP );
+        _refittedOmegaIP = refittedTsIP->getOmega();
+        _refittedTanLambdaIP = refittedTsIP->getTanLambda();
+
+        auto refittedTsCalo = getTrackStateAtCalorimeter( refittedTrack );
+        _refittedOmegaECAL = refittedTsCalo->getOmega();
+        _refittedTanLambdaECAL = refittedTsCalo->getTanLambda();
+
+        Vector3D refittedTrackPosAtCalo( refittedTsCalo->getReferencePoint() );
+        std::array<double, 3> refittedMom = UTIL::getTrackMomentum(refittedTsCalo, _bField);
+        Vector3D refittedTrackMomAtCalo(refittedMom[0], refittedMom[1], refittedMom[2]);
+
+        for(int j=0; j<3; j++) _refittedRecoIpMom.at(j) = updatedPfo->getMomentum()[j];
+        for(int j=0; j<3; j++) _refittedRecoCaloPos.at(j) = refittedTrackPosAtCalo[j];
+        for(int j=0; j<3; j++) _refittedRecoCaloMom.at(j) = refittedTrackMomAtCalo[j];
+    }
+
+
+
+}
+
 void BohdanAna::processEvent(EVENT::LCEvent * evt){
     ++_nEvent;
     streamlog_out(MESSAGE)<<"==================== Event: "<<_nEvent<<std::endl;
-    // int vm = getVirtualMemoryUsage();
-    // int rm = getPhysicalMemoryUsage();
-    // streamlog_out(MESSAGE)<<"VM usage: "<<vm/1000.<<"    PM usage: "<<rm/1000.<<"  MB"<<std::endl;
 
+    LCCollection* mcs = evt->getCollection("MCParticle");
     LCCollection* pfos = evt->getCollection("PandoraPFOs");
     LCCollection* updatedPfos = evt->getCollection("updatedPandoraPFOs");
+    LCRelationNavigator mc2pfo ( evt->getCollection("MCTruthRecoLink") );
     LCRelationNavigator pfo2mc ( evt->getCollection("RecoMCTruthLink") );
     LCRelationNavigator navToSimTrackerHits( evt->getCollection("TrackerHitsRelations") );
     LCRelationNavigator navToSimCalorimeterHits( evt->getCollection("CalorimeterHitsRelations") );
 
-    for (int i=0; i<pfos->getNumberOfElements(); ++i){
-        streamlog_out(DEBUG8)<<"======== PFO: "<<i+1<<std::endl;
+    Vector3D truePrimaryVertex( static_cast<MCParticle*>(mcs->getElementAt(0))->getVertex() );
+    std::map< Vector3D, std::vector<MCParticle*>, CompareVectors > reconstructableTrueVertices = getReconstructableTrueVertices(evt);
+
+    // No primary vertex!? Throw away this event
+    if ( reconstructableTrueVertices.size() == 0 ) return;
+    // Split primary and secondary
+    auto closestToTruePrimaryVertex = [&truePrimaryVertex](const std::pair<Vector3D, std::vector<MCParticle*> >& a, const std::pair<Vector3D, std::vector<MCParticle*> >& b){return (a.first - truePrimaryVertex).r() < (b.first - truePrimaryVertex).r();};
+    auto primaryVertexIter = std::min_element(reconstructableTrueVertices.begin(), reconstructableTrueVertices.end(), closestToTruePrimaryVertex);
+    Vector3D reconstructablePrimaryVertexPosition = primaryVertexIter->first;
+    std::vector<MCParticle*> reconstructablePrimaryVertexMCs = primaryVertexIter->second;
+    reconstructableTrueVertices.erase( primaryVertexIter );
+    auto reconstructableSecondaryVertices = reconstructableTrueVertices;
+
+    //LOOP OVER ALL MCParticles and store only pointers to pi/k/p/gamma
+    for (int i=0; i<mcs->getNumberOfElements(); ++i){
         resetVariables();
-        ReconstructedParticle* pfo = static_cast <ReconstructedParticle*> ( pfos->getElementAt(i) );
-        int nTracks = pfo->getTracks().size();
-        int nClusters = pfo->getClusters().size();
-        // only simple cases
-        if( nTracks > 1 || nClusters != 1) continue;
-        MCParticle* mc = getMC(pfo, pfo2mc);
+
+        MCParticle* mc = static_cast <MCParticle*> ( mcs->getElementAt(i) );
         if (mc == nullptr) continue;
-        _pdg = mc->getPDG();
-        for(int j=0; j<3; j++) _mcMom.at(j) = mc->getMomentum()[j];
+        bool isHadron = std::abs( mc->getPDG() ) == 211 || std::abs( mc->getPDG() ) == 321 || std::abs( mc->getPDG() ) == 2212;
+        if ( not isHadron ) continue;
+        ReconstructedParticle* pfo = getRelatedReconstructedParticle(mc, mc2pfo, pfo2mc);
+        auto refittedPFO = getRefittedPFO(pfos, updatedPfos, pfo);
 
-        bool isHadron = std::abs(_pdg) == 211 || std::abs(_pdg) == 321 || std::abs(_pdg) == 2212;
-        bool isPhoton = std::abs(_pdg) == 22;
-        streamlog_out(DEBUG8)<<"PDG: "<<_pdg<<"   isHadron: "<<isHadron<<"   isPhoton: "<<isPhoton<<std::endl;
-
-        Cluster* cluster = pfo->getClusters().at(0);
-        streamlog_out(DEBUG8)<<"Cluster with N hits: "<<cluster->getCalorimeterHits().size()<<std::endl;
-
-        for (const auto& hit:cluster->getCalorimeterHits()){
-            //Count only ECAL hits. No LumiCal, BeamCal, HCAL, Yoke hits are recorded!
-            CHT hitType( hit->getType() );
-            bool isEcal = (hitType.caloID() == CHT::ecal);
-            if (!isEcal) continue;
-            _xHit.push_back(hit->getPosition()[0]);
-            _yHit.push_back(hit->getPosition()[1]);
-            _zHit.push_back(hit->getPosition()[2]);
-            _tHit.push_back(hit->getTime());
-            _layerHit.push_back( hitType.layer() );
-            _energyHit.push_back( hit->getEnergy() );
-        }
-        _nHits = _tHit.size();
-
-        if (isHadron && nTracks == 1){
-            Track* track = pfo->getTracks().at(0);
-            _dEdx = track->getdEdx();
-
-            auto tsIP = track->getTrackState( TrackState::AtIP );
-            _omegaIP = tsIP->getOmega();
-            _tanLambdaIP = tsIP->getTanLambda();
-
-            auto tsCalo = getTrackStateAtCalorimeter( track );
-            _omegaECAL = tsCalo->getOmega();
-            _tanLambdaECAL = tsCalo->getTanLambda();
-
-            Vector3D trackPosAtCalo( tsCalo->getReferencePoint() );
-            std::array<double, 3> mom = UTIL::getTrackMomentum(tsCalo, _bField);
-            Vector3D trackMomAtCalo(mom[0], mom[1], mom[2]);
-
-            for(int j=0; j<3; j++) _recoIpMom.at(j) = pfo->getMomentum()[j];
-            for(int j=0; j<3; j++) _recoCaloPos.at(j) = trackPosAtCalo[j];
-            for(int j=0; j<3; j++) _recoCaloMom.at(j) = trackMomAtCalo[j];
-
-            // Now fill the same for the refitted track.
-            ReconstructedParticle* updatedPfo = static_cast <ReconstructedParticle*> ( updatedPfos->getElementAt(i) );
-            Track* refittedTrack = updatedPfo->getTracks().at(0);
-            if (refittedTrack->getOmega() == 0.f && refittedTrack->getTanLambda() == 0.f){
-                //This is empty track! Fit has failed!?
-                _refittedOmegaIP = 0.f;
-                _refittedTanLambdaIP = 0.f;
-                _refittedOmegaECAL = 0.f;
-                _refittedTanLambdaECAL = 0.f;
-                for(int j=0; j<3; j++) _refittedRecoIpMom.at(j) = 0.f;
-                for(int j=0; j<3; j++) _refittedRecoCaloPos.at(j) = 0.f;
-                for(int j=0; j<3; j++) _refittedRecoCaloMom.at(j) = 0.f;
-            }
-            else{
-                auto refittedTsIP = refittedTrack->getTrackState( TrackState::AtIP );
-                _refittedOmegaIP = refittedTsIP->getOmega();
-                _refittedTanLambdaIP = refittedTsIP->getTanLambda();
-
-                auto refittedTsCalo = getTrackStateAtCalorimeter( refittedTrack );
-                _refittedOmegaECAL = refittedTsCalo->getOmega();
-                _refittedTanLambdaECAL = refittedTsCalo->getTanLambda();
-
-                Vector3D refittedTrackPosAtCalo( refittedTsCalo->getReferencePoint() );
-                std::array<double, 3> refittedMom = UTIL::getTrackMomentum(refittedTsCalo, _bField);
-                Vector3D refittedTrackMomAtCalo(refittedMom[0], refittedMom[1], refittedMom[2]);
-
-                for(int j=0; j<3; j++) _refittedRecoIpMom.at(j) = updatedPfo->getMomentum()[j];
-                for(int j=0; j<3; j++) _refittedRecoCaloPos.at(j) = refittedTrackPosAtCalo[j];
-                for(int j=0; j<3; j++) _refittedRecoCaloMom.at(j) = refittedTrackMomAtCalo[j];
-            }
-
-
-            streamlog_out(DEBUG8)<<"getTrackStates()"<<std::endl;
-            std::vector<HitState> trackHitStates = getTrackStates(pfo, _bField, _trkSystem, navToSimTrackerHits);
-            std::vector<IMPL::TrackStateImpl> trackStates;
-            for(auto& hitState: trackHitStates){
-                trackStates.push_back(hitState.ts);
-
-                if ( hitState.simHit != nullptr && hitState.simHit->getMCParticle() != mc ) _cleanTrack = false;
-            }
-
-            _trackLength_IDR = getTrackLengthIDR(track);
-            streamlog_out(DEBUG8)<<"getTrackLengthSHA(AtIP)"<<std::endl;
-            _trackLength_SHA_phiLambda_IP = getTrackLengthSHA(track, TrackState::AtIP, TrackLengthOption::phiLambda);
-            _trackLength_SHA_phiZed_IP = getTrackLengthSHA(track, TrackState::AtIP, TrackLengthOption::phiZed);
-            _trackLength_SHA_zedLambda_IP = getTrackLengthSHA(track, TrackState::AtIP, TrackLengthOption::zedLambda);
-            streamlog_out(DEBUG8)<<"getTrackLengthSHA(AtCalorimeter)"<<std::endl;
-            _trackLength_SHA_phiLambda_ECAL = getTrackLengthSHA(track, TrackState::AtCalorimeter, TrackLengthOption::phiLambda);
-            _trackLength_SHA_phiZed_ECAL = getTrackLengthSHA(track, TrackState::AtCalorimeter, TrackLengthOption::phiZed);
-            _trackLength_SHA_zedLambda_ECAL = getTrackLengthSHA(track, TrackState::AtCalorimeter, TrackLengthOption::zedLambda);
-            streamlog_out(DEBUG8)<<"getTrackLengthIKF()"<<std::endl;
-            std::tie(_trackLength_IKF_phiLambda, _harmonicMom_IKF_phiLambda) = getTrackLengthIKF(trackStates, _bField, TrackLengthOption::phiLambda);
-            std::tie(_trackLength_IKF_phiZed, _harmonicMom_IKF_phiZed) = getTrackLengthIKF(trackStates, _bField, TrackLengthOption::phiZed);
-            std::tie(_trackLength_IKF_zedLambda, _harmonicMom_IKF_zedLambda) = getTrackLengthIKF(trackStates, _bField, TrackLengthOption::zedLambda);
-
-            auto it = std::find_if(trackHitStates.begin(), trackHitStates.end(), [](const HitState& hitState){return isSETHit(hitState.hit);});
-            bool foundSETHit = it != trackHitStates.end();
-            if (foundSETHit){
-                int idx = it - trackHitStates.begin();
-                std::vector<IMPL::TrackStateImpl> trackStatesToSET = std::vector<IMPL::TrackStateImpl>(trackStates.begin(), trackStates.begin() + idx + 1 );
-                std::tie(_trackLengthToSET_IKF_phiLambda, _harmonicMomToSET_IKF_phiLambda) = getTrackLengthIKF(trackStatesToSET, _bField, TrackLengthOption::phiLambda);
-                std::tie(_trackLengthToSET_IKF_phiZed, _harmonicMomToSET_IKF_phiZed) = getTrackLengthIKF(trackStatesToSET, _bField, TrackLengthOption::phiZed);
-                std::tie(_trackLengthToSET_IKF_zedLambda, _harmonicMomToSET_IKF_zedLambda) = getTrackLengthIKF(trackStatesToSET, _bField, TrackLengthOption::zedLambda);
-            }
-
-            streamlog_out(DEBUG8)<<"getTofClosest()"<<std::endl;
-            CalorimeterHit* closestHit = getClosestHit(cluster, trackPosAtCalo);
-            //NOTE: We assume no time measurementin the LumiCal! This cut should be consistent with one in the loops over ECAL hits!
-            // We ignore the particle if the closest hit is not in the ECAL, e.g. LumiCal.
-            bool notEcalClosestHit = ! (CHT( closestHit->getType() ).caloID() == CHT::ecal);
-            if ( notEcalClosestHit ) continue;
-
-            _typeClosest = getHitCaloType(closestHit);
-            _caloIDClosest = getHitCaloID(closestHit);
-            _layoutClosest = getHitCaloLayout(closestHit);
-            _layerClosest = getHitCaloLayer(closestHit);
-            _cleanClosestHit = getHitEarliestMC(closestHit, navToSimCalorimeterHits) == mc;
-
-            streamlog_out(DEBUG8)<<"selectFrankEcalHits()"<<std::endl;
-            auto selectedHits = selectFrankEcalHits(cluster, trackPosAtCalo, trackMomAtCalo, 10);
-            streamlog_out(DEBUG8)<<"Calculating TOFs for all resolutions"<<std::endl;
-            for (size_t j = 0; j < _resolutions.size(); j++){
-                float res = _resolutions[j]/1000.; // in ns
-                _tofClosest.at(j) = getHitTof(closestHit, trackPosAtCalo, res);
-                _tofAverage.at(j) = getTofFrankAvg(selectedHits, trackPosAtCalo, res);
-                _tofFit.at(j) = getTofFrankFit(selectedHits, trackPosAtCalo, res);
-                std::tie(_tofSETFront.at(j), _tofSETBack.at(j)) = getTofSET(track, res);
-            }
-
-            if (_produce_csv_output){
-                _global_pfo_number++;
-
-                for (const auto& hit:cluster->getCalorimeterHits()){
-                    //Count only ECAL hits. No LumiCal, BeamCal, HCAL, Yoke hits are recorded!
-                    bool notEcalHit = ! (CHT( hit->getType() ).caloID() == CHT::ecal);
-                    if ( notEcalHit ) continue;
-
-                    auto hitCaloID = getHitCaloID(hit);
-                    auto hitLayout = getHitCaloLayout(hit);
-                    auto hitLayer = getHitCaloLayer(hit);
-
-                    std::stringstream ss;
-                    ss<<_global_pfo_number<<", ";
-                    ss<<_pdg<<", ";
-                    ss<<std::scientific<<std::setprecision(5)<<_trackLength_IKF_zedLambda<<", ";
-
-                    ss<<std::scientific<<std::setprecision(4)<<trackMomAtCalo.r()<<", ";
-                    ss<<std::scientific<<std::setprecision(4)<<trackMomAtCalo.trans()<<", ";
-                    ss<<std::scientific<<std::setprecision(4)<<trackMomAtCalo[0]<<", ";
-                    ss<<std::scientific<<std::setprecision(4)<<trackMomAtCalo[1]<<", ";
-                    ss<<std::scientific<<std::setprecision(4)<<trackMomAtCalo[2]<<", ";
-
-                    ss<<std::scientific<<std::setprecision(4)<<trackPosAtCalo[0]<<", ";
-                    ss<<std::scientific<<std::setprecision(4)<<trackPosAtCalo[1]<<", ";
-                    ss<<std::scientific<<std::setprecision(4)<<trackPosAtCalo[2]<<", ";
-                    ss<<std::scientific<<std::setprecision(6)<<_tofClosest[0]<<", ";
-                    ss<<hitCaloID<<", "; // type of hit, i.e. ECal, LumiCal etc. hit
-                    ss<<hitLayout<<", ";
-                    ss<<std::scientific<<std::setprecision(6)<<hit->getTime()<<", ";
-                    ss<<std::scientific<<std::setprecision(6)<<CLHEP::RandGauss::shoot(hit->getTime(), 0.05)<<", ";
-                    ss<<std::scientific<<std::setprecision(6)<<CLHEP::RandGauss::shoot(hit->getTime(), 0.1)<<", ";
-                    ss<<std::scientific<<std::setprecision(6)<<hit->getEnergy()<<", ";
-                    ss<<hitLayer<<", ";
-                    ss<<std::scientific<<std::setprecision(6)<<hit->getPosition()[0]<<", ";
-                    ss<<std::scientific<<std::setprecision(6)<<hit->getPosition()[1]<<", ";
-                    ss<<std::scientific<<std::setprecision(6)<<hit->getPosition()[2]<<"\n";
-
-                    _csv_output_file << ss.str();
-                }
-            }
-
-        }
-        else if( isPhoton && nTracks == 0 && ( !mc->isDecayedInTracker() ) ) {
-            streamlog_out(DEBUG8)<<"Photon stuff"<<std::endl;
-
-            Vector3D photonPosAtCalo = getPhotonAtCalorimeter(mc);
-            Vector3D mom( mc->getMomentum() );
-
-            CalorimeterHit* closestHit = getClosestHit(cluster, photonPosAtCalo);
-            CHT hitType( closestHit->getType() );
-            bool isEcal = (hitType.caloID() == CHT::ecal);
-            if (!isEcal) continue;
-
-            _typeClosest = getHitCaloType(closestHit);
-            _caloIDClosest = getHitCaloID(closestHit);
-            _layoutClosest = getHitCaloLayout(closestHit);
-            _layerClosest = getHitCaloLayer(closestHit);
-            _cleanClosestHit = getHitEarliestMC(closestHit, navToSimCalorimeterHits) == mc;
-
-
-            auto selectedHits = selectFrankEcalHits(cluster, photonPosAtCalo, mom, 10);
-            streamlog_out(DEBUG8)<<"Calculating TOFs for all resolutions"<<std::endl;
-            for (size_t j = 0; j < _resolutions.size(); j++){
-                float res = _resolutions[j]/1000.; // in ns
-                _tofClosest.at(j) = getHitTof(closestHit, photonPosAtCalo, res);
-                _tofAverage.at(j) = getTofFrankAvg(selectedHits, photonPosAtCalo, res);
-                _tofFit.at(j) = getTofFrankFit(selectedHits, photonPosAtCalo, res);
-                // no track - no SET!
+        bool isInRecoconstructablePrimaryVertex = std::find(reconstructablePrimaryVertexMCs.begin(), reconstructablePrimaryVertexMCs.end(), mc) != reconstructablePrimaryVertexMCs.end();
+        bool isInRecoconstructableSecondaryVertex = false;
+        for(auto const& [pos, reconstructableSecondaryVertexMCs] : reconstructableSecondaryVertices){
+            if (std::find(reconstructableSecondaryVertexMCs.begin(), reconstructableSecondaryVertexMCs.end(), mc) != reconstructableSecondaryVertexMCs.end() ){
+                isInRecoconstructableSecondaryVertex = true;
+                break;
             }
         }
-        else{
+
+        _quarksToPythia = getQuarksToPythia(evt);
+        fillMCTrueInfo( mc, pfo, isInRecoconstructablePrimaryVertex, isInRecoconstructableSecondaryVertex );
+        std::cout<<"_quarksToPythia: "<<_quarksToPythia<<std::endl;
+
+        if ( pfo == nullptr || pfo->getTracks().size() != 1 || pfo->getClusters().size() != 1){
+            _tree->Fill();
             continue;
         }
-        _tree->Fill();
 
+        auto track = pfo->getTracks()[0];
+        auto cluster = pfo->getClusters()[0];
+        auto tsCalo = getTrackStateAtCalorimeter( track );
+        Vector3D trackPosAtCalo( tsCalo->getReferencePoint() );
+        auto closestHit = getClosestHit(cluster, trackPosAtCalo);
+
+        std::array<double, 3> mom = UTIL::getTrackMomentum(tsCalo, _bField);
+        Vector3D trackMomAtCalo(mom[0], mom[1], mom[2]);
+
+        fillTrackLengthInfo(pfo, mc, navToSimTrackerHits);
+        fillTrackStates(pfo, refittedPFO);
+
+
+        _typeClosest = getHitCaloType(closestHit);
+        _caloIDClosest = getHitCaloID(closestHit);
+        _layoutClosest = getHitCaloLayout(closestHit);
+        _layerClosest = getHitCaloLayer(closestHit);
+        _cleanClosestHit = getHitEarliestMC(closestHit, navToSimCalorimeterHits) == mc;
+
+        //Do not fill TOF info when closest hit is in LumiCal
+        if ( not isEcalHit(closestHit) ){
+            _tree->Fill();
+            continue;
+        }
+        fillTOFInfo(cluster, track, closestHit, trackPosAtCalo, trackMomAtCalo);
+        if(_produce_csv_output) fillCsvForKonrad( cluster, _pdg, _tofClosest[0], _trackLength_IKF_zedLambda, trackPosAtCalo, trackMomAtCalo );
+
+        // drawDisplay(this, evt, displayPFO, pfo);
+        _tree->Fill();
     }
+
+
 }
 
 void BohdanAna::end(){
@@ -392,13 +465,34 @@ void BohdanAna::end(){
 }
 
 void BohdanAna::resetVariables(){
-    _pdg = 0;
+    _quarksToPythia = 0;
+    _pdg = -1;
+    _mcVtx.fill(0.f);
+    _mcMom.fill(0.f);
+    _d0True = 0.f;
+    _z0True = 0.f;
+    _omegaTrue = 0.f;
+    _tanLambdaTrue = 0.f;
+    _timeTrue = 0.f;
+    _isOverlay = false;
+    _isSimulated = false;
+    _imidiateParentPDG = -1;
+    _firstStableParentPDG = -1;
+    _isBottomQuarkDecay = false;
+    _isCharmQuarkDecay = false;
+    _isHadronisationDecay = false;
+    _isInReconstructablePrimaryVertex = false;
+    _isInReconstructableSecondaryVertex = false;
+    _isReconstructed = false;
+    _hasTrack = false;
+    _hasShower = false;
+
+
     _dEdx = 0.f;
     _omegaIP = 0.f;
     _omegaECAL = 0.f;
     _tanLambdaIP = 0.f;
     _tanLambdaECAL = 0.f;
-    _mcMom.fill(0.f);
     _recoIpMom.fill(0.f);
     _recoCaloPos.fill(0.f);
     _recoCaloMom.fill(0.f);

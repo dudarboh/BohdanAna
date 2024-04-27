@@ -16,10 +16,6 @@ std::vector<EVENT::CalorimeterHit*> selectFrankEcalHits( EVENT::Cluster* cluster
 EVENT::CalorimeterHit* getClosestHit( EVENT::Cluster* cluster, const dd4hep::rec::Vector3D& posAtEcal );
 
 float getHitTof( EVENT::CalorimeterHit* hit, const dd4hep::rec::Vector3D& posAtEcal, float timeResolution) ;
-int getHitCaloType( EVENT::CalorimeterHit* hit );
-int getHitCaloID( EVENT::CalorimeterHit* hit );
-int getHitCaloLayout( EVENT::CalorimeterHit* hit );
-int getHitCaloLayer( EVENT::CalorimeterHit* hit );
 EVENT::MCParticle* getHitEarliestMC( EVENT::CalorimeterHit* hit, const UTIL::LCRelationNavigator& navToSimCalorimeterHits );
 
 float getTofFrankAvg( const std::vector<EVENT::CalorimeterHit*>& selectedHits, const dd4hep::rec::Vector3D& posAtEcal, float timeResolution );
