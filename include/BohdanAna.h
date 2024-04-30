@@ -46,14 +46,14 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
 
         // Event information
         int _quarksToPythia{};
-        std::array<float, 3> _ipTrue{};
-        std::array<float, 3> _primVertexTrue{};
-        std::array<float, 3> _primVertexReco{};
-        std::array<float, 3> _primRefitVertexReco{};
+        dd4hep::rec::Vector3D _ipTrue{};
+        dd4hep::rec::Vector3D _primVertexTrue{};
+        dd4hep::rec::Vector3D _primVertexReco{};
+        dd4hep::rec::Vector3D _primRefitVertexReco{};
 
         // True infromation of MCParticle
         int _pdg{};
-        std::array<float, 3> _mcVtx{};
+        dd4hep::rec::Vector3D _mcVtx{};
         bool _isOverlay{};
         bool _isSimulated{};
         int _imidiateParentPDG{};
@@ -70,7 +70,7 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
         bool _isInTruePrimaryVertex{};
         bool _isInTrueSecondaryVertex{};
         bool _isInTrueV0DecayTrue{};
-        std::array<float, 3> _trueVertexPos{};
+        dd4hep::rec::Vector3D _trueVertexPos{};
         unsigned int _nTracksAtTrueVertex{};
         float _invMassOfTrueVertex{};
         float _minEnergyOfTrueVertex{};
@@ -82,8 +82,8 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
         bool _isInRecoPrimaryVertex{};
         bool _isInRecoSecondaryVertex{};
         bool _isV0DecayReco{};
-        std::array<float, 3> _recoVertexPos{};
-        std::array<float, 3> _recoVertexPosErr{};
+        dd4hep::rec::Vector3D _recoVertexPos{};
+        dd4hep::rec::Vector3D _recoVertexPosErr{};
         unsigned int _nTracksAtRecoVertex{};
         float _invMassOfRecoVertex{};
         float _minEnergyOfRecoVertex{};
@@ -96,8 +96,8 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
         bool _isInRecoPrimaryRefitVertex{};
         bool _isInRecoSecondaryRefitVertex{};
         bool _isV0DecayRefitReco{};
-        std::array<float, 3> _recoRefitVertexPos{};
-        std::array<float, 3> _recoRefitVertexPosErr{};
+        dd4hep::rec::Vector3D _recoRefitVertexPos{};
+        dd4hep::rec::Vector3D _recoRefitVertexPosErr{};
         unsigned int _nTracksAtRecoRefitVertex{};
         float _invMassOfRecoRefitVertex{};
         float _minEnergyOfRecoRefitVertex{};
@@ -116,7 +116,7 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
         float _z0True{};
         float _phiTrue{};
         float _timeTrue{};
-        std::array<float, 3> _mcMom{};
+        dd4hep::rec::Vector3D _mcMom{};
 
         // TRACK STATE AT IP
         float _omegaIP{};
@@ -129,7 +129,7 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
         float _d0ErrIP{};
         float _z0ErrIP{};
         float _phiErrIP{};
-        std::array<float, 3> _recoIpMom{};
+        dd4hep::rec::Vector3D _recoIpMom{};
 
         //TRACK STATE AT ECAL
         float _omegaECAL{};
@@ -142,8 +142,8 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
         float _d0ErrECAL{};
         float _z0ErrECAL{};
         float _phiErrECAL{};
-        std::array<float, 3> _recoCaloPos{};
-        std::array<float, 3> _recoCaloMom{};
+        dd4hep::rec::Vector3D _recoCaloPos{};
+        dd4hep::rec::Vector3D _recoCaloMom{};
 
         //TRACK STATE AT IP REFITTED
         float _refittedOmegaIP{};
@@ -156,7 +156,7 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
         float _refittedD0ErrIP{};
         float _refittedZ0ErrIP{};
         float _refittedPhiErrIP{};
-        std::array<float, 3> _refittedRecoIpMom{};
+        dd4hep::rec::Vector3D _refittedRecoIpMom{};
 
         //TRACK STATE AT ECAL REFITTED
         float _refittedOmegaECAL{};
@@ -169,8 +169,8 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
         float _refittedD0ErrECAL{};
         float _refittedZ0ErrECAL{};
         float _refittedPhiErrECAL{};
-        std::array<float, 3> _refittedRecoCaloPos{};
-        std::array<float, 3> _refittedRecoCaloMom{};
+        dd4hep::rec::Vector3D _refittedRecoCaloPos{};
+        dd4hep::rec::Vector3D _refittedRecoCaloMom{};
 
         // TRACK LENGTH and HARMONIC MEAN MOMENTUM ESTIMATORS
         float _trackLength_IDR{};

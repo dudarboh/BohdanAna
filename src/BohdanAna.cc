@@ -152,8 +152,8 @@ void BohdanAna::init(){
 
 void BohdanAna::fillMCTrueInfo(EVENT::MCParticle* mc, EVENT::ReconstructedParticle* pfo){
     _pdg = mc->getPDG();
-    for(int j=0; j<3; j++) _mcVtx.at(j) = mc->getVertex()[j];
-    for(int j=0; j<3; j++) _mcMom.at(j) = mc->getMomentum()[j];
+    _mcVtx = Vector3D( mc->getVertex() );
+    _mcMom = Vector3D( mc->getMomentum() );
     _omegaTrue = getOmegaTrue(mc);
     _tanLambdaTrue = getTanLTrue(mc);
     _d0True = getD0True(mc);
@@ -263,6 +263,7 @@ void BohdanAna::fillTrackLengthInfo(EVENT::ReconstructedParticle* pfo, EVENT::MC
     }
 
 }
+
 void BohdanAna::fillCsvForKonrad(EVENT::Cluster* cluster, int pdg, double trueTOF, double trackLength, const dd4hep::rec::Vector3D& trackPosAtCalo, const dd4hep::rec::Vector3D& trackMomAtCalo){
     _global_pfo_number++;
     for (auto* hit:cluster->getCalorimeterHits()){
@@ -319,25 +320,25 @@ void BohdanAna::fillTrackStates(EVENT::ReconstructedParticle* pfo, EVENT::Recons
     _d0ErrIP = std::sqrt( tsIP->getCovMatrix()[0] );
     _z0ErrIP = std::sqrt( tsIP->getCovMatrix()[9] );
     _phiErrIP = std::sqrt( tsIP->getCovMatrix()[2] );
-    // _recoIpPos is always (0, 0, 0)
-    std::array<double, 3> momIp = UTIL::getTrackMomentum(tsIP, _bField);
-    for(int j=0; j<3; j++) _recoIpMom[j] = momIp[j]; // should be identical to pfo->getMomentum()[j];
+    // _recoIpPos is always (0, 0, 0) so I do not store it...
+    auto momIP = UTIL::getTrackMomentum(tsIP, _bField);
+    _recoIpMom = Vector3D( momIP[0], momIP[1], momIP[2] ); // should be identical to pfo->getMomentum()
 
     auto tsECAL = getTrackStateAtCalorimeter( track );
     _omegaECAL = tsECAL->getOmega();
     _tanLambdaECAL = tsECAL->getTanLambda();
     _d0ECAL = tsECAL->getD0(); // NOTE: must be 0 by definition at ECAL
     _z0ECAL = tsECAL->getZ0(); // NOTE: must be 0 by definition at ECAL
+    
     _phiECAL = tsECAL->getPhi();
     _omegaErrECAL = std::sqrt( tsECAL->getCovMatrix()[5] );
     _tanLambdaErrECAL = std::sqrt( tsECAL->getCovMatrix()[14] );
     _d0ErrECAL = std::sqrt( tsECAL->getCovMatrix()[0] );
     _z0ErrECAL = std::sqrt( tsECAL->getCovMatrix()[9] );
     _phiErrECAL = std::sqrt( tsECAL->getCovMatrix()[2] );
-    for(int j=0; j<3; j++) _recoCaloPos[j] = tsECAL->getReferencePoint()[j];
-    std::array<double, 3> momECAL = UTIL::getTrackMomentum(tsECAL, _bField);
-    for(int j=0; j<3; j++) _recoCaloMom[j] = momECAL[j];
-
+    _recoCaloPos = Vector3D( tsECAL->getReferencePoint() );
+    auto momECAL = UTIL::getTrackMomentum(tsECAL, _bField);
+    _recoCaloMom = Vector3D( momECAL[0], momECAL[1], momECAL[2] );
 
     if (refittedPfo == nullptr || refittedPfo->getTracks().size() != 1 ||  refittedPfo->getTracks()[0]->getOmega() == 0.f || refittedPfo->getTracks()[0]->getTanLambda() == 0.f) return;
     auto refittedTrack = refittedPfo->getTracks()[0];
@@ -354,8 +355,8 @@ void BohdanAna::fillTrackStates(EVENT::ReconstructedParticle* pfo, EVENT::Recons
     _refittedZ0ErrIP = std::sqrt( refittedTsIP->getCovMatrix()[9] );
     _refittedPhiErrIP = std::sqrt( refittedTsIP->getCovMatrix()[2] );
     // _recoIpPos is always (0, 0, 0)
-    std::array<double, 3> refittedMomIp = UTIL::getTrackMomentum(refittedTsIP, _bField);
-    for(int j=0; j<3; j++) _refittedRecoIpMom[j] = refittedMomIp[j]; // should be identical to refittedPfo->getMomentum()[j];
+    auto refittedMomIP = UTIL::getTrackMomentum(refittedTsIP, _bField);
+    _refittedRecoIpMom = Vector3D( refittedMomIP[0], refittedMomIP[1], refittedMomIP[2] ); // should be identical to refittedPfo->getMomentum();
 
     auto refittedTsECAL = getTrackStateAtCalorimeter( refittedTrack );
     _refittedOmegaECAL = refittedTsECAL->getOmega();
@@ -368,9 +369,9 @@ void BohdanAna::fillTrackStates(EVENT::ReconstructedParticle* pfo, EVENT::Recons
     _refittedD0ErrECAL = std::sqrt( refittedTsECAL->getCovMatrix()[0] );
     _refittedZ0ErrECAL = std::sqrt( refittedTsECAL->getCovMatrix()[9] );
     _refittedPhiErrECAL = std::sqrt( refittedTsECAL->getCovMatrix()[2] );
-    for(int j=0; j<3; j++) _refittedRecoCaloPos[j] = refittedTsECAL->getReferencePoint()[j];
-    std::array<double, 3> refittedMomECAL = UTIL::getTrackMomentum(refittedTsECAL, _bField);
-    for(int j=0; j<3; j++) _refittedRecoCaloMom[j] = refittedMomECAL[j];
+    _refittedRecoCaloPos = Vector3D( refittedTsECAL->getReferencePoint() );
+    auto refittedMomECAL = UTIL::getTrackMomentum(refittedTsECAL, _bField);
+    _refittedRecoCaloMom = Vector3D( refittedMomECAL[0], refittedMomECAL[1], refittedMomECAL[2] );
 }
 
 void BohdanAna::fillRecoVertexInfo(EVENT::LCEvent* evt, EVENT::MCParticle* mc, const UTIL::LCRelationNavigator& pfo2mc){
@@ -481,8 +482,7 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
 
         resetVariables();
 
-        auto pfo = getRelatedReconstructedParticle(mc, mc2pfo, pfo2mc);
-        auto refittedPFO = static_cast<ReconstructedParticle* > ( getMatchingElement(pfos, pfo, updatedPfos) );
+        _quarksToPythia = getQuarksToPythia(evt);
 
         // Is MC in the true vertex?
         for(auto& vtx : trueVertices) {
@@ -495,9 +495,7 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
             }
         }
 
-        fillRecoVertexInfo(evt, mc, pfo2mc);
-        _quarksToPythia = getQuarksToPythia(evt);
-
+        auto pfo = getRelatedReconstructedParticle(mc, mc2pfo, pfo2mc);
         fillMCTrueInfo( mc, pfo );
 
         // Work only with simple reconstructed particles (1 track and 1 shower). Ignore rest ( ~ O( 0.1%) )
@@ -505,6 +503,8 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
             _tree->Fill();
             continue;
         }
+        auto refittedPFO = static_cast<ReconstructedParticle* > ( getMatchingElement(pfos, pfo, updatedPfos) );
+        fillRecoVertexInfo(evt, mc, pfo2mc);
 
         auto track = pfo->getTracks()[0];
         auto cluster = pfo->getClusters()[0];
@@ -512,8 +512,8 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
         Vector3D trackPosAtCalo( tsCalo->getReferencePoint() );
         auto closestHit = getClosestHit(cluster, trackPosAtCalo);
 
-        std::array<double, 3> mom = UTIL::getTrackMomentum(tsCalo, _bField);
-        Vector3D trackMomAtCalo(mom[0], mom[1], mom[2]);
+        auto mom = UTIL::getTrackMomentum(tsCalo, _bField);
+        Vector3D trackMomAtCalo( mom[0], mom[1], mom[2] );
 
         fillTrackLengthInfo(pfo, mc, navToSimTrackerHits);
         fillTrackStates(pfo, refittedPFO);
@@ -549,8 +549,8 @@ void BohdanAna::end(){
 void BohdanAna::resetVariables(){
     _quarksToPythia = 0;
     _pdg = -1;
-    _mcVtx.fill(0.f);
-    _mcMom.fill(0.f);
+    _mcVtx = Vector3D();
+    _mcMom = Vector3D();
     _omegaTrue = 0.f;
     _tanLambdaTrue = 0.f;
     _d0True = 0.f;
@@ -585,7 +585,7 @@ void BohdanAna::resetVariables(){
     _d0ErrIP = 0.f;
     _z0ErrIP = 0.f;
     _phiErrIP = 0.f;
-    _recoIpMom.fill(0.f);
+    _recoIpMom = Vector3D();
     _omegaECAL = 0.f;
     _tanLambdaECAL = 0.f;
     _d0ECAL = 0.f;
@@ -596,8 +596,8 @@ void BohdanAna::resetVariables(){
     _d0ErrECAL = 0.f;
     _z0ErrECAL = 0.f;
     _phiErrECAL = 0.f;
-    _recoCaloPos.fill(0.f);
-    _recoCaloMom.fill(0.f);
+    _recoCaloPos = Vector3D();
+    _recoCaloMom = Vector3D();
     _refittedOmegaIP = 0.f;
     _refittedTanLambdaIP = 0.f;
     _refittedD0IP = 0.f;
@@ -608,7 +608,7 @@ void BohdanAna::resetVariables(){
     _refittedD0ErrIP = 0.f;
     _refittedZ0ErrIP = 0.f;
     _refittedPhiErrIP = 0.f;
-    _refittedRecoIpMom.fill(0.f);
+    _refittedRecoIpMom = Vector3D();
     _refittedOmegaECAL = 0.f;
     _refittedTanLambdaECAL = 0.f;
     _refittedD0ECAL = 0.f;
@@ -619,8 +619,8 @@ void BohdanAna::resetVariables(){
     _refittedD0ErrECAL = 0.f;
     _refittedZ0ErrECAL = 0.f;
     _refittedPhiErrECAL = 0.f;
-    _refittedRecoCaloPos.fill(0.f);
-    _refittedRecoCaloMom.fill(0.f);
+    _refittedRecoCaloPos = Vector3D();
+    _refittedRecoCaloMom = Vector3D();
 
     _trackLength_IDR = 0.f;
     _trackLength_SHA_phiLambda_IP = 0.f;
