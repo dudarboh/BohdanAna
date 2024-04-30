@@ -16,10 +16,12 @@
 #include <string>
 #include <vector>
 
-struct CompareVectors{
-    bool operator()(const dd4hep::rec::Vector3D& a, const dd4hep::rec::Vector3D& b) const { return a.r() < b.r(); }
+struct VertexData{
+    dd4hep::rec::Vector3D pos;
+    std::vector<EVENT::MCParticle* > mcs{};
+    bool isPrimary = false;
+    bool isV0 = false;
 };
-
 
 int parseLine(char* line);
 
@@ -59,6 +61,7 @@ unsigned long interpolateHexColor(unsigned long startColor, unsigned long endCol
 
 bool isSETHit(const EVENT::TrackerHit* hit);
 
+float getPhiTrue(EVENT::MCParticle* mc);
 float getD0True(EVENT::MCParticle* mc);
 float getZ0True(EVENT::MCParticle* mc);
 float getOmegaTrue(EVENT::MCParticle* mc);
@@ -78,8 +81,10 @@ int getHitCaloLayout( EVENT::CalorimeterHit* hit );
 int getHitCaloLayer( EVENT::CalorimeterHit* hit );
 bool isEcalHit(EVENT::CalorimeterHit* hit);
 
-std::map< dd4hep::rec::Vector3D, std::vector<EVENT::MCParticle*>, CompareVectors > getReconstructableTrueVertices(EVENT::LCEvent * evt);
+std::vector<VertexData> getReconstructableTrueVertices(EVENT::LCEvent* evt);
 
-EVENT::ReconstructedParticle* getRefittedPFO(EVENT::LCCollection* pfos, EVENT::LCCollection* refittedPFOs, EVENT::ReconstructedParticle* pfo);
+void mergeCloseVerticies(std::vector<VertexData>& verticies, double mergeDistance);
+
+EVENT::LCObject* getMatchingElement(EVENT::LCCollection* col1, EVENT::LCObject* requestedObject, EVENT::LCCollection* col2);
 
 #endif

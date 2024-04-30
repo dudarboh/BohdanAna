@@ -288,6 +288,11 @@ bool isSETHit(const EVENT::TrackerHit* hit){
     return subdet == UTIL::ILDDetID::SET;
 }
 
+float getPhiTrue(EVENT::MCParticle* mc){
+    Vector3D mom( mc->getMomentum() );
+    return std::atan2( mom.y(), mom.x() );
+}
+
 float getD0True(EVENT::MCParticle* mc){
     //Return d0 of the particle given the MC truth infromation of the vertex and momentum
     //Copied from somewhere I hope it has no bugs...
@@ -404,88 +409,117 @@ unsigned int getQuarkTypeDecay(EVENT::MCParticle* mc){
     return 1;
 }
 
-std::map< dd4hep::rec::Vector3D, std::vector<EVENT::MCParticle*>, CompareVectors > getReconstructableTrueVertices(EVENT::LCEvent * evt){
+std::vector<VertexData> getReconstructableTrueVertices(EVENT::LCEvent * evt){
     EVENT::LCCollection* mcs = evt->getCollection("MCParticle");
     UTIL::LCRelationNavigator mc2pfo ( evt->getCollection("MCTruthRecoLink") );
     UTIL::LCRelationNavigator pfo2mc ( evt->getCollection("RecoMCTruthLink") );
 
-
-    std::map< Vector3D, std::vector<EVENT::MCParticle*>, CompareVectors > vtx2mcs;
+    std::vector<VertexData> verticies;
     //Find all MCParticles with reconstructed track.
     for (int i=0; i<mcs->getNumberOfElements(); ++i){
         EVENT::MCParticle* mc = static_cast <EVENT::MCParticle*> ( mcs->getElementAt(i) );
         if (mc == nullptr) continue;
         EVENT::ReconstructedParticle* pfo = getRelatedReconstructedParticle(mc, mc2pfo, pfo2mc);
         if( pfo == nullptr || pfo->getTracks().size() == 0) continue;
-        vtx2mcs[ Vector3D( mc->getVertex() ) ].push_back(mc);
+
+        Vector3D pos( mc->getVertex() );
+        auto it = std::find_if(verticies.begin(), verticies.end(), [&pos](VertexData vtx){return vtx.pos == pos;} );
+        if ( it != verticies.end() ){
+            (*it).mcs.push_back(mc);
+        }
+        else{
+            VertexData vtxData;
+            vtxData.pos = Vector3D( mc->getVertex() );
+            vtxData.mcs.push_back(mc);
+            verticies.push_back(vtxData);
+        }
     }
 
     // DEBUG OUTPUT
     streamlog_out(DEBUG2)<<"List of raw true vertices:"<<std::endl;
-    for( auto const& [vtx, mcsInVertex] : vtx2mcs ){
-        streamlog_out(DEBUG2)<<" Vertex at ("<<vtx.r()<<")  MCs:  ";
-        for(auto mc : mcsInVertex) streamlog_out(DEBUG2)<<mc<<"    ";
+    for( auto& vtxData : verticies ){
+        streamlog_out(DEBUG2)<<" Vertex at ("<<vtxData.pos.r()<<")  MCs:  ";
+        for(auto mc : vtxData.mcs) streamlog_out(DEBUG2)<<mc<<"    ";
         streamlog_out(DEBUG2)<<std::endl;
     }
 
-    // Merge all vertices within 3 um. And recalculate vertex position as a weighted average
-    for(auto iter1=vtx2mcs.begin(); iter1!=vtx2mcs.end();){
+    // Merge all vertices within 3 um and combine their MC particles. And recalculate vertex position as a weighted average
+    mergeCloseVerticies(verticies, 0.003);
+
+    // DEBUG OUTPUT
+    streamlog_out(DEBUG2)<<"List of raw true vertices:"<<std::endl;
+    for( auto& vtxData : verticies ){
+        streamlog_out(DEBUG2)<<" Vertex at ("<<vtxData.pos.r()<<")  MCs:  ";
+        for(auto* mc : vtxData.mcs) streamlog_out(DEBUG2)<<mc<<"    ";
+        streamlog_out(DEBUG2)<<std::endl;
+    }
+
+    // Remove any vertices with only single track as such verticies are unreconstructable
+    verticies.erase(std::remove_if(verticies.begin(), verticies.end(), [](const VertexData& vtx) {return vtx.mcs.size() < 2;}), verticies.end());
+
+    // DEBUG OUTPUT
+    streamlog_out(DEBUG2)<<"List of raw true vertices:"<<std::endl;
+    for( auto& vtxData : verticies ){
+        streamlog_out(DEBUG2)<<" Vertex at ("<<vtxData.pos.r()<<")  MCs:  ";
+        for(auto* mc : vtxData.mcs) streamlog_out(DEBUG2)<<mc<<"    ";
+        streamlog_out(DEBUG2)<<std::endl;
+    }
+
+    Vector3D primVertexPosTrue( static_cast< EVENT::MCParticle* >(mcs->getElementAt(0))->getVertex() );
+    auto compDistanceToTrue = [&](const VertexData& a, const VertexData& b){return (a.pos - primVertexPosTrue).r() < (b.pos - primVertexPosTrue).r();};
+
+    (*std::min_element(verticies.begin(), verticies.end(), compDistanceToTrue)).isPrimary = true;
+
+    for (auto& vtx : verticies){
+        if ( vtx.mcs.size() != 2 ) continue;
+        if ( vtx.mcs[0]->getCharge() == vtx.mcs[1]->getCharge() ) continue;
+        auto* parent1 = getFirstStableParent( vtx.mcs[0] );
+        auto* parent2 = getFirstStableParent( vtx.mcs[1] );
+        if ( parent1 == nullptr || parent2 == nullptr || (parent1 != parent2) ) continue;
+
+        unsigned int parentPDG = std::abs( parent1->getPDG() );
+        vtx.isV0 = parentPDG == 310 || parentPDG == 3122;
+    }
+    return verticies;
+}
+
+void mergeCloseVerticies(std::vector<VertexData>& verticies, double mergeDistance=0.003){
+    for(auto iter1=verticies.begin(); iter1!=verticies.end();){
         bool isMerged = false;
-        for(auto iter2=std::next(iter1); iter2!=vtx2mcs.end();){
+        for(auto iter2=std::next(iter1); iter2!=verticies.end();){
             // streamlog_out(DEBUG1)<<"Beginning merge loop Iter1: "<<std::distance(vtx2mcs.begin(), iter1)<<"/"<<vtx2mcs.size()<<endl;
             // streamlog_out(DEBUG1)<<"Beginning merge loop Iter2: "<<std::distance(vtx2mcs.begin(), iter2)<<"/"<<vtx2mcs.size()<<endl;
-            Vector3D vtx1 = iter1->first;
-            Vector3D vtx2 = iter2->first;
-            double distance = (vtx1-vtx2).r();
+            Vector3D pos1 = (*iter1).pos;
+            Vector3D pos2 = (*iter2).pos;
+            double distance = (pos1-pos2).r();
             //Assuming vertex detector resolution 3um, merge vertices within 3um and recalculate vertex position as a weighted average.
             //NOTE: I merge them in arbitrary order. Practially it doesn't matter, but this may cause a difference in some cases.
-            if (distance < 0.003){
+            if (distance < mergeDistance){
                 isMerged = true;
                 streamlog_out(DEBUG1)<<" Vertices are being merged! Resetting the loop iterators!"<<std::endl;
-                std::vector<EVENT::MCParticle*> mcs1 = iter1->second;
+                auto mcs1 = (*iter1).mcs;
                 int nMCs1 = mcs1.size();
-                std::vector<EVENT::MCParticle*> mcs2 = iter2->second;
+                auto mcs2 = (*iter2).mcs;
                 int nMCs2 = mcs2.size();
-                Vector3D avgPos = (1./(nMCs1+nMCs2))*(nMCs1*vtx1 + nMCs2*vtx2);
-                std::vector<EVENT::MCParticle*> mergedMCs = mcs1;
-                mergedMCs.insert( mergedMCs.end(), mcs2.begin(), mcs2.end() );
-                vtx2mcs.erase(vtx1);
-                vtx2mcs.erase(vtx2);
-                vtx2mcs[avgPos] = mergedMCs;
+
+                //removing two vertices that are being merged. erase-remove idiom: https://stackoverflow.com/questions/347441/how-can-you-erase-elements-from-a-vector-while-iterating
+                verticies.erase(std::remove_if(verticies.begin(), verticies.end(), [&](const VertexData& vtx) {return vtx.mcs == mcs1 || vtx.mcs == mcs2;}), verticies.end());
+
+                VertexData vtxData;
+                vtxData.pos = (1./(nMCs1+nMCs2))*(nMCs1*pos1 + nMCs2*pos2);
+                vtxData.mcs = mcs1;
+                vtxData.mcs.insert( vtxData.mcs.end(), mcs2.begin(), mcs2.end() );
+                verticies.push_back(vtxData);
                 break;
             }
             else{
                 ++iter2;
             }
         }
-        if (isMerged) iter1 = vtx2mcs.begin();
+        if (isMerged) iter1 = verticies.begin();
         else ++iter1;
     }
 
-    // DEBUG OUTPUT
-    streamlog_out(DEBUG2)<<"List of true vertices after merging:"<<std::endl;
-    for( auto const& [vtx, mcsInVertex] : vtx2mcs ){
-        streamlog_out(DEBUG2)<<" Vertex at ("<<vtx.r()<<")  MCs:  ";
-        for(auto mc : mcsInVertex) streamlog_out(DEBUG2)<<mc<<"    ";
-        streamlog_out(DEBUG2)<<std::endl;
-    }
-
-
-    // Remove any vertices with only single track as they are unfindable
-    for (auto iter = vtx2mcs.begin() ; iter != vtx2mcs.end(); ){
-        if ( (iter->second).size() < 2 ) iter = vtx2mcs.erase(iter);
-        else ++iter;
-    }
-
-    // DEBUG OUTPUT
-    streamlog_out(DEBUG2)<<"List of true vertices after merging and removing 1-track vertices:"<<std::endl;
-    for( auto const& [vtx, mcsInVertex] : vtx2mcs ){
-        streamlog_out(DEBUG2)<<" Vertex at ("<<vtx.r()<<")  MCs:  ";
-        for(auto mc : mcsInVertex) streamlog_out(DEBUG2)<<mc<<"    ";
-        streamlog_out(DEBUG2)<<std::endl;
-    }
-
-    return vtx2mcs;
 }
 
 
@@ -536,14 +570,12 @@ bool isEcalHit(EVENT::CalorimeterHit* hit){
     return ( getHitCaloID(hit) == CHT::ecal);
 }
 
-EVENT::ReconstructedParticle* getRefittedPFO(EVENT::LCCollection* pfos, EVENT::LCCollection* refittedPFOs, EVENT::ReconstructedParticle* pfo){
-    int pfoIndexInCollection = -1;
-    for (int j=0; j<pfos->getNumberOfElements(); ++j){
-        auto testPFO = static_cast<EVENT::ReconstructedParticle*>( pfos->getElementAt(j) );
-        if ( pfo == testPFO ){
-            pfoIndexInCollection = j;
-            break;
-        }
+EVENT::LCObject* getMatchingElement(EVENT::LCCollection* col1, EVENT::LCObject* requestedObject, EVENT::LCCollection* col2){
+    //Return LCObject from col2 that matches the index of object in col1.
+    for (int i=0; i<col1->getNumberOfElements(); ++i){
+        if ( requestedObject == col1->getElementAt(i) && i < col2->getNumberOfElements() ) return col2->getElementAt(i);
     }
-    return static_cast <EVENT::ReconstructedParticle*> ( refittedPFOs->getElementAt( pfoIndexInCollection ) );
+    //IMPROVE: print collection names. I hope they will be stored in the corresponding in the future. Now they are accesible only through LCEvent
+    streamlog_out(WARNING)<<"Could not find a matching object in the collection "<<col2<<" for the requested object "<<requestedObject<<" in the collection "<<col1<<std::endl;
+    return nullptr;
 }

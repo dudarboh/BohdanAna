@@ -150,14 +150,15 @@ void BohdanAna::init(){
     }
 }
 
-void BohdanAna::fillMCTrueInfo(EVENT::MCParticle* mc, EVENT::ReconstructedParticle* pfo, bool isInReconstructablePrimaryVertex, bool isInReconstructableSecondaryVertex){
+void BohdanAna::fillMCTrueInfo(EVENT::MCParticle* mc, EVENT::ReconstructedParticle* pfo){
     _pdg = mc->getPDG();
     for(int j=0; j<3; j++) _mcVtx.at(j) = mc->getVertex()[j];
     for(int j=0; j<3; j++) _mcMom.at(j) = mc->getMomentum()[j];
-    _d0True = getD0True(mc);
-    _z0True = getZ0True(mc);
     _omegaTrue = getOmegaTrue(mc);
     _tanLambdaTrue = getTanLTrue(mc);
+    _d0True = getD0True(mc);
+    _z0True = getZ0True(mc);
+    _phiTrue = getPhiTrue(mc);
     _timeTrue = mc->getTime();
     _isOverlay = mc->isOverlay();
     _isSimulated = mc->isCreatedInSimulation();
@@ -171,8 +172,8 @@ void BohdanAna::fillMCTrueInfo(EVENT::MCParticle* mc, EVENT::ReconstructedPartic
     _isCharmQuarkDecay = quarkTypeDecay == 4;
     _isHadronisationDecay = not _isBottomQuarkDecay && not _isCharmQuarkDecay;
 
-    _isInReconstructablePrimaryVertex = isInReconstructablePrimaryVertex;
-    _isInReconstructableSecondaryVertex = isInReconstructableSecondaryVertex;
+    _isV0DecayTrue = std::abs(_firstStableParentPDG) == 310  || std::abs(_firstStableParentPDG) == 3122;
+
     _isReconstructed = pfo != nullptr;
 
     if ( _isReconstructed ){
@@ -196,9 +197,8 @@ void BohdanAna::fillMCTrueInfo(EVENT::MCParticle* mc, EVENT::ReconstructedPartic
     std::cout<<"_firstStableParentPDG: "<<_firstStableParentPDG<<std::endl;
     std::cout<<"_isBottomQuarkDecay: "<<_isBottomQuarkDecay<<std::endl;
     std::cout<<"_isCharmQuarkDecay: "<<_isCharmQuarkDecay<<std::endl;
+    std::cout<<"_isV0DecayTrue: "<<_isV0DecayTrue<<std::endl;
     std::cout<<"_isHadronisationDecay: "<<_isHadronisationDecay<<std::endl;
-    std::cout<<"_isInReconstructablePrimaryVertex: "<<_isInReconstructablePrimaryVertex<<std::endl;
-    std::cout<<"_isInReconstructableSecondaryVertex: "<<_isInReconstructableSecondaryVertex<<std::endl;
     std::cout<<"_isReconstructed: "<<_isReconstructed<<std::endl;
     std::cout<<"_hasTrack: "<<_hasTrack<<std::endl;
     std::cout<<"_hasShower: "<<_hasShower<<std::endl;
@@ -307,65 +307,152 @@ void BohdanAna::fillTrackStates(EVENT::ReconstructedParticle* pfo, EVENT::Recons
     if (pfo == nullptr || pfo->getTracks().size() != 1) return;
     auto track = pfo->getTracks()[0];
     _dEdx = track->getdEdx();
+
     auto tsIP = track->getTrackState( TrackState::AtIP );
     _omegaIP = tsIP->getOmega();
     _tanLambdaIP = tsIP->getTanLambda();
     _d0IP = tsIP->getD0();
     _z0IP = tsIP->getZ0();
     _phiIP = tsIP->getPhi();
-
-    _d0ErrBefore = std::sqrt( track->getCovMatrix()[0] );
-    _d0ErrAfter = std::sqrt( trackAfter->getCovMatrix()[0] );
-    _z0ErrBefore = std::sqrt( track->getCovMatrix()[9] );
-    _z0ErrAfter = std::sqrt( trackAfter->getCovMatrix()[9] );
+    _omegaErrIP = std::sqrt( tsIP->getCovMatrix()[5] );
+    _tanLambdaErrIP = std::sqrt( tsIP->getCovMatrix()[14] );
+    _d0ErrIP = std::sqrt( tsIP->getCovMatrix()[0] );
+    _z0ErrIP = std::sqrt( tsIP->getCovMatrix()[9] );
+    _phiErrIP = std::sqrt( tsIP->getCovMatrix()[2] );
+    // _recoIpPos is always (0, 0, 0)
+    std::array<double, 3> momIp = UTIL::getTrackMomentum(tsIP, _bField);
+    for(int j=0; j<3; j++) _recoIpMom[j] = momIp[j]; // should be identical to pfo->getMomentum()[j];
 
     auto tsECAL = getTrackStateAtCalorimeter( track );
     _omegaECAL = tsECAL->getOmega();
     _tanLambdaECAL = tsECAL->getTanLambda();
-    _d0ECAL = tsECAL->getD0();
-    _z0ECAL = tsECAL->getZ0();
+    _d0ECAL = tsECAL->getD0(); // NOTE: must be 0 by definition at ECAL
+    _z0ECAL = tsECAL->getZ0(); // NOTE: must be 0 by definition at ECAL
     _phiECAL = tsECAL->getPhi();
+    _omegaErrECAL = std::sqrt( tsECAL->getCovMatrix()[5] );
+    _tanLambdaErrECAL = std::sqrt( tsECAL->getCovMatrix()[14] );
+    _d0ErrECAL = std::sqrt( tsECAL->getCovMatrix()[0] );
+    _z0ErrECAL = std::sqrt( tsECAL->getCovMatrix()[9] );
+    _phiErrECAL = std::sqrt( tsECAL->getCovMatrix()[2] );
+    for(int j=0; j<3; j++) _recoCaloPos[j] = tsECAL->getReferencePoint()[j];
+    std::array<double, 3> momECAL = UTIL::getTrackMomentum(tsECAL, _bField);
+    for(int j=0; j<3; j++) _recoCaloMom[j] = momECAL[j];
 
 
+    if (refittedPfo == nullptr || refittedPfo->getTracks().size() != 1 ||  refittedPfo->getTracks()[0]->getOmega() == 0.f || refittedPfo->getTracks()[0]->getTanLambda() == 0.f) return;
     auto refittedTrack = refittedPfo->getTracks()[0];
 
-    std::array<double, 3> mom = UTIL::getTrackMomentum(tsCalo, _bField);
-    Vector3D trackMomAtCalo(mom[0], mom[1], mom[2]);
+    auto refittedTsIP = refittedTrack->getTrackState( TrackState::AtIP );
+    _refittedOmegaIP = refittedTsIP->getOmega();
+    _refittedTanLambdaIP = refittedTsIP->getTanLambda();
+    _refittedD0IP = refittedTsIP->getD0();
+    _refittedZ0IP = refittedTsIP->getZ0();
+    _refittedPhiIP = refittedTsIP->getPhi();
+    _refittedOmegaErrIP = std::sqrt( refittedTsIP->getCovMatrix()[5] );
+    _refittedTanLambdaErrIP = std::sqrt( refittedTsIP->getCovMatrix()[14] );
+    _refittedD0ErrIP = std::sqrt( refittedTsIP->getCovMatrix()[0] );
+    _refittedZ0ErrIP = std::sqrt( refittedTsIP->getCovMatrix()[9] );
+    _refittedPhiErrIP = std::sqrt( refittedTsIP->getCovMatrix()[2] );
+    // _recoIpPos is always (0, 0, 0)
+    std::array<double, 3> refittedMomIp = UTIL::getTrackMomentum(refittedTsIP, _bField);
+    for(int j=0; j<3; j++) _refittedRecoIpMom[j] = refittedMomIp[j]; // should be identical to refittedPfo->getMomentum()[j];
 
-    for(int j=0; j<3; j++) _recoIpMom.at(j) = pfo->getMomentum()[j];
-    for(int j=0; j<3; j++) _recoCaloPos.at(j) = trackPosAtCalo[j];
-    for(int j=0; j<3; j++) _recoCaloMom.at(j) = trackMomAtCalo[j];
+    auto refittedTsECAL = getTrackStateAtCalorimeter( refittedTrack );
+    _refittedOmegaECAL = refittedTsECAL->getOmega();
+    _refittedTanLambdaECAL = refittedTsECAL->getTanLambda();
+    _refittedD0ECAL = refittedTsECAL->getD0(); // NOTE: must be 0 by definition at ECAL
+    _refittedZ0ECAL = refittedTsECAL->getZ0(); // NOTE: must be 0 by definition at ECAL
+    _refittedPhiECAL = refittedTsECAL->getPhi();
+    _refittedOmegaErrECAL = std::sqrt( refittedTsECAL->getCovMatrix()[5] );
+    _refittedTanLambdaErrECAL = std::sqrt( refittedTsECAL->getCovMatrix()[14] );
+    _refittedD0ErrECAL = std::sqrt( refittedTsECAL->getCovMatrix()[0] );
+    _refittedZ0ErrECAL = std::sqrt( refittedTsECAL->getCovMatrix()[9] );
+    _refittedPhiErrECAL = std::sqrt( refittedTsECAL->getCovMatrix()[2] );
+    for(int j=0; j<3; j++) _refittedRecoCaloPos[j] = refittedTsECAL->getReferencePoint()[j];
+    std::array<double, 3> refittedMomECAL = UTIL::getTrackMomentum(refittedTsECAL, _bField);
+    for(int j=0; j<3; j++) _refittedRecoCaloMom[j] = refittedMomECAL[j];
+}
 
-    // Now fill the same for the refitted track.
-    ReconstructedParticle* updatedPfo = static_cast <ReconstructedParticle*> ( updatedPfos->getElementAt(i) );
-    if (refittedTrack->getOmega() == 0.f && refittedTrack->getTanLambda() == 0.f){
-        //This is empty track! Fit has failed!?
-        _refittedOmegaIP = 0.f;
-        _refittedTanLambdaIP = 0.f;
-        _refittedOmegaECAL = 0.f;
-        _refittedTanLambdaECAL = 0.f;
-        for(int j=0; j<3; j++) _refittedRecoIpMom.at(j) = 0.f;
-        for(int j=0; j<3; j++) _refittedRecoCaloPos.at(j) = 0.f;
-        for(int j=0; j<3; j++) _refittedRecoCaloMom.at(j) = 0.f;
+void BohdanAna::fillRecoVertexInfo(EVENT::LCEvent* evt, EVENT::MCParticle* mc, const UTIL::LCRelationNavigator& pfo2mc){
+    LCCollection* pfos = evt->getCollection("PandoraPFOs");
+    LCCollection* updatedPfos = evt->getCollection("updatedPandoraPFOs");
+    LCCollection* primVtxCol = evt->getCollection("PrimaryVertex_default");
+    LCCollection* secondaryVtxCol = evt->getCollection("BuildUpVertex_default");
+    LCCollection* secondaryV0VtxCol = evt->getCollection("BuildUpVertex_V0_default");
+    LCCollection* primVtxRefitCol = evt->getCollection("PrimaryVertex_refit");
+    LCCollection* secondaryVtxRefitCol = evt->getCollection("BuildUpVertex_refit");
+    LCCollection* secondaryV0VtxRefitCol = evt->getCollection("BuildUpVertex_V0_refit");
+
+    for(int i=0; i<primVtxCol->getNumberOfElements(); ++i){
+        auto vertex = static_cast<Vertex*> (primVtxCol->getElementAt(i));
+        auto prongs = vertex->getAssociatedParticle()->getParticles();
+        for (auto* prong : prongs){
+            auto prongMC = getMC(prong, pfo2mc);
+            if (mc == prongMC) _isInRecoPrimaryVertex = true;
+            break;
+        }
     }
-    else{
-        auto refittedTsIP = refittedTrack->getTrackState( TrackState::AtIP );
-        _refittedOmegaIP = refittedTsIP->getOmega();
-        _refittedTanLambdaIP = refittedTsIP->getTanLambda();
-
-        auto refittedTsCalo = getTrackStateAtCalorimeter( refittedTrack );
-        _refittedOmegaECAL = refittedTsCalo->getOmega();
-        _refittedTanLambdaECAL = refittedTsCalo->getTanLambda();
-
-        Vector3D refittedTrackPosAtCalo( refittedTsCalo->getReferencePoint() );
-        std::array<double, 3> refittedMom = UTIL::getTrackMomentum(refittedTsCalo, _bField);
-        Vector3D refittedTrackMomAtCalo(refittedMom[0], refittedMom[1], refittedMom[2]);
-
-        for(int j=0; j<3; j++) _refittedRecoIpMom.at(j) = updatedPfo->getMomentum()[j];
-        for(int j=0; j<3; j++) _refittedRecoCaloPos.at(j) = refittedTrackPosAtCalo[j];
-        for(int j=0; j<3; j++) _refittedRecoCaloMom.at(j) = refittedTrackMomAtCalo[j];
+    for(int i=0; i<secondaryVtxCol->getNumberOfElements(); ++i){
+        auto vertex = static_cast<Vertex*> (secondaryVtxCol->getElementAt(i));
+        auto prongs = vertex->getAssociatedParticle()->getParticles();
+        for (auto* prong : prongs){
+            auto prongMC = getMC(prong, pfo2mc);
+            if (mc == prongMC) _isInRecoSecondaryVertex = true;
+            break;
+        }
+    }
+    for(int i=0; i<secondaryV0VtxCol->getNumberOfElements(); ++i){
+        auto vertex = static_cast<Vertex*> (secondaryV0VtxCol->getElementAt(i));
+        auto prongs = vertex->getAssociatedParticle()->getParticles();
+        for (auto* prong : prongs){
+            auto prongMC = getMC(prong, pfo2mc);
+            if (mc == prongMC){
+                _isInRecoSecondaryVertex = true;
+                _isV0DecayReco = true;
+            }
+            break;
+        }
     }
 
+    for(int i=0; i<primVtxRefitCol->getNumberOfElements(); ++i){
+        auto vertex = static_cast<Vertex*> (primVtxRefitCol->getElementAt(i));
+        auto prongs = vertex->getAssociatedParticle()->getParticles();
+        for (auto* refittedProng : prongs){
+            auto* prongObject = getMatchingElement(updatedPfos, refittedProng, pfos);
+            if(prongObject == nullptr) continue;
+            auto* prong = static_cast<ReconstructedParticle*> ( prongObject );
+            auto prongMC = getMC(prong, pfo2mc);
+            if (mc == prongMC) _isInRecoPrimaryRefitVertex = true;
+            break;
+        }
+    }
+    for(int i=0; i<secondaryVtxRefitCol->getNumberOfElements(); ++i){
+        auto vertex = static_cast<Vertex*> (secondaryVtxRefitCol->getElementAt(i));
+        auto prongs = vertex->getAssociatedParticle()->getParticles();
+        for (auto* refittedProng : prongs){
+            auto* prongObject = getMatchingElement(updatedPfos, refittedProng, pfos);
+            if(prongObject == nullptr) continue;
+            auto* prong = static_cast<ReconstructedParticle*> ( prongObject );
+            auto prongMC = getMC(prong, pfo2mc);
+            if (mc == prongMC) _isInRecoSecondaryRefitVertex = true;
+            break;
+        }
+    }
+    for(int i=0; i<secondaryV0VtxRefitCol->getNumberOfElements(); ++i){
+        auto vertex = static_cast<Vertex*> (secondaryV0VtxRefitCol->getElementAt(i));
+        auto prongs = vertex->getAssociatedParticle()->getParticles();
+        for (auto* refittedProng : prongs){
+            auto* prongObject = getMatchingElement(updatedPfos, refittedProng, pfos);
+            if(prongObject == nullptr) continue;
+            auto* prong = static_cast<ReconstructedParticle*> ( prongObject );
+            auto prongMC = getMC(prong, pfo2mc);
+            if (mc == prongMC){
+                _isInRecoSecondaryRefitVertex = true;
+                _isV0DecayRefitReco = true;
+            }
+            break;
+        }
+    }
 
 
 }
@@ -382,43 +469,38 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
     LCRelationNavigator navToSimTrackerHits( evt->getCollection("TrackerHitsRelations") );
     LCRelationNavigator navToSimCalorimeterHits( evt->getCollection("CalorimeterHitsRelations") );
 
-    Vector3D truePrimaryVertex( static_cast<MCParticle*>(mcs->getElementAt(0))->getVertex() );
-    std::map< Vector3D, std::vector<MCParticle*>, CompareVectors > reconstructableTrueVertices = getReconstructableTrueVertices(evt);
+    std::vector<VertexData> trueVertices = getReconstructableTrueVertices(evt);
 
-    // No primary vertex!? Throw away this event
-    if ( reconstructableTrueVertices.size() == 0 ) return;
-    // Split primary and secondary
-    auto closestToTruePrimaryVertex = [&truePrimaryVertex](const std::pair<Vector3D, std::vector<MCParticle*> >& a, const std::pair<Vector3D, std::vector<MCParticle*> >& b){return (a.first - truePrimaryVertex).r() < (b.first - truePrimaryVertex).r();};
-    auto primaryVertexIter = std::min_element(reconstructableTrueVertices.begin(), reconstructableTrueVertices.end(), closestToTruePrimaryVertex);
-    Vector3D reconstructablePrimaryVertexPosition = primaryVertexIter->first;
-    std::vector<MCParticle*> reconstructablePrimaryVertexMCs = primaryVertexIter->second;
-    reconstructableTrueVertices.erase( primaryVertexIter );
-    auto reconstructableSecondaryVertices = reconstructableTrueVertices;
-
-    //LOOP OVER ALL MCParticles and store only pointers to pi/k/p/gamma
+    //Loop over MC particles
     for (int i=0; i<mcs->getNumberOfElements(); ++i){
-        resetVariables();
-
+        // Storing only charged hadrons - pi/K/p
         MCParticle* mc = static_cast <MCParticle*> ( mcs->getElementAt(i) );
         if (mc == nullptr) continue;
         bool isHadron = std::abs( mc->getPDG() ) == 211 || std::abs( mc->getPDG() ) == 321 || std::abs( mc->getPDG() ) == 2212;
         if ( not isHadron ) continue;
-        ReconstructedParticle* pfo = getRelatedReconstructedParticle(mc, mc2pfo, pfo2mc);
-        auto refittedPFO = getRefittedPFO(pfos, updatedPfos, pfo);
 
-        bool isInRecoconstructablePrimaryVertex = std::find(reconstructablePrimaryVertexMCs.begin(), reconstructablePrimaryVertexMCs.end(), mc) != reconstructablePrimaryVertexMCs.end();
-        bool isInRecoconstructableSecondaryVertex = false;
-        for(auto const& [pos, reconstructableSecondaryVertexMCs] : reconstructableSecondaryVertices){
-            if (std::find(reconstructableSecondaryVertexMCs.begin(), reconstructableSecondaryVertexMCs.end(), mc) != reconstructableSecondaryVertexMCs.end() ){
-                isInRecoconstructableSecondaryVertex = true;
+        resetVariables();
+
+        auto pfo = getRelatedReconstructedParticle(mc, mc2pfo, pfo2mc);
+        auto refittedPFO = static_cast<ReconstructedParticle* > ( getMatchingElement(pfos, pfo, updatedPfos) );
+
+        // Is MC in the true vertex?
+        for(auto& vtx : trueVertices) {
+            auto it = std::find(vtx.mcs.begin(), vtx.mcs.end(), mc);
+            if (it != vtx.mcs.end()){
+                _isInTrueV0DecayTrue = vtx.isV0;
+                if (vtx.isPrimary) _isInTruePrimaryVertex = true;
+                else _isInTrueSecondaryVertex = true;
                 break;
             }
         }
 
+        fillRecoVertexInfo(evt, mc, pfo2mc);
         _quarksToPythia = getQuarksToPythia(evt);
-        fillMCTrueInfo( mc, pfo, isInRecoconstructablePrimaryVertex, isInRecoconstructableSecondaryVertex );
-        std::cout<<"_quarksToPythia: "<<_quarksToPythia<<std::endl;
 
+        fillMCTrueInfo( mc, pfo );
+
+        // Work only with simple reconstructed particles (1 track and 1 shower). Ignore rest ( ~ O( 0.1%) )
         if ( pfo == nullptr || pfo->getTracks().size() != 1 || pfo->getClusters().size() != 1){
             _tree->Fill();
             continue;
@@ -469,10 +551,11 @@ void BohdanAna::resetVariables(){
     _pdg = -1;
     _mcVtx.fill(0.f);
     _mcMom.fill(0.f);
-    _d0True = 0.f;
-    _z0True = 0.f;
     _omegaTrue = 0.f;
     _tanLambdaTrue = 0.f;
+    _d0True = 0.f;
+    _z0True = 0.f;
+    _phiTrue = 0.f;
     _timeTrue = 0.f;
     _isOverlay = false;
     _isSimulated = false;
@@ -481,26 +564,61 @@ void BohdanAna::resetVariables(){
     _isBottomQuarkDecay = false;
     _isCharmQuarkDecay = false;
     _isHadronisationDecay = false;
-    _isInReconstructablePrimaryVertex = false;
-    _isInReconstructableSecondaryVertex = false;
     _isReconstructed = false;
     _hasTrack = false;
     _hasShower = false;
-
+    _isInTruePrimaryVertex = false;
+    _isInTrueSecondaryVertex = false;
+    _isInRecoPrimaryVertex = false;
+    _isInRecoSecondaryVertex = false;
+    _isV0DecayTrue = false;
+    _isV0DecayReco = false;
 
     _dEdx = 0.f;
     _omegaIP = 0.f;
-    _omegaECAL = 0.f;
     _tanLambdaIP = 0.f;
-    _tanLambdaECAL = 0.f;
+    _d0IP = 0.f;
+    _z0IP = 0.f;
+    _phiIP = 0.f;
+    _omegaErrIP = 0.f;
+    _tanLambdaErrIP = 0.f;
+    _d0ErrIP = 0.f;
+    _z0ErrIP = 0.f;
+    _phiErrIP = 0.f;
     _recoIpMom.fill(0.f);
+    _omegaECAL = 0.f;
+    _tanLambdaECAL = 0.f;
+    _d0ECAL = 0.f;
+    _z0ECAL = 0.f;
+    _phiECAL = 0.f;
+    _omegaErrECAL = 0.f;
+    _tanLambdaErrECAL = 0.f;
+    _d0ErrECAL = 0.f;
+    _z0ErrECAL = 0.f;
+    _phiErrECAL = 0.f;
     _recoCaloPos.fill(0.f);
     _recoCaloMom.fill(0.f);
     _refittedOmegaIP = 0.f;
-    _refittedOmegaECAL = 0.f;
     _refittedTanLambdaIP = 0.f;
-    _refittedTanLambdaECAL = 0.f;
+    _refittedD0IP = 0.f;
+    _refittedZ0IP = 0.f;
+    _refittedPhiIP = 0.f;
+    _refittedOmegaErrIP = 0.f;
+    _refittedTanLambdaErrIP = 0.f;
+    _refittedD0ErrIP = 0.f;
+    _refittedZ0ErrIP = 0.f;
+    _refittedPhiErrIP = 0.f;
     _refittedRecoIpMom.fill(0.f);
+    _refittedOmegaECAL = 0.f;
+    _refittedTanLambdaECAL = 0.f;
+    _refittedD0ECAL = 0.f;
+    _refittedZ0ECAL = 0.f;
+    _refittedPhiECAL = 0.f;
+    _refittedOmegaErrECAL = 0.f;
+    _refittedTanLambdaErrECAL = 0.f;
+    _refittedD0ErrECAL = 0.f;
+    _refittedZ0ErrECAL = 0.f;
+    _refittedPhiErrECAL = 0.f;
     _refittedRecoCaloPos.fill(0.f);
     _refittedRecoCaloMom.fill(0.f);
 
@@ -523,9 +641,8 @@ void BohdanAna::resetVariables(){
     _harmonicMomToSET_IKF_phiLambda = 0.f;
     _harmonicMomToSET_IKF_phiZed = 0.f;
     _harmonicMomToSET_IKF_zedLambda = 0.f;
-
-
     _cleanTrack = true;
+
     _typeClosest = -1;
     _caloIDClosest = -1;
     _layoutClosest = -1;
@@ -537,11 +654,11 @@ void BohdanAna::resetVariables(){
     _tofSETBack.fill(0.f);
     _tofFit.fill(0.f);
 
-    _nHits = 0;
     _xHit.clear();
     _yHit.clear();
     _zHit.clear();
     _tHit.clear();
     _layerHit.clear();
     _energyHit.clear();
+    _nHits = 0;
 }
