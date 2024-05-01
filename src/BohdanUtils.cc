@@ -535,7 +535,8 @@ unsigned int getQuarksToPythia(EVENT::LCEvent * evt){
         for (auto parent:parents){
             unsigned int quarkPDG = std::abs( parent->getPDG() );
             if ( not ( 0 < quarkPDG && quarkPDG < 9 ) ){
-                streamlog_out(WARNING)<<"Unexpected not quark input to the pythia!!!"<<std::endl;
+                streamlog_out(WARNING)<<"Unexpected parents of pdg=94 (pythia input) in the event "<<evt->getEventNumber();
+                streamlog_out(WARNING)<<". Expected quarks, but found abs(pdg) : "<<quarkPDG<<std::endl;
                 continue;
             }
             pdgs.push_back( quarkPDG );

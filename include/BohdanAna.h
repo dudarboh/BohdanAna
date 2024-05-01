@@ -9,7 +9,7 @@
 #include "EventDisplayer.h"
 #include "TrackLength.h"
 
-
+#include "BohdanUtils.h"
 
 class BohdanAna : public marlin::Processor, EventDisplayer {
     friend class EventDisplayer;
@@ -25,13 +25,20 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
         void end();
 
         void fillMCTrueInfo(EVENT::MCParticle* mc, EVENT::ReconstructedParticle* pfo);
-        void fillTOFInfo(EVENT::Cluster* cluster, EVENT::Track* track, EVENT::CalorimeterHit* closestHit, const dd4hep::rec::Vector3D& trackPosAtCalo, const dd4hep::rec::Vector3D& trackMomAtCalo);
-        void fillTrackLengthInfo(EVENT::ReconstructedParticle* pfo, EVENT::MCParticle* mc, const UTIL::LCRelationNavigator& navToSimTrackerHits);
-        void fillCsvForKonrad(EVENT::Cluster* cluster, int pdg, double trueTOF, double trackLength, const dd4hep::rec::Vector3D& trackPosAtCalo, const dd4hep::rec::Vector3D& trackMomAtCalo);
-        void fillTrackStates(EVENT::ReconstructedParticle* pfo, EVENT::ReconstructedParticle* refittedPfo);
+
+        void fillTrueVertexInfo(EVENT::MCParticle* mc, const std::vector<VertexData>& trueVertices);
+
         void fillRecoVertexInfo(EVENT::LCEvent* evt, EVENT::MCParticle* mc, const UTIL::LCRelationNavigator& pfo2mc);
 
+        void fillTrackStates(EVENT::ReconstructedParticle* pfo, EVENT::ReconstructedParticle* refittedPfo);
 
+        void fillTrackLengthInfo(EVENT::MCParticle* mc, EVENT::ReconstructedParticle* pfo, const UTIL::LCRelationNavigator& navToSimTrackerHits);
+
+        void fillTOFInfo(EVENT::MCParticle* mc, EVENT::ReconstructedParticle* pfo, const UTIL::LCRelationNavigator& navToSimCalorimeterHits);
+
+        void fillCsvForKonrad(EVENT::ReconstructedParticle* pfo, int pdg, double trueTOF, double trackLength);
+
+        void initialiseTTree();
         void resetVariables();
     private:
         int _nEvent{};
@@ -53,11 +60,11 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
 
         // True infromation of MCParticle
         int _pdg{};
+        int _imidiateParentPDG{};
+        int _firstStableParentPDG{};
         dd4hep::rec::Vector3D _mcVtx{};
         bool _isOverlay{};
         bool _isSimulated{};
-        int _imidiateParentPDG{};
-        int _firstStableParentPDG{};
         bool _isBottomQuarkDecay{};
         bool _isCharmQuarkDecay{};
         bool _isHadronisationDecay{};
@@ -65,11 +72,19 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
         bool _isReconstructed{};
         bool _hasTrack{};
         bool _hasShower{};
+        // TRUE TRACK STATE AT IP
+        float _omegaTrue{};
+        float _tanLambdaTrue{};
+        float _d0True{};
+        float _z0True{};
+        float _phiTrue{};
+        float _timeTrue{};
+        dd4hep::rec::Vector3D _mcMom{};
 
         // TRUE VERTEX (NOTE: TRUE here means TRUE ON MC LEVEL BUT RECONSTRUCTABLE IN PRINCIPLE. E.g. has two reco tracks!)
         bool _isInTruePrimaryVertex{};
         bool _isInTrueSecondaryVertex{};
-        bool _isInTrueV0DecayTrue{};
+        bool _isInTrueV0Vertex{};
         dd4hep::rec::Vector3D _trueVertexPos{};
         unsigned int _nTracksAtTrueVertex{};
         float _invMassOfTrueVertex{};
@@ -106,17 +121,8 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
         float _cosThetaOfRecoRefitVertex{};
         float _cosThetaToIpOfRecoRefitVertex{};
 
-        // TRACK
+        // TRACK.
         float _dEdx{};
-
-        // TRUE TRACK STATE AT IP
-        float _omegaTrue{};
-        float _tanLambdaTrue{};
-        float _d0True{};
-        float _z0True{};
-        float _phiTrue{};
-        float _timeTrue{};
-        dd4hep::rec::Vector3D _mcMom{};
 
         // TRACK STATE AT IP
         float _omegaIP{};
@@ -129,6 +135,7 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
         float _d0ErrIP{};
         float _z0ErrIP{};
         float _phiErrIP{};
+        // _recoIpPos is (0,0,0) no point of storing it...
         dd4hep::rec::Vector3D _recoIpMom{};
 
         //TRACK STATE AT ECAL
