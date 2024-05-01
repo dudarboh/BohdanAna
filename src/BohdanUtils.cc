@@ -454,6 +454,7 @@ std::vector<VertexData> getReconstructableTrueVertices(EVENT::LCEvent * evt){
         streamlog_out(DEBUG2)<<std::endl;
     }
 
+
     // Remove any vertices with only single track as such verticies are unreconstructable
     verticies.erase(std::remove_if(verticies.begin(), verticies.end(), [](const VertexData& vtx) {return vtx.mcs.size() < 2;}), verticies.end());
 
@@ -468,6 +469,7 @@ std::vector<VertexData> getReconstructableTrueVertices(EVENT::LCEvent * evt){
     Vector3D primVertexPosTrue( static_cast< EVENT::MCParticle* >(mcs->getElementAt(0))->getVertex() );
     auto compDistanceToTrue = [&](const VertexData& a, const VertexData& b){return (a.pos - primVertexPosTrue).r() < (b.pos - primVertexPosTrue).r();};
 
+    if ( verticies.empty() ) return verticies; // no TRUE primary vertex may hapen. This happens once in ~200k events.
     (*std::min_element(verticies.begin(), verticies.end(), compDistanceToTrue)).isPrimary = true;
 
     for (auto& vtx : verticies){
