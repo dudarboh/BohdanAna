@@ -12,10 +12,13 @@ ROOT.EnableImplicitMT()
 N_MOMENTUM_BINS, MIN_MOMENTUM, MAX_MOMENTUM = 70, 0, 20 # GeV/c
 #Log momentum bins for dE/dx
 N_LOG_MOMENTUM_BINS, MIN_LOG_MOMENTUM, MAX_LOG_MOMENTUM = 30, -0.3, 1.3 # (0.5 to ~20) GeV/c
-LOG_MOMENTUM_BINS = np.array([ 10**(MIN_LOG_MOMENTUM + (MAX_LOG_MOMENTUM-MIN_LOG_MOMENTUM)*i/N_LOG_MOMENTUM_BINS ) for i in range(N_LOG_MOMENTUM_BINS+1) ])
+# LOG_MOMENTUM_BINS = np.array([ 10**(MIN_LOG_MOMENTUM + (MAX_LOG_MOMENTUM-MIN_LOG_MOMENTUM)*i/N_LOG_MOMENTUM_BINS ) for i in range(N_LOG_MOMENTUM_BINS+1) ])
+LOG_MOMENTUM_BINS = np.logspace(MIN_LOG_MOMENTUM, MAX_LOG_MOMENTUM, N_LOG_MOMENTUM_BINS+1)
 N_DEDX_BINS, MIN_DEDX, MAX_DEDX = 3000, 0, 1e-6
-DEDX_BINS = np.array([ MIN_DEDX + (MAX_DEDX - MIN_DEDX)*i/N_DEDX_BINS for i in range(N_DEDX_BINS+1) ])
+DEDX_BINS = np.linspace(MIN_DEDX, MAX_DEDX, N_DEDX_BINS+1)
 N_MASS2_BINS, MIN_MASS2, MAX_MASS2 = 3000, -3, 3  # GeV^2/c^4
+# MASS2_BINS = np.array([ MIN_MASS2 + (MAX_MASS2 - MIN_MASS2)*i/N_MASS2_BINS for i in range(N_MASS2_BINS+1) ])
+MASS2_BINS = np.linspace(MIN_MASS2, MAX_MASS2, N_MASS2_BINS+1)
 MOMENTUM_COLUMN = "harmonicMomToEcal_IKF_zedLambda" 
 TRACK_LENGTH_COLUMN = "trackLengthToEcal_IKF_zedLambda"
 RESOLUTIONS = [0, 1, 5, 10, 30, 50, 100, 300] # ps
@@ -257,11 +260,42 @@ def find_optimal_cut_2d(h1_2d, h2_2d):
     pass
 
 def main():
-    df_init = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna_*.root")\
-                  .Filter("abs(pdg) == 211 || abs(pdg) == 321 || abs(pdg) == 2212").Filter("tofClosest0 > 6.")
+
+    df_init = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna_Zqq.root").Filter("quarksToPythia == 44")
+    df = df_init.Define("mom", "sqrt(mcPx*mcPx + mcPy*mcPy + mcPz*mcPz)").Filter("abs(pdg) == 321")
+    h1 = df.Histo1D((get_rand_string(), "Produced;Momentum (GeV/c);N entries", 1000, 0, 20), "mom" )
+    h2 = df.Filter("isReconstructed").Histo1D((get_rand_string(), "Reconstructed;Momentum (GeV/c);N entries", 1000, 0, 20), "mom" )
+    h3 = df.Filter("isReconstructed && hasTrack").Histo1D((get_rand_string(), "Reconstructed && Track;Momentum (GeV/c);N entries", 1000, 0, 20), "mom" )
+    h4 = df.Filter("isReconstructed && hasTrack && hasShower").Histo1D((get_rand_string(), "Reconstructed && Track && Shower;Momentum (GeV/c);N entries", 1000, 0, 20), "mom" )
+    h5 = df.Filter("isReconstructed && hasTrack && hasShower && !isSimulated").Histo1D((get_rand_string(), "Reconstructed && Track && Shower && not sim;Momentum (GeV/c);N entries", 1000, 0, 20), "mom" )
+    h6 = df.Filter("isReconstructed && hasTrack && hasShower && !isSimulated && !isOverlay").Histo1D((get_rand_string(), "Reconstructed && Track && Shower && not sim && not overlay;Momentum (GeV/c);N entries", 1000, 0, 20), "mom" )
+    h7 = df.Filter("isReconstructed && hasTrack && hasShower && !isSimulated && !isOverlay && isInTrueSecondaryVertex").Histo1D((get_rand_string(), "Reconstructed && Track && Shower && not sim && not overlay && isInTrueSecondaryVertex ;Momentum (GeV/c);N entries", 1000, 0, 20), "mom" )
+    h8 = df.Filter("isReconstructed && hasTrack && hasShower && !isSimulated && !isOverlay && isInTrueSecondaryVertex && isInRecoSecondaryVertex").Histo1D((get_rand_string(), "Reconstructed && Track && Shower && not sim && not overlay && isInTrueSecondaryVertex ;Momentum (GeV/c);N entries", 1000, 0, 20), "mom" )
+
+
+    h2.SetLineColor(ROOT.kRed+2)
+    h3.SetLineColor(3)
+    h4.SetLineColor(4)
+    h5.SetLineColor(5)
+    h6.SetLineColor(6)
+    h7.SetLineColor(7)
+    h8.SetLineColor(8)
+
+    h1.Draw()
+    h2.Draw("same")
+    h3.Draw("same")
+    h4.Draw("same")
+    h5.Draw("same")
+    h6.Draw("same")
+    h7.Draw("same")
+    h8.Draw("same")
+    input("wait")
+
+
+
 
     # Get all histos first to utilise lazy RDataFrame behaviour
-    histos = {"TOF" : {}, "dEdx" : {}, "Combined" : {}}
+    histos = {"TOF" : {}, "dEdx" : {}, "Combined30" : {}}
     for RES in RESOLUTIONS:
         histos["TOF"][RES] = {}
         df = df_init.Define("beta", f"{TRACK_LENGTH_COLUMN}/(tofClosest{RES}*299.792458)")\

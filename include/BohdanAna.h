@@ -47,6 +47,8 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
         std::unique_ptr<TFile> _file;
         std::unique_ptr<TTree> _tree;
 
+        bool _dst_mode{};
+        bool _produce_refit_output{};
         bool _produce_csv_output{};
         std::ofstream _csv_output_file;
         int _global_pfo_number{};

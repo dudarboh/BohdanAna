@@ -87,4 +87,6 @@ void mergeCloseVerticies(std::vector<VertexData>& verticies, double mergeDistanc
 
 EVENT::LCObject* getMatchingElement(EVENT::LCCollection* col1, EVENT::LCObject* requestedObject, EVENT::LCCollection* col2);
 
+EVENT::LCCollection* getMCParticleCollection(EVENT::LCEvent* evt);
+
 #endif

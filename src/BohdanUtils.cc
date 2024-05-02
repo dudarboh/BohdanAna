@@ -74,6 +74,8 @@ std::vector<EVENT::Track*> getSubTracks(EVENT::Track* track){
     int indexOfFirstTPCCurl = 0;
     for(int i = 0; i < nSubTracks; ++i){
         EVENT::Track* subTrack = track->getTracks()[i];
+        //DST files do not store subTracks. Return imidiately.
+        if (subTrack == nullptr) return subTracks;
         auto hits = subTrack->getTrackerHits();
         if ( std::find_if(hits.begin(), hits.end(), isTPCHit) != hits.end() ){
             indexOfFirstTPCCurl = i;
@@ -410,7 +412,7 @@ unsigned int getQuarkTypeDecay(EVENT::MCParticle* mc){
 }
 
 std::vector<VertexData> getReconstructableTrueVertices(EVENT::LCEvent * evt){
-    EVENT::LCCollection* mcs = evt->getCollection("MCParticle");
+    EVENT::LCCollection* mcs = getMCParticleCollection(evt);
     UTIL::LCRelationNavigator mc2pfo ( evt->getCollection("MCTruthRecoLink") );
     UTIL::LCRelationNavigator pfo2mc ( evt->getCollection("RecoMCTruthLink") );
 
@@ -529,19 +531,19 @@ unsigned int getQuarksToPythia(EVENT::LCEvent * evt){
     // Return int, where each quark flavour goes as a separate input digit.
     // 55 - bb, 44 - cc, 33 - ss, ..., 5423 - bcus, etc... Signs are ignored
     std::vector<unsigned int> pdgs;
-    EVENT::LCCollection* mcs = evt->getCollection("MCParticle");
+    EVENT::LCCollection* mcs = getMCParticleCollection(evt);
     for (int i=0; i<mcs->getNumberOfElements(); ++i){
         EVENT::MCParticle* mc = static_cast <EVENT::MCParticle*> ( mcs->getElementAt(i) );
         if ( mc == nullptr || mc->getPDG() != 94 ) continue;
         auto parents = mc->getParents();
         for (auto parent:parents){
             unsigned int quarkPDG = std::abs( parent->getPDG() );
-            if ( not ( 0 < quarkPDG && quarkPDG < 9 ) ){
-                streamlog_out(WARNING)<<"Unexpected parents of pdg=94 (pythia input) in the event "<<evt->getEventNumber();
-                streamlog_out(WARNING)<<". Expected quarks, but found abs(pdg) : "<<quarkPDG<<std::endl;
+            if ( not ( 0 < quarkPDG && quarkPDG < 10 ) && not (quarkPDG ==  21) ){
+                streamlog_out(DEBUG8)<<"Ignoring parents of pdg=94 (pythia input) in the event "<<evt->getEventNumber()<<" with abs(pdg) : "<<quarkPDG<<std::endl;
                 continue;
             }
-            pdgs.push_back( quarkPDG );
+            if ( quarkPDG ==  21 ) pdgs.push_back( 9 );
+            else pdgs.push_back( quarkPDG );
         }
     }
     unsigned int encodedPDGs = 0;
@@ -581,4 +583,12 @@ EVENT::LCObject* getMatchingElement(EVENT::LCCollection* col1, EVENT::LCObject* 
     //IMPROVE: print collection names. I hope they will be stored in the corresponding in the future. Now they are accesible only through LCEvent
     streamlog_out(WARNING)<<"Could not find a matching object in the collection "<<col2<<" for the requested object "<<requestedObject<<" in the collection "<<col1<<std::endl;
     return nullptr;
+}
+
+EVENT::LCCollection* getMCParticleCollection(EVENT::LCEvent* evt){
+    // Return collection of MCParticles. Which is "MCParticle" for REC files and "MCParticlesSkimmed" for DST files.
+    const std::vector<std::string>* names = evt->getCollectionNames();
+    if ( std::find(names->begin(), names->end(), "MCParticle") != names->end() ) return evt->getCollection("MCParticle");
+    else if ( std::find(names->begin(), names->end(), "MCParticlesSkimmed") != names->end() ) return evt->getCollection("MCParticlesSkimmed");
+    else return nullptr;    
 }

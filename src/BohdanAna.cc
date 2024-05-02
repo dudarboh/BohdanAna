@@ -3,6 +3,7 @@
 #include "TOF.h"
 #include "TrackLength.h"
 
+#include "marlin/Global.h"
 #include "marlinutil/GeometryUtil.h"
 #include "marlinutil/CalorimeterHitType.h"
 #include "UTIL/LCRelationNavigator.h"
@@ -22,6 +23,18 @@ BohdanAna::BohdanAna() : marlin::Processor("BohdanAna"), EventDisplayer(this){
                                 "Produce csv output file for Konrad or not",
                                 _produce_csv_output,
                                 false);
+
+    registerProcessorParameter( "dst_mode",
+                                "Write only DST level output",
+                                _dst_mode,
+                                false);
+
+    // Rerunning LCFIPlus vertexing on statistics of DST files is very slow and is a bottleneck.
+    registerProcessorParameter( "produce_refit_output",
+                                "Store info about refitted tracks and vertices",
+                                _produce_refit_output,
+                                true);
+
 }
 
 
@@ -35,7 +48,22 @@ void BohdanAna::init(){
 
     initialiseTTree();
 
+    std::vector<std::string> fileNames ;
+    Global::parameters->getStringVals("LCIOInputFiles" , fileNames ) ;
+    if( fileNames.empty() ) streamlog_out(ERROR)<<" No slcio files provided!"<<std::endl;
+    for(auto& name : fileNames){
+        if ( _dst_mode && name.find("rec") != std::string::npos  ){
+            streamlog_out(WARNING)<<" Found \"rec\" in a filename while using DST mode! use DST files with full statistics!"<<std::endl;
+            break;
+        }
+        else if ( not _dst_mode && name.find("dst") != std::string::npos ){
+            streamlog_out(ERROR)<<" Found \"dst\" in a filename while using REC mode! Use DST mode or a REC file. Exiting to prevent a crash."<<std::endl;
+            exit(1);
+        }
+    }
+
     if(_produce_csv_output){
+        if (_dst_mode) streamlog_out(ERROR)<<" I cannot produce Konrad CSV file with hit information while running in DST mode!"<<std::endl;
         _csv_output_file = std::ofstream("output.csv");
         _csv_output_file<<"PFO #,"
                     "PDG,"
@@ -153,13 +181,19 @@ void BohdanAna::fillTrueVertexInfo(EVENT::MCParticle* mc, const std::vector<Vert
 
 void BohdanAna::fillRecoVertexInfo(EVENT::LCEvent* evt, EVENT::MCParticle* mc, const UTIL::LCRelationNavigator& pfo2mc){
     LCCollection* pfos = evt->getCollection("PandoraPFOs");
-    LCCollection* updatedPfos = evt->getCollection("updatedPandoraPFOs");
     LCCollection* primVtxCol = evt->getCollection("PrimaryVertex");
     LCCollection* secondaryVtxCol = evt->getCollection("BuildUpVertex");
     LCCollection* secondaryV0VtxCol = evt->getCollection("BuildUpVertex_V0");
-    LCCollection* primVtxRefitCol = evt->getCollection("PrimaryVertex_refit");
-    LCCollection* secondaryVtxRefitCol = evt->getCollection("BuildUpVertex_refit");
-    LCCollection* secondaryV0VtxRefitCol = evt->getCollection("BuildUpVertex_V0_refit");
+    LCCollection* updatedPfos = nullptr;
+    LCCollection* primVtxRefitCol = nullptr;
+    LCCollection* secondaryVtxRefitCol = nullptr;
+    LCCollection* secondaryV0VtxRefitCol = nullptr;
+    if ( _produce_refit_output ){
+        updatedPfos = evt->getCollection("updatedPandoraPFOs");
+        primVtxRefitCol = evt->getCollection("PrimaryVertex_refit");
+        secondaryVtxRefitCol = evt->getCollection("BuildUpVertex_refit");
+        secondaryV0VtxRefitCol = evt->getCollection("BuildUpVertex_V0_refit");
+    }
 
     EVENT::Vertex* matchedVertex = nullptr;
     for(int i=0; i<primVtxCol->getNumberOfElements(); ++i){
@@ -224,6 +258,7 @@ void BohdanAna::fillRecoVertexInfo(EVENT::LCEvent* evt, EVENT::MCParticle* mc, c
         }
     }
 
+    if ( not _produce_refit_output ) return;
     // Do literaly the same for the refitted vertex collections. Should be refactored better in functions...
     EVENT::Vertex* matchedRefittedVertex = nullptr;
 
@@ -348,6 +383,8 @@ void BohdanAna::fillTrackStates(EVENT::ReconstructedParticle* pfo, EVENT::Recons
     _recoCaloPos = Vector3D( tsECAL->getReferencePoint() );
     auto momECAL = UTIL::getTrackMomentum(tsECAL, _bField);
     _recoCaloMom = Vector3D( momECAL[0], momECAL[1], momECAL[2] );
+
+    if (not _produce_refit_output) return;
 
     if (refittedPfo == nullptr || refittedPfo->getTracks().size() != 1 ||  refittedPfo->getTracks()[0]->getOmega() == 0.f || refittedPfo->getTracks()[0]->getTanLambda() == 0.f) return;
 
@@ -517,16 +554,23 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
     ++_nEvent;
     streamlog_out(MESSAGE)<<"==================== Event: "<<_nEvent<<std::endl;
 
-    LCCollection* mcs = evt->getCollection("MCParticle");
+    LCCollection* mcs = getMCParticleCollection(evt);
     LCCollection* pfos = evt->getCollection("PandoraPFOs");
-    LCCollection* updatedPfos = evt->getCollection("updatedPandoraPFOs");
     LCRelationNavigator mc2pfo ( evt->getCollection("MCTruthRecoLink") );
     LCRelationNavigator pfo2mc ( evt->getCollection("RecoMCTruthLink") );
-    LCRelationNavigator navToSimTrackerHits( evt->getCollection("TrackerHitsRelations") );
-    LCRelationNavigator navToSimCalorimeterHits( evt->getCollection("CalorimeterHitsRelations") );
     LCCollection* primVtxCol = evt->getCollection("PrimaryVertex");
-    LCCollection* primVtxRefitCol = evt->getCollection("PrimaryVertex_refit");
-
+    LCCollection* updatedPfos = nullptr;
+    LCCollection* primVtxRefitCol = nullptr;
+    if ( _produce_refit_output ){
+        updatedPfos = evt->getCollection("updatedPandoraPFOs");
+        primVtxRefitCol = evt->getCollection("PrimaryVertex_refit");
+    }
+    std::unique_ptr<LCRelationNavigator> navToSimTrackerHits = nullptr;
+    std::unique_ptr<LCRelationNavigator> navToSimCalorimeterHits = nullptr;
+    if ( not _dst_mode){
+        navToSimTrackerHits = std::make_unique<LCRelationNavigator> ( evt->getCollection("TrackerHitsRelations") );
+        navToSimCalorimeterHits = std::make_unique<LCRelationNavigator> ( evt->getCollection("CalorimeterHitsRelations") );
+    }
     std::vector<VertexData> trueVertices = getReconstructableTrueVertices(evt);
     auto quarksToPythia = getQuarksToPythia(evt);
     auto ipTrue = Vector3D( static_cast< EVENT::MCParticle* >(mcs->getElementAt(0))->getVertex() );
@@ -553,9 +597,11 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
             _primVertexReco = Vector3D( vtx->getPosition() );
         }
 
-        if ( primVtxRefitCol->getNumberOfElements() > 0 ){
-            auto vtx = static_cast<Vertex*> (primVtxRefitCol->getElementAt(0));
-            _primRefitVertexReco = Vector3D( vtx->getPosition() );
+        if (_produce_refit_output){
+            if ( primVtxRefitCol->getNumberOfElements() > 0 ){
+                auto vtx = static_cast<Vertex*> (primVtxRefitCol->getElementAt(0));
+                _primRefitVertexReco = Vector3D( vtx->getPosition() );
+            }
         }
 
         //IMPORTANT: Run exactly in the order below there are interdependencies in fill functions...
@@ -568,7 +614,9 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
             _tree->Fill();
             continue;
         }
-        auto refittedPFO = static_cast<ReconstructedParticle* > ( getMatchingElement(pfos, pfo, updatedPfos) );
+
+        ReconstructedParticle* refittedPFO = nullptr;
+        if ( _produce_refit_output ) refittedPFO = static_cast<ReconstructedParticle* > ( getMatchingElement(pfos, pfo, updatedPfos) );
 
         fillRecoVertexInfo(evt, mc, pfo2mc);
 
@@ -576,11 +624,12 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
 
         fillTrackStates(pfo, refittedPFO);
 
-        fillTrackLengthInfo(mc, pfo, navToSimTrackerHits);
+        if (not _dst_mode){
+            fillTrackLengthInfo(mc, pfo, *navToSimTrackerHits);
 
-        fillTOFInfo(mc, pfo, navToSimCalorimeterHits);
-
-        if(_produce_csv_output && _tofClosest[0] > 5. ) fillCsvForKonrad( pfo, _pdg, _tofClosest[0], _trackLength_IKF_zedLambda);
+            fillTOFInfo(mc, pfo, *navToSimCalorimeterHits);
+            if(_produce_csv_output && _tofClosest[0] > 6. ) fillCsvForKonrad( pfo, _pdg, _tofClosest[0], _trackLength_IKF_zedLambda);
+        }
 
         // drawDisplay(this, evt, displayPFO, pfo);
         _tree->Fill();
@@ -610,9 +659,11 @@ void BohdanAna::initialiseTTree(){
     _tree->Branch("primVertexRecoX", &(_primVertexReco[0]) );
     _tree->Branch("primVertexRecoY", &(_primVertexReco[1]) );
     _tree->Branch("primVertexRecoZ", &(_primVertexReco[2]) );
-    _tree->Branch("primRefitVertexRecoX", &(_primRefitVertexReco[0]) );
-    _tree->Branch("primRefitVertexRecoY", &(_primRefitVertexReco[1]) );
-    _tree->Branch("primRefitVertexRecoZ", &(_primRefitVertexReco[2]) );
+    if ( _produce_refit_output ){
+        _tree->Branch("primRefitVertexRecoX", &(_primRefitVertexReco[0]) );
+        _tree->Branch("primRefitVertexRecoY", &(_primRefitVertexReco[1]) );
+        _tree->Branch("primRefitVertexRecoZ", &(_primRefitVertexReco[2]) );
+    }
 
     // True infromation of MCParticle
     _tree->Branch("pdg", &_pdg);
@@ -663,21 +714,23 @@ void BohdanAna::initialiseTTree(){
     _tree->Branch("cosThetaToIpOfRecoVertex", &_cosThetaToIpOfRecoVertex);
 
     // RECO REFITTED VERTEX
-    _tree->Branch("isInRecoPrimaryRefitVertex", &_isInRecoPrimaryRefitVertex);
-    _tree->Branch("isInRecoSecondaryRefitVertex", &_isInRecoSecondaryRefitVertex);
-    _tree->Branch("isV0DecayRefitReco", &_isV0DecayRefitReco);
-    _tree->Branch("recoRefitVertexPosX", &(_recoRefitVertexPos[0]) );
-    _tree->Branch("recoRefitVertexPosY", &(_recoRefitVertexPos[1]) );
-    _tree->Branch("recoRefitVertexPosZ", &(_recoRefitVertexPos[2]) );
-    _tree->Branch("recoRefitVertexPosErrX", &(_recoRefitVertexPosErr[0]) );
-    _tree->Branch("recoRefitVertexPosErrY", &(_recoRefitVertexPosErr[1]) );
-    _tree->Branch("recoRefitVertexPosErrZ", &(_recoRefitVertexPosErr[2]) );
-    _tree->Branch("nTracksAtRecoRefitVertex", &_nTracksAtRecoRefitVertex);
-    _tree->Branch("invMassOfRecoRefitVertex", &_invMassOfRecoRefitVertex);
-    _tree->Branch("minEnergyOfRecoRefitVertex", &_minEnergyOfRecoRefitVertex);
-    _tree->Branch("oppositeChargeOfRecoRefitVertex", &_oppositeChargeOfRecoRefitVertex);
-    _tree->Branch("cosThetaOfRecoRefitVertex", &_cosThetaOfRecoRefitVertex);
-    _tree->Branch("cosThetaToIpOfRecoRefitVertex", &_cosThetaToIpOfRecoRefitVertex);
+    if ( _produce_refit_output ){
+        _tree->Branch("isInRecoPrimaryRefitVertex", &_isInRecoPrimaryRefitVertex);
+        _tree->Branch("isInRecoSecondaryRefitVertex", &_isInRecoSecondaryRefitVertex);
+        _tree->Branch("isV0DecayRefitReco", &_isV0DecayRefitReco);
+        _tree->Branch("recoRefitVertexPosX", &(_recoRefitVertexPos[0]) );
+        _tree->Branch("recoRefitVertexPosY", &(_recoRefitVertexPos[1]) );
+        _tree->Branch("recoRefitVertexPosZ", &(_recoRefitVertexPos[2]) );
+        _tree->Branch("recoRefitVertexPosErrX", &(_recoRefitVertexPosErr[0]) );
+        _tree->Branch("recoRefitVertexPosErrY", &(_recoRefitVertexPosErr[1]) );
+        _tree->Branch("recoRefitVertexPosErrZ", &(_recoRefitVertexPosErr[2]) );
+        _tree->Branch("nTracksAtRecoRefitVertex", &_nTracksAtRecoRefitVertex);
+        _tree->Branch("invMassOfRecoRefitVertex", &_invMassOfRecoRefitVertex);
+        _tree->Branch("minEnergyOfRecoRefitVertex", &_minEnergyOfRecoRefitVertex);
+        _tree->Branch("oppositeChargeOfRecoRefitVertex", &_oppositeChargeOfRecoRefitVertex);
+        _tree->Branch("cosThetaOfRecoRefitVertex", &_cosThetaOfRecoRefitVertex);
+        _tree->Branch("cosThetaToIpOfRecoRefitVertex", &_cosThetaToIpOfRecoRefitVertex);
+    }
 
     // TRACK
     _tree->Branch("dEdx", &_dEdx);
@@ -726,86 +779,91 @@ void BohdanAna::initialiseTTree(){
     _tree->Branch("recoCaloPy", &(_recoCaloMom[1]) );
     _tree->Branch("recoCaloPz", &(_recoCaloMom[2]) );
 
-    //TRACK STATE AT IP REFITTED
-    _tree->Branch("refittedOmegaIP", &_refittedOmegaIP);
-    _tree->Branch("refittedTanLambdaIP", &_refittedTanLambdaIP);
-    _tree->Branch("refittedD0IP", &_refittedD0IP);
-    _tree->Branch("refittedZ0IP", &_refittedZ0IP);
-    _tree->Branch("refittedPhiIP", &_refittedPhiIP);
-    _tree->Branch("refittedOmegaErrIP", &_refittedOmegaErrIP);
-    _tree->Branch("refittedTanLambdaErrIP", &_refittedTanLambdaErrIP);
-    _tree->Branch("refittedD0ErrIP", &_refittedD0ErrIP);
-    _tree->Branch("refittedZ0ErrIP", &_refittedZ0ErrIP);
-    _tree->Branch("refittedPhiErrIP", &_refittedPhiErrIP);
-    _tree->Branch("refittedRecoIpPx", &(_refittedRecoIpMom[0]) );
-    _tree->Branch("refittedRecoIpPy", &(_refittedRecoIpMom[1]) );
-    _tree->Branch("refittedRecoIpPz", &(_refittedRecoIpMom[2]) );
+    if ( _produce_refit_output ){
+        //TRACK STATE AT IP REFITTED
+        _tree->Branch("refittedOmegaIP", &_refittedOmegaIP);
+        _tree->Branch("refittedTanLambdaIP", &_refittedTanLambdaIP);
+        _tree->Branch("refittedD0IP", &_refittedD0IP);
+        _tree->Branch("refittedZ0IP", &_refittedZ0IP);
+        _tree->Branch("refittedPhiIP", &_refittedPhiIP);
+        _tree->Branch("refittedOmegaErrIP", &_refittedOmegaErrIP);
+        _tree->Branch("refittedTanLambdaErrIP", &_refittedTanLambdaErrIP);
+        _tree->Branch("refittedD0ErrIP", &_refittedD0ErrIP);
+        _tree->Branch("refittedZ0ErrIP", &_refittedZ0ErrIP);
+        _tree->Branch("refittedPhiErrIP", &_refittedPhiErrIP);
+        _tree->Branch("refittedRecoIpPx", &(_refittedRecoIpMom[0]) );
+        _tree->Branch("refittedRecoIpPy", &(_refittedRecoIpMom[1]) );
+        _tree->Branch("refittedRecoIpPz", &(_refittedRecoIpMom[2]) );
 
-    //TRACK STATE AT ECAL REFITTED
-    _tree->Branch("refittedOmegaECAL", &_refittedOmegaECAL);
-    _tree->Branch("refittedTanLambdaECAL", &_refittedTanLambdaECAL);
-    _tree->Branch("refittedD0ECAL", &_refittedD0ECAL);
-    _tree->Branch("refittedZ0ECAL", &_refittedZ0ECAL);
-    _tree->Branch("refittedPhiECAL", &_refittedPhiECAL);
-    _tree->Branch("refittedOmegaErrECAL", &_refittedOmegaErrECAL);
-    _tree->Branch("refittedTanLambdaErrECAL", &_refittedTanLambdaErrECAL);
-    _tree->Branch("refittedD0ErrECAL", &_refittedD0ErrECAL);
-    _tree->Branch("refittedZ0ErrECAL", &_refittedZ0ErrECAL);
-    _tree->Branch("refittedPhiErrECAL", &_refittedPhiErrECAL);
-    _tree->Branch("refittedRecoCaloX", &(_refittedRecoCaloPos[0]) );
-    _tree->Branch("refittedRecoCaloY", &(_refittedRecoCaloPos[1]) );
-    _tree->Branch("refittedRecoCaloZ", &(_refittedRecoCaloPos[2]) );
-    _tree->Branch("refittedRecoCaloPx", &(_refittedRecoCaloMom[0]) );
-    _tree->Branch("refittedRecoCaloPy", &(_refittedRecoCaloMom[1]) );
-    _tree->Branch("refittedRecoCaloPz", &(_refittedRecoCaloMom[2]) );
-
-    // TRACK LENGTH and HARMONIC MEAN MOMENTUM ESTIMATORS
-    _tree->Branch("trackLength_IDR", &_trackLength_IDR);
-    _tree->Branch("trackLengthToEcal_SHA_phiLambda_IP", &_trackLength_SHA_phiLambda_IP);
-    _tree->Branch("trackLengthToEcal_SHA_phiZed_IP", &_trackLength_SHA_phiZed_IP);
-    _tree->Branch("trackLengthToEcal_SHA_zedLambda_IP", &_trackLength_SHA_zedLambda_IP);
-    _tree->Branch("trackLengthToEcal_SHA_phiLambda_ECAL", &_trackLength_SHA_phiLambda_ECAL);
-    _tree->Branch("trackLengthToEcal_SHA_phiZed_ECAL", &_trackLength_SHA_phiZed_ECAL);
-    _tree->Branch("trackLengthToEcal_SHA_zedLambda_ECAL", &_trackLength_SHA_zedLambda_ECAL);
-
-    _tree->Branch("trackLengthToEcal_IKF_phiLambda", &_trackLength_IKF_phiLambda);
-    _tree->Branch("trackLengthToEcal_IKF_phiZed", &_trackLength_IKF_phiZed);
-    _tree->Branch("trackLengthToEcal_IKF_zedLambda", &_trackLength_IKF_zedLambda);
-    _tree->Branch("harmonicMomToEcal_IKF_phiLambda", &_harmonicMom_IKF_phiLambda);
-    _tree->Branch("harmonicMomToEcal_IKF_phiZed", &_harmonicMom_IKF_phiZed);
-    _tree->Branch("harmonicMomToEcal_IKF_zedLambda", &_harmonicMom_IKF_zedLambda);
-
-    _tree->Branch("trackLengthToSET_IKF_phiLambda", &_trackLengthToSET_IKF_phiLambda);
-    _tree->Branch("trackLengthToSET_IKF_phiZed", &_trackLengthToSET_IKF_phiZed);
-    _tree->Branch("trackLengthToSET_IKF_zedLambda", &_trackLengthToSET_IKF_zedLambda);
-    _tree->Branch("harmonicMomToSET_IKF_phiLambda", &_harmonicMomToSET_IKF_phiLambda);
-    _tree->Branch("harmonicMomToSET_IKF_phiZed", &_harmonicMomToSET_IKF_phiZed);
-    _tree->Branch("harmonicMomToSET_IKF_zedLambda", &_harmonicMomToSET_IKF_zedLambda);
-
-    _tree->Branch("cleanTrack", &_cleanTrack);
-
-    //tofs
-    _tree->Branch("typeClosest", &_typeClosest);
-    _tree->Branch("caloIDClosest", &_caloIDClosest);
-    _tree->Branch("layoutClosest", &_layoutClosest);
-    _tree->Branch("layerClosest", &_layerClosest);
-    _tree->Branch("cleanClosestHit", &_cleanClosestHit);
-    for (size_t i = 0; i < _resolutions.size(); i++){
-        int res = int(_resolutions[i]);
-        _tree->Branch(( "tofClosest"+std::to_string(res) ).c_str(), &( _tofClosest[i]) );
-        _tree->Branch(( "tofAverage"+std::to_string(res) ).c_str(), &( _tofAverage[i]) );
-        _tree->Branch(( "tofSETFront"+std::to_string(res) ).c_str(), &( _tofSETFront[i]) );
-        _tree->Branch(( "tofSETBack"+std::to_string(res) ).c_str(), &( _tofSETBack[i]) );
-        _tree->Branch(( "tofFit"+std::to_string(res) ).c_str(), &( _tofFit[i]) );
+        //TRACK STATE AT ECAL REFITTED
+        _tree->Branch("refittedOmegaECAL", &_refittedOmegaECAL);
+        _tree->Branch("refittedTanLambdaECAL", &_refittedTanLambdaECAL);
+        _tree->Branch("refittedD0ECAL", &_refittedD0ECAL);
+        _tree->Branch("refittedZ0ECAL", &_refittedZ0ECAL);
+        _tree->Branch("refittedPhiECAL", &_refittedPhiECAL);
+        _tree->Branch("refittedOmegaErrECAL", &_refittedOmegaErrECAL);
+        _tree->Branch("refittedTanLambdaErrECAL", &_refittedTanLambdaErrECAL);
+        _tree->Branch("refittedD0ErrECAL", &_refittedD0ErrECAL);
+        _tree->Branch("refittedZ0ErrECAL", &_refittedZ0ErrECAL);
+        _tree->Branch("refittedPhiErrECAL", &_refittedPhiErrECAL);
+        _tree->Branch("refittedRecoCaloX", &(_refittedRecoCaloPos[0]) );
+        _tree->Branch("refittedRecoCaloY", &(_refittedRecoCaloPos[1]) );
+        _tree->Branch("refittedRecoCaloZ", &(_refittedRecoCaloPos[2]) );
+        _tree->Branch("refittedRecoCaloPx", &(_refittedRecoCaloMom[0]) );
+        _tree->Branch("refittedRecoCaloPy", &(_refittedRecoCaloMom[1]) );
+        _tree->Branch("refittedRecoCaloPz", &(_refittedRecoCaloMom[2]) );
     }
 
-    _tree->Branch("nHits", &_nHits);
-    _tree->Branch("xHit", &_xHit);
-    _tree->Branch("yHit", &_yHit);
-    _tree->Branch("zHit", &_zHit);
-    _tree->Branch("tHit", &_tHit);
-    _tree->Branch("layerHit", &_layerHit);
-    _tree->Branch("energyHit", &_energyHit);
+    // TRACK LENGTH and HARMONIC MEAN MOMENTUM ESTIMATORS
+    if (not _dst_mode){
+        _tree->Branch("trackLength_IDR", &_trackLength_IDR);
+        _tree->Branch("trackLengthToEcal_SHA_phiLambda_IP", &_trackLength_SHA_phiLambda_IP);
+        _tree->Branch("trackLengthToEcal_SHA_phiZed_IP", &_trackLength_SHA_phiZed_IP);
+        _tree->Branch("trackLengthToEcal_SHA_zedLambda_IP", &_trackLength_SHA_zedLambda_IP);
+        _tree->Branch("trackLengthToEcal_SHA_phiLambda_ECAL", &_trackLength_SHA_phiLambda_ECAL);
+        _tree->Branch("trackLengthToEcal_SHA_phiZed_ECAL", &_trackLength_SHA_phiZed_ECAL);
+        _tree->Branch("trackLengthToEcal_SHA_zedLambda_ECAL", &_trackLength_SHA_zedLambda_ECAL);
+
+        _tree->Branch("trackLengthToEcal_IKF_phiLambda", &_trackLength_IKF_phiLambda);
+        _tree->Branch("trackLengthToEcal_IKF_phiZed", &_trackLength_IKF_phiZed);
+        _tree->Branch("trackLengthToEcal_IKF_zedLambda", &_trackLength_IKF_zedLambda);
+        _tree->Branch("harmonicMomToEcal_IKF_phiLambda", &_harmonicMom_IKF_phiLambda);
+        _tree->Branch("harmonicMomToEcal_IKF_phiZed", &_harmonicMom_IKF_phiZed);
+        _tree->Branch("harmonicMomToEcal_IKF_zedLambda", &_harmonicMom_IKF_zedLambda);
+
+        _tree->Branch("trackLengthToSET_IKF_phiLambda", &_trackLengthToSET_IKF_phiLambda);
+        _tree->Branch("trackLengthToSET_IKF_phiZed", &_trackLengthToSET_IKF_phiZed);
+        _tree->Branch("trackLengthToSET_IKF_zedLambda", &_trackLengthToSET_IKF_zedLambda);
+        _tree->Branch("harmonicMomToSET_IKF_phiLambda", &_harmonicMomToSET_IKF_phiLambda);
+        _tree->Branch("harmonicMomToSET_IKF_phiZed", &_harmonicMomToSET_IKF_phiZed);
+        _tree->Branch("harmonicMomToSET_IKF_zedLambda", &_harmonicMomToSET_IKF_zedLambda);
+
+        _tree->Branch("cleanTrack", &_cleanTrack);
+        //tofs
+
+        _tree->Branch("typeClosest", &_typeClosest);
+        _tree->Branch("caloIDClosest", &_caloIDClosest);
+        _tree->Branch("layoutClosest", &_layoutClosest);
+        _tree->Branch("layerClosest", &_layerClosest);
+        _tree->Branch("cleanClosestHit", &_cleanClosestHit);
+        for (size_t i = 0; i < _resolutions.size(); i++){
+            int res = int(_resolutions[i]);
+            _tree->Branch(( "tofClosest"+std::to_string(res) ).c_str(), &( _tofClosest[i]) );
+            _tree->Branch(( "tofAverage"+std::to_string(res) ).c_str(), &( _tofAverage[i]) );
+            _tree->Branch(( "tofSETFront"+std::to_string(res) ).c_str(), &( _tofSETFront[i]) );
+            _tree->Branch(( "tofSETBack"+std::to_string(res) ).c_str(), &( _tofSETBack[i]) );
+            _tree->Branch(( "tofFit"+std::to_string(res) ).c_str(), &( _tofFit[i]) );
+        }
+
+        _tree->Branch("nHits", &_nHits);
+        _tree->Branch("xHit", &_xHit);
+        _tree->Branch("yHit", &_yHit);
+        _tree->Branch("zHit", &_zHit);
+        _tree->Branch("tHit", &_tHit);
+        _tree->Branch("layerHit", &_layerHit);
+        _tree->Branch("energyHit", &_energyHit);
+    }
+
 
 }
 
