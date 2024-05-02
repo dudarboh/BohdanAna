@@ -184,17 +184,7 @@ void BohdanAna::fillRecoVertexInfo(EVENT::LCEvent* evt, EVENT::MCParticle* mc, c
     LCCollection* primVtxCol = evt->getCollection("PrimaryVertex");
     LCCollection* secondaryVtxCol = evt->getCollection("BuildUpVertex");
     LCCollection* secondaryV0VtxCol = evt->getCollection("BuildUpVertex_V0");
-    LCCollection* updatedPfos = nullptr;
-    LCCollection* primVtxRefitCol = nullptr;
-    LCCollection* secondaryVtxRefitCol = nullptr;
-    LCCollection* secondaryV0VtxRefitCol = nullptr;
-    if ( _produce_refit_output ){
-        updatedPfos = evt->getCollection("updatedPandoraPFOs");
-        primVtxRefitCol = evt->getCollection("PrimaryVertex_refit");
-        secondaryVtxRefitCol = evt->getCollection("BuildUpVertex_refit");
-        secondaryV0VtxRefitCol = evt->getCollection("BuildUpVertex_V0_refit");
-    }
-
+    
     EVENT::Vertex* matchedVertex = nullptr;
     for(int i=0; i<primVtxCol->getNumberOfElements(); ++i){
         auto vertex = static_cast<Vertex*> (primVtxCol->getElementAt(i));
@@ -259,7 +249,13 @@ void BohdanAna::fillRecoVertexInfo(EVENT::LCEvent* evt, EVENT::MCParticle* mc, c
     }
 
     if ( not _produce_refit_output ) return;
+
+
     // Do literaly the same for the refitted vertex collections. Should be refactored better in functions...
+    LCCollection* updatedPfos = evt->getCollection("updatedPandoraPFOs");
+    LCCollection* primVtxRefitCol = evt->getCollection("PrimaryVertex_refit");
+    LCCollection* secondaryVtxRefitCol = evt->getCollection("BuildUpVertex_refit");
+    LCCollection* secondaryV0VtxRefitCol = evt->getCollection("BuildUpVertex_V0_refit");
     EVENT::Vertex* matchedRefittedVertex = nullptr;
 
     for(int i=0; i<primVtxRefitCol->getNumberOfElements(); ++i){
