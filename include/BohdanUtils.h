@@ -74,6 +74,8 @@ bool isStrangePDG(unsigned int pdg);
 bool isMCInternalPDG(unsigned int pdg);
 unsigned int getQuarkTypeDecay(EVENT::MCParticle* mc);
 unsigned int getQuarksToPythia(EVENT::LCEvent * evt);
+bool checkIsHiggsProcess(EVENT::LCEvent * evt);
+unsigned int getHiggsDaughters(EVENT::LCEvent * evt);
 
 int getHitCaloType( EVENT::CalorimeterHit* hit );
 int getHitCaloID( EVENT::CalorimeterHit* hit );

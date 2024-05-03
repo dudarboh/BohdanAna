@@ -261,34 +261,39 @@ def find_optimal_cut_2d(h1_2d, h2_2d):
 
 def main():
 
-    df_init = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna_Zqq.root").Filter("quarksToPythia == 44")
-    df = df_init.Define("mom", "sqrt(mcPx*mcPx + mcPy*mcPy + mcPz*mcPz)").Filter("abs(pdg) == 321")
-    h1 = df.Histo1D((get_rand_string(), "Produced;Momentum (GeV/c);N entries", 1000, 0, 20), "mom" )
-    h2 = df.Filter("isReconstructed").Histo1D((get_rand_string(), "Reconstructed;Momentum (GeV/c);N entries", 1000, 0, 20), "mom" )
-    h3 = df.Filter("isReconstructed && hasTrack").Histo1D((get_rand_string(), "Reconstructed && Track;Momentum (GeV/c);N entries", 1000, 0, 20), "mom" )
-    h4 = df.Filter("isReconstructed && hasTrack && hasShower").Histo1D((get_rand_string(), "Reconstructed && Track && Shower;Momentum (GeV/c);N entries", 1000, 0, 20), "mom" )
-    h5 = df.Filter("isReconstructed && hasTrack && hasShower && !isSimulated").Histo1D((get_rand_string(), "Reconstructed && Track && Shower && not sim;Momentum (GeV/c);N entries", 1000, 0, 20), "mom" )
-    h6 = df.Filter("isReconstructed && hasTrack && hasShower && !isSimulated && !isOverlay").Histo1D((get_rand_string(), "Reconstructed && Track && Shower && not sim && not overlay;Momentum (GeV/c);N entries", 1000, 0, 20), "mom" )
-    h7 = df.Filter("isReconstructed && hasTrack && hasShower && !isSimulated && !isOverlay && isInTrueSecondaryVertex").Histo1D((get_rand_string(), "Reconstructed && Track && Shower && not sim && not overlay && isInTrueSecondaryVertex ;Momentum (GeV/c);N entries", 1000, 0, 20), "mom" )
-    h8 = df.Filter("isReconstructed && hasTrack && hasShower && !isSimulated && !isOverlay && isInTrueSecondaryVertex && isInRecoSecondaryVertex").Histo1D((get_rand_string(), "Reconstructed && Track && Shower && not sim && not overlay && isInTrueSecondaryVertex ;Momentum (GeV/c);N entries", 1000, 0, 20), "mom" )
+    canvas = create_canvas()
+
+    df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/2f_hadronic_dst.root")
+    df = df.Define("mom", "sqrt(mcPx*mcPx + mcPy*mcPy + mcPz*mcPz)").Filter("abs(pdg) == 321")
+    df_gen = df.Filter("!isSimulated && !isOverlay")
+    df_reco = df.Filter("!isSimulated && !isOverlay && hasTrack")
+    df_reco_shower = df.Filter("!isSimulated && !isOverlay && hasTrack && hasShower")
+
+    h1 = df_gen.Histo1D((get_rand_string(), "Generated;Momentum (GeV/c);N entries", 500, 0, 20), "mom" )
+    h2 = df_reco.Histo1D((get_rand_string(), "Reconstructed;Momentum (GeV/c);N entries", 500, 0, 20), "mom" )
+    h3 = df_reco_shower.Histo1D((get_rand_string(), "Reconstructed and reaches ECAL;Momentum (GeV/c);N entries", 500, 0, 20), "mom" )
+
+    h7 = df.Filter("isReconstructed && hasTrack && hasShower && !isSimulated && !isOverlay && isInTrueSecondaryVertex").Histo1D((get_rand_string(), "Reconstructed && Track && Shower && not sim && not overlay && isInTrueSecondaryVertex ;Momentum (GeV/c);N entries", 500, 0, 20), "mom" )
+    h8 = df.Filter("isReconstructed && hasTrack && hasShower && !isSimulated && !isOverlay && isInTrueSecondaryVertex && isInRecoSecondaryVertex").Histo1D((get_rand_string(), "Reconstructed && Track && Shower && not sim && not overlay && isInTrueSecondaryVertex ;Momentum (GeV/c);N entries", 500, 0, 20), "mom" )
 
 
     h2.SetLineColor(ROOT.kRed+2)
     h3.SetLineColor(3)
-    h4.SetLineColor(4)
-    h5.SetLineColor(5)
-    h6.SetLineColor(6)
-    h7.SetLineColor(7)
-    h8.SetLineColor(8)
+    # h4.SetLineColor(4)
+    # h5.SetLineColor(5)
+    # h6.SetLineColor(6)
+    # h7.SetLineColor(7)
+    # h8.SetLineColor(8)
 
     h1.Draw()
     h2.Draw("same")
     h3.Draw("same")
-    h4.Draw("same")
-    h5.Draw("same")
-    h6.Draw("same")
-    h7.Draw("same")
-    h8.Draw("same")
+    # h4.Draw("same")
+    # h5.Draw("same")
+    # h6.Draw("same")
+    # h7.Draw("same")
+    # h8.Draw("same")
+    canvas.Update()
     input("wait")
 
 

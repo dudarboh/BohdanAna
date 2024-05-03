@@ -55,6 +55,8 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
 
         // Event information
         int _quarksToPythia{};
+        bool _isHiggsProcess{};
+        int _higgsDaughters{};
         dd4hep::rec::Vector3D _ipTrue{};
         dd4hep::rec::Vector3D _primVertexTrue{};
         dd4hep::rec::Vector3D _primVertexReco{};

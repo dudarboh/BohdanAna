@@ -569,6 +569,9 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
     }
     std::vector<VertexData> trueVertices = getReconstructableTrueVertices(evt);
     auto quarksToPythia = getQuarksToPythia(evt);
+    auto isHiggsProcess = checkIsHiggsProcess(evt);
+    auto higgsDaughters = getHiggsDaughters(evt);
+    
     auto ipTrue = Vector3D( static_cast< EVENT::MCParticle* >(mcs->getElementAt(0))->getVertex() );
     //Loop over MC particles
     for (int i=0; i<mcs->getNumberOfElements(); ++i){
@@ -584,6 +587,8 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
 
         // Event information ideally put in function...
         _quarksToPythia = quarksToPythia;
+        _isHiggsProcess = isHiggsProcess;
+        _higgsDaughters = higgsDaughters;
         _ipTrue = ipTrue;
         auto primVertexIt = std::find_if(trueVertices.begin(), trueVertices.end(), [](const VertexData& vtx){return vtx.isPrimary;});
         if ( primVertexIt != trueVertices.end() ) _primVertexTrue = (*primVertexIt).pos;
@@ -606,23 +611,27 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
         fillTrueVertexInfo( mc, trueVertices );
 
         // Work only with simple reconstructed particles (1 track and 1 shower). Ignore rest ( ~ O( 0.1%) )
-        if ( pfo == nullptr || pfo->getTracks().size() != 1 || pfo->getClusters().size() != 1){
+        if ( pfo == nullptr || pfo->getTracks().size() != 1){
             _tree->Fill();
             continue;
         }
+        _dEdx = pfo->getTracks()[0]->getdEdx();
+
+        fillRecoVertexInfo(evt, mc, pfo2mc);
 
         ReconstructedParticle* refittedPFO = nullptr;
         if ( _produce_refit_output ) refittedPFO = static_cast<ReconstructedParticle* > ( getMatchingElement(pfos, pfo, updatedPfos) );
 
-        fillRecoVertexInfo(evt, mc, pfo2mc);
-
-        _dEdx = pfo->getTracks()[0]->getdEdx();
-
         fillTrackStates(pfo, refittedPFO);
 
-        if (not _dst_mode){
-            fillTrackLengthInfo(mc, pfo, *navToSimTrackerHits);
+        if (not _dst_mode) fillTrackLengthInfo(mc, pfo, *navToSimTrackerHits);
 
+        if ( pfo->getClusters().size() != 1){
+            _tree->Fill();
+            continue;
+        }
+
+        if (not _dst_mode){
             fillTOFInfo(mc, pfo, *navToSimCalorimeterHits);
             if(_produce_csv_output && _tofClosest[0] > 6. ) fillCsvForKonrad( pfo, _pdg, _tofClosest[0], _trackLength_IKF_zedLambda);
         }
@@ -646,6 +655,8 @@ void BohdanAna::initialiseTTree(){
 
     // Event information
     _tree->Branch("quarksToPythia", &_quarksToPythia);
+    _tree->Branch("isHiggsProcess", &_isHiggsProcess);
+    _tree->Branch("higgsDaughters", &_higgsDaughters);
     _tree->Branch("ipTrueX", &(_ipTrue[0]) );
     _tree->Branch("ipTrueY", &(_ipTrue[1]) );
     _tree->Branch("ipTrueZ", &(_ipTrue[2]) );
@@ -866,6 +877,8 @@ void BohdanAna::initialiseTTree(){
 void BohdanAna::resetVariables(){
     // Event information
     _quarksToPythia = 0;
+    _isHiggsProcess = false;
+    _higgsDaughters = 0;
     _ipTrue = Vector3D();
     _primVertexTrue = Vector3D();
     _primVertexReco = Vector3D();

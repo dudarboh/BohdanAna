@@ -551,6 +551,34 @@ unsigned int getQuarksToPythia(EVENT::LCEvent * evt){
     return encodedPDGs;
 }
 
+bool checkIsHiggsProcess(EVENT::LCEvent * evt){
+    EVENT::LCCollection* mcs = getMCParticleCollection(evt);
+    for (int i=0; i<mcs->getNumberOfElements(); ++i){
+        auto mc = static_cast <EVENT::MCParticle*> ( mcs->getElementAt(i) );
+        if ( std::abs( mc->getPDG() ) == 25 ) return true;
+    }
+    return false;
+}
+
+unsigned int getHiggsDaughters(EVENT::LCEvent * evt){
+    std::vector<unsigned int> pdgs;
+    EVENT::LCCollection* mcs = getMCParticleCollection(evt);
+    for (int i=0; i<mcs->getNumberOfElements(); ++i){
+        EVENT::MCParticle* mc = static_cast <EVENT::MCParticle*> ( mcs->getElementAt(i) );
+        //IMPORTANT: This assumes only SINGLE Higgs in the event
+        if ( std::abs( mc->getPDG() ) == 25 ){
+            auto daughters = mc->getDaughters();
+            for (auto* daughter : daughters){
+                pdgs.push_back( std::abs( daughter->getPDG() ) );
+            }
+            break;
+        }
+    }
+    unsigned int encodedPDGs = 0;
+    for(size_t i=0; i < pdgs.size(); i++) encodedPDGs += pdgs[i] * int(std::pow(10, 2*i));
+    return encodedPDGs;
+}
+
 int getHitCaloType( EVENT::CalorimeterHit* hit ){
     if (hit == nullptr) return -1;
     return CHT( hit->getType() ).caloType();

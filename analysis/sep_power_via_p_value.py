@@ -18,7 +18,7 @@ DEDX_BINS = np.array([ MIN_DEDX + (MAX_DEDX - MIN_DEDX)*i/N_DEDX_BINS for i in r
 N_MASS2_BINS, MIN_MASS2, MAX_MASS2 = 3000, -3, 3  # GeV^2/c^4
 MOMENTUM_COLUMN = "harmonicMomToEcal_IKF_zedLambda" 
 TRACK_LENGTH_COLUMN = "trackLengthToEcal_IKF_zedLambda"
-RESOLUTIONS = [0, 1, 5, 10, 30, 50, 100, 300] # ps
+RESOLUTIONS = [0, 1, 5, 10, 30, 50, 100] # ps
 COLORS_RESOLUTION = [ ROOT.TColor.GetColor(c) for c in ["#00aaff", "#0091ea", "#0079d3", "#0061bd", "#004aa5", "#00348d", "#001d75", "#00045c"] ]
 COLORS_DEDX = [ ROOT.TColor.GetColor(c) for c in ["#00aaff", "#cd54b9", "#c52700"] ]
 MIN_SEP_POWER, MAX_SEP_POWER = 0, 6
@@ -250,21 +250,15 @@ def draw_dedx_sep_powers(gr_tof, gr_dedx):
     return canvas
 
 
-def find_optimal_cut_2d(h1_2d, h2_2d):
-    '''Return'''
-    # I will try tomorrow to feed two 2D histograms and find optimal line cut
-    # return optimal_cut, optimal_eff, optimal_mis_id
-    pass
 
 def main():
-    df_init = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna_*.root")\
-                  .Filter("abs(pdg) == 211 || abs(pdg) == 321 || abs(pdg) == 2212").Filter("tofClosest0 > 6.")
+    df_init = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna_BACKUP.root").Filter("tofClosest0 > 6.")
 
     # Get all histos first to utilise lazy RDataFrame behaviour
     histos = {"TOF" : {}, "dEdx" : {}, "Combined" : {}}
     for RES in RESOLUTIONS:
         histos["TOF"][RES] = {}
-        df = df_init.Define("beta", f"{TRACK_LENGTH_COLUMN}/(tofClosest{RES}*299.792458)")\
+        df = df_init.Filter("tofClosest0 > 6.").Define("beta", f"{TRACK_LENGTH_COLUMN}/(tofClosest{RES}*299.792458)")\
                     .Define("mass2", f"{MOMENTUM_COLUMN}*{MOMENTUM_COLUMN}*( 1./(beta*beta) - 1.)")
         for p in particles:
             histos["TOF"][RES][p] = {"lin": {}, "log" : {}}
