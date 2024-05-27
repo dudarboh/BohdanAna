@@ -9,7 +9,7 @@ from utils import *
 ROOT.EnableImplicitMT()
 
 #Linear momentum bins
-N_MOMENTUM_BINS, MIN_MOMENTUM, MAX_MOMENTUM = 70, 0, 20 # GeV/c
+N_MOMENTUM_BINS, MIN_MOMENTUM, MAX_MOMENTUM = 50, 0, 18 # GeV/c
 #Log momentum bins for dE/dx
 N_LOG_MOMENTUM_BINS, MIN_LOG_MOMENTUM, MAX_LOG_MOMENTUM = 30, -0.3, 1.3 # (0.5 to ~20) GeV/c
 LOG_MOMENTUM_BINS = np.array([ 10**(MIN_LOG_MOMENTUM + (MAX_LOG_MOMENTUM-MIN_LOG_MOMENTUM)*i/N_LOG_MOMENTUM_BINS ) for i in range(N_LOG_MOMENTUM_BINS+1) ])
@@ -18,10 +18,10 @@ DEDX_BINS = np.array([ MIN_DEDX + (MAX_DEDX - MIN_DEDX)*i/N_DEDX_BINS for i in r
 N_MASS2_BINS, MIN_MASS2, MAX_MASS2 = 3000, -3, 3  # GeV^2/c^4
 MOMENTUM_COLUMN = "harmonicMomToEcal_IKF_zedLambda" 
 TRACK_LENGTH_COLUMN = "trackLengthToEcal_IKF_zedLambda"
-RESOLUTIONS = [0, 1, 5, 10, 30, 50, 100] # ps
+RESOLUTIONS = [0, 1, 5, 10, 17, 30, 50, 100] # ps
 COLORS_RESOLUTION = [ ROOT.TColor.GetColor(c) for c in ["#00aaff", "#0091ea", "#0079d3", "#0061bd", "#004aa5", "#00348d", "#001d75", "#00045c"] ]
 COLORS_DEDX = [ ROOT.TColor.GetColor(c) for c in ["#00aaff", "#cd54b9", "#c52700"] ]
-MIN_SEP_POWER, MAX_SEP_POWER = 0, 6
+MIN_SEP_POWER, MAX_SEP_POWER = -0.2, 7.5
 
 def convert_p_value_to_sep_power(p_value):
     '''Return separation power equivalent to the given p-value (1 - efficiency)'''
@@ -40,7 +40,7 @@ def find_optimal_cut(h1, h2, debug=False):
     n_signal = h1.GetEntries()
     n_background = h2.GetEntries()
 
-    for bin in range(1, h1.GetXaxis().GetNbins()):
+    for bin in range(1, h1.GetXaxis().GetNbins() + 1):
         bin_x = h1.GetXaxis().GetBinUpEdge(bin)
         # integral includes first/last bins
         eff = h1.Integral(0, bin)/n_signal if n_signal !=0 else 0
@@ -75,7 +75,7 @@ def draw_optimal_cut(h1, h2, cut):
 
     h1_fill = h1.Clone()
     h2_fill = h2.Clone()
-    for bin in range(1, h1_fill.GetXaxis().GetNbins() ):
+    for bin in range(1, h1_fill.GetXaxis().GetNbins() + 1):
         if h1_fill.GetBinCenter(bin) < cut:
             h1_fill.SetBinContent(bin, 0.)
         else:
@@ -129,7 +129,7 @@ def calculate_pid_graphs(h1, h2):
     gr_misid = ROOT.TGraph()
     gr_sep_power = ROOT.TGraph()
 
-    for i in range(1, h1.GetXaxis().GetNbins() ):
+    for i in range(1, h1.GetXaxis().GetNbins() + 1):
         x_low, x, x_up = h1.GetXaxis().GetBinLowEdge(i), h1.GetXaxis().GetBinCenter(i), h1.GetXaxis().GetBinUpEdge(i)
         h1_proj = h1.ProjectionY("h1_proj", i, i)
         h2_proj = h2.ProjectionY("h2_proj", i, i)
@@ -153,10 +153,12 @@ def draw_resolution_sep_powers(graphs):
     for i, (res, gr) in enumerate(graphs.items()):
         if i == 0:
             # canvas.DrawFrame(0., MIN_SEP_POWER, 19., MAX_SEP_POWER)
+            x_last = MAX_MOMENTUM
+
             gr.Draw("ALP")
             gr.GetYaxis().SetTitleOffset(0.9)
-            gr.GetXaxis().SetRangeUser(0, 19)
-            gr.GetXaxis().SetNdivisions(506)
+            gr.GetXaxis().SetRangeUser(0, x_last)
+            gr.GetXaxis().SetNdivisions(512)
             gr.GetYaxis().SetRangeUser(MIN_SEP_POWER, MAX_SEP_POWER)
             canvas.Modified()
             canvas.Update()
@@ -174,11 +176,12 @@ def draw_resolution_sep_powers(graphs):
             axis_eff.SetLabelOffset(-0.14)
             axis_eff.SetLabelSize( ROOT.gStyle.GetLabelSize("Y") )
             axis_eff.SetTickLength(0.03)
-            for j in range(MIN_SEP_POWER, MAX_SEP_POWER+1):
-                axis_eff.ChangeLabel(j+1, -1, -1, -1, ROOT.kBlack, -1, f"{convert_sep_power_to_eff(j)*100:.2f}")
+            for j in range(int(MIN_SEP_POWER), int(MAX_SEP_POWER)+1):
+                axis_eff.ChangeLabel(j+1, -1, -1, -1, ROOT.kBlack, -1, f"{convert_sep_power_to_eff(j)*100:.2f}") # only in the new ROOT versions
             axis_eff.DrawClone()
         else:
             gr.Draw("LPsame")
+
         gr.SetLineColor(COLORS_RESOLUTION[i])
         gr.SetMarkerColor(COLORS_RESOLUTION[i])
         gr.SetLineWidth(4)
@@ -215,9 +218,8 @@ def draw_dedx_sep_powers(gr_tof, gr_dedx):
     legend.AddEntry(gr_tof, gr_tof.GetTitle(),"lp")
     canvas.Modified()
     canvas.Update()
-    # draw an axis on the right side
-    # NOTE: FREAKING ROOT BUG https://root-forum.cern.ch/t/getumin-getumax-show-wrong-results-for-the-canvases-with-the-log-scale/58867
-    x_pos = 10**canvas.GetUxmax()
+    # draw an axis on the right side    
+    x_pos = 10**canvas.GetUxmax() # NOTE: FREAKING ROOT https://root-forum.cern.ch/t/getumin-getumax-show-wrong-results-for-the-canvases-with-the-log-scale/58867
     axis_eff = ROOT.TGaxis(x_pos, canvas.GetUymin(), x_pos-0.001, canvas.GetUymax(), MIN_SEP_POWER, MAX_SEP_POWER)
     axis_eff.SetTitleColor( ROOT.gStyle.GetTitleColor("Y") )
     axis_eff.SetTitleFont( ROOT.gStyle.GetTitleFont("Y") )
@@ -230,7 +232,7 @@ def draw_dedx_sep_powers(gr_tof, gr_dedx):
     axis_eff.SetLabelOffset(-0.14)
     axis_eff.SetLabelSize( ROOT.gStyle.GetLabelSize("Y") )
     axis_eff.SetTickLength(0.03)
-    for j in range(MIN_SEP_POWER, MAX_SEP_POWER+1):
+    for j in range(int(MIN_SEP_POWER), int(MAX_SEP_POWER)+1):
         axis_eff.ChangeLabel(j+1, -1, -1, -1, ROOT.kBlack, -1, f"{convert_sep_power_to_eff(j)*100:.2f}")
     axis_eff.DrawClone()
     gr_dedx.Draw("LPsame")
@@ -239,6 +241,21 @@ def draw_dedx_sep_powers(gr_tof, gr_dedx):
     gr_dedx.SetLineWidth(4)
     gr_dedx.SetMarkerStyle(20)
     legend.AddEntry(gr_dedx, gr_dedx.GetTitle(),"lp")
+
+    gr_combined = ROOT.TGraph()
+    gr_combined.SetTitle("dE/dx #oplus TOF")
+    for i in range( gr_tof.GetN() ):
+        x = gr_dedx.GetPointX(i)
+        sp_dedx = gr_dedx.GetPointY(i)
+        sp_tof = gr_tof.GetPointY(i)
+        gr_combined.SetPoint(i, x, np.sqrt(sp_dedx*sp_dedx + sp_tof*sp_tof))
+
+    gr_combined.SetLineColor(COLORS_DEDX[1])
+    gr_combined.SetMarkerColor(COLORS_DEDX[1])
+    gr_combined.SetLineWidth(4)
+    gr_combined.SetMarkerStyle(20)
+    legend.AddEntry(gr_combined, gr_combined.GetTitle(),"lp")
+    gr_combined.DrawClone("LPsame")
 
     legend.DrawClone()
 
@@ -252,10 +269,11 @@ def draw_dedx_sep_powers(gr_tof, gr_dedx):
 
 
 def main():
-    df_init = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna_BACKUP.root").Filter("tofClosest0 > 6.")
-
+    canvases = []
+    df_init = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna.root")
+ 
     # Get all histos first to utilise lazy RDataFrame behaviour
-    histos = {"TOF" : {}, "dEdx" : {}, "Combined" : {}}
+    histos = {"TOF" : {}, "dEdx" : {}}
     for RES in RESOLUTIONS:
         histos["TOF"][RES] = {}
         df = df_init.Filter("tofClosest0 > 6.").Define("beta", f"{TRACK_LENGTH_COLUMN}/(tofClosest{RES}*299.792458)")\
@@ -267,44 +285,46 @@ def main():
             h_log = df_p.Histo2D((get_rand_string(), "", N_LOG_MOMENTUM_BINS, LOG_MOMENTUM_BINS, N_MASS2_BINS, MIN_MASS2, MAX_MASS2), MOMENTUM_COLUMN, "mass2")
             histos["TOF"][RES][p] = {"lin": h_lin, "log" : h_log}
     for p in particles:
-        df_p = df_init.Filter(f"abs(pdg) == {p.pdg}").Filter("dEdx > 0.")
+        df_p = df_init.Filter("dEdx > 0.").Filter(f"abs(pdg) == {p.pdg}")
         # h = df_p.Histo2D((get_rand_string(), "", N_LOG_MOMENTUM_BINS, LOG_MOMENTUM_BINS, N_DEDX_BINS, MIN_DEDX, MAX_DEDX), MOMENTUM_COLUMN, "dEdx")
         h = df_p.Histo2D((get_rand_string(), "", N_LOG_MOMENTUM_BINS, LOG_MOMENTUM_BINS, N_DEDX_BINS, DEDX_BINS), MOMENTUM_COLUMN, "dEdx")
         histos["dEdx"][p] = h
 
+    for tof_res in [10]:
+        print(f"Calculating for dEdx for resolution {tof_res}")
+        dedx_graphs = { "pik" : {}, "kp" : {} }
+        _, _, _, dedx_graphs["pik"]["TOF"] = calculate_pid_graphs(histos["TOF"][tof_res][pion]["log"], histos["TOF"][tof_res][kaon]["log"])
+        dedx_graphs["pik"]["TOF"].SetTitle(f"TOF {tof_res} ps;Momentum (GeV/c);#pi/K separation power")
+        _, _, _, dedx_graphs["pik"]["dEdx"] = calculate_pid_graphs(histos["dEdx"][pion], histos["dEdx"][kaon])
+        dedx_graphs["pik"]["dEdx"].SetTitle("dE/dx")
+        c3 = draw_dedx_sep_powers(dedx_graphs["pik"]["TOF"], dedx_graphs["pik"]["dEdx"])
+        c3.Modified()
+        c3.Update()
+        canvases.append(c3)
 
-    print(f"Calculating for dEdx")
-    dedx_graphs = { "pik" : {}, "kp" : {} }
-    _, _, _, dedx_graphs["pik"]["TOF"] = calculate_pid_graphs(histos["TOF"][30][pion]["log"], histos["TOF"][30][kaon]["log"])
-    dedx_graphs["pik"]["TOF"].SetTitle("TOF 30 ps;Momentum (GeV/c);#pi/K separation power")
-    _, _, _, dedx_graphs["pik"]["dEdx"] = calculate_pid_graphs(histos["dEdx"][pion], histos["dEdx"][kaon])
-    dedx_graphs["pik"]["dEdx"].SetTitle("dE/dx")
-    c3 = draw_dedx_sep_powers(dedx_graphs["pik"]["TOF"], dedx_graphs["pik"]["dEdx"])
-    c3.Modified()
-    c3.Update()
+        _, _, _, dedx_graphs["kp"]["TOF"] = calculate_pid_graphs(histos["TOF"][tof_res][kaon]["log"], histos["TOF"][tof_res][proton]["log"])
+        dedx_graphs["kp"]["TOF"].SetTitle(f"TOF {tof_res} ps;Momentum (GeV/c);K/p separation power")
+        _, _, _, dedx_graphs["kp"]["dEdx"] = calculate_pid_graphs(histos["dEdx"][kaon], histos["dEdx"][proton])
+        dedx_graphs["kp"]["dEdx"].SetTitle("dE/dx")
+        c4 = draw_dedx_sep_powers(dedx_graphs["kp"]["TOF"], dedx_graphs["kp"]["dEdx"])
+        c4.Modified()
+        c4.Update()
+        canvases.append(c4)
+        input("wait")
+    # resolution_graphs = { "pik" : {}, "kp" : {} }
+    # for RES in RESOLUTIONS:
+    #     print(f"Calculating for {RES} resolution")
+    #     _, _, _, resolution_graphs["pik"][RES] = calculate_pid_graphs(histos["TOF"][RES][pion]["lin"], histos["TOF"][RES][kaon]["lin"])
+    #     _, _, _, resolution_graphs["kp"][RES] = calculate_pid_graphs(histos["TOF"][RES][kaon]["lin"], histos["TOF"][RES][proton]["lin"])
 
-    _, _, _, dedx_graphs["kp"]["TOF"] = calculate_pid_graphs(histos["TOF"][30][kaon]["log"], histos["TOF"][30][proton]["log"])
-    dedx_graphs["kp"]["TOF"].SetTitle("TOF 30 ps;Momentum (GeV/c);K/p separation power")
-    _, _, _, dedx_graphs["kp"]["dEdx"] = calculate_pid_graphs(histos["dEdx"][kaon], histos["dEdx"][proton])
-    dedx_graphs["kp"]["dEdx"].SetTitle("dE/dx")
-    c4 = draw_dedx_sep_powers(dedx_graphs["kp"]["TOF"], dedx_graphs["kp"]["dEdx"])
-    c4.Modified()
-    c4.Update()
-
-    resolution_graphs = { "pik" : {}, "kp" : {} }
-    for RES in RESOLUTIONS:
-        print(f"Calculating for {RES} resolution")
-        _, _, _, resolution_graphs["pik"][RES] = calculate_pid_graphs(histos["TOF"][RES][pion]["lin"], histos["TOF"][RES][kaon]["lin"])
-        _, _, _, resolution_graphs["kp"][RES] = calculate_pid_graphs(histos["TOF"][RES][kaon]["lin"], histos["TOF"][RES][proton]["lin"])
-
-    c1 = draw_resolution_sep_powers(resolution_graphs["pik"])
-    resolution_graphs["pik"][0].SetTitle(";Momentum (GeV/c);#pi/K separation power")
-    c1.Modified()
-    c1.Update()
-    c2 = draw_resolution_sep_powers(resolution_graphs["kp"])
-    resolution_graphs["kp"][0].SetTitle(";Momentum (GeV/c);K/p separation power")
-    c2.Modified()
-    c2.Update()
+    # c1 = draw_resolution_sep_powers(resolution_graphs["pik"])
+    # resolution_graphs["pik"][0].SetTitle(";Momentum (GeV/c);#pi/K separation power")
+    # c1.Modified()
+    # c1.Update()
+    # c2 = draw_resolution_sep_powers(resolution_graphs["kp"])
+    # resolution_graphs["kp"][0].SetTitle(";Momentum (GeV/c);K/p separation power")
+    # c2.Modified()
+    # c2.Update()
 
     input("wait")
 

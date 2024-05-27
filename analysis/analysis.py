@@ -192,4 +192,17 @@ def refit_impact():
 
     input("wait")
 
-refit_impact()
+
+def tof_vs_dedx():
+    resolutions = np.array([0, 1, 5, 10, 17, 30, 50, 100]) # ps
+    pik_mom_low = np.array([0.75, 0.75])
+    pik_mom_high = np.array([6.2, 6.14, 5.3])
+    kp_mom_low = np.array([1.26, 1.26])
+    kp_mom_high = np.array([23, 23])
+
+    canvas = create_canvas()
+    pass
+
+
+# refit_impact()
+tof_vs_dedx()

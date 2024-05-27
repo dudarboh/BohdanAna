@@ -46,7 +46,7 @@
 
     <processor name="BohdanAna" type="BohdanAna">
         <parameter name="eventDisplay" type="bool">false</parameter>
-        <parameter name="produce_csv_output" type="bool">true</parameter>
+        <parameter name="produce_csv_output" type="bool">false</parameter>
         <parameter name="produce_refit_output" type="bool">${produce_refit_output}</parameter>
         <parameter name="dst_mode" type="bool">false</parameter>
     </processor>
