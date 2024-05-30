@@ -567,43 +567,57 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
         navToSimTrackerHits = std::make_unique<LCRelationNavigator> ( evt->getCollection("TrackerHitsRelations") );
         navToSimCalorimeterHits = std::make_unique<LCRelationNavigator> ( evt->getCollection("CalorimeterHitsRelations") );
     }
+
     std::vector<VertexData> trueVertices = getReconstructableTrueVertices(evt);
-    auto quarksToPythia = getQuarksToPythia(evt);
-    auto isHiggsProcess = checkIsHiggsProcess(evt);
-    auto higgsDaughters = getHiggsDaughters(evt);
+    _quarksToPythia = getQuarksToPythia(evt);
+    _isHiggsProcess = checkIsHiggsProcess(evt);
+    _higgsDaughters = getHiggsDaughters(evt);
+    _primVertexTrue = Vector3D();
+    _primVertexReco = Vector3D();
+    _primRefitVertexReco = Vector3D();
     
-    auto ipTrue = Vector3D( static_cast< EVENT::MCParticle* >(mcs->getElementAt(0))->getVertex() );
+    _ipTrue = Vector3D( static_cast< EVENT::MCParticle* >(mcs->getElementAt(0))->getVertex() );
+
+    auto primVertexIt = std::find_if(trueVertices.begin(), trueVertices.end(), [](const VertexData& vtx){return vtx.isPrimary;});
+    if ( primVertexIt != trueVertices.end() ) _primVertexTrue = (*primVertexIt).pos;
+
+    if ( primVtxCol->getNumberOfElements() > 0 ){
+        auto vtx = static_cast<Vertex*> (primVtxCol->getElementAt(0));
+        _primVertexReco = Vector3D( vtx->getPosition() );
+    }
+
+    if (_produce_refit_output){
+        if ( primVtxRefitCol->getNumberOfElements() > 0 ){
+            auto vtx = static_cast<Vertex*> (primVtxRefitCol->getElementAt(0));
+            _primRefitVertexReco = Vector3D( vtx->getPosition() );
+        }
+    }
+
+    _nPionsGenerated = 0;
+    _nKaonsGenerated = 0;
+    _nProtonsGenerated = 0;
+    _nPionsTrack = 0;
+    _nKaonsTrack = 0;
+    _nProtonsTrack = 0;
+    _nPionsShower = 0;
+    _nKaonsShower = 0;
+    _nProtonsShower = 0;
+
     //Loop over MC particles
     for (int i=0; i<mcs->getNumberOfElements(); ++i){
         // Storing only charged hadrons - pi/K/p
         MCParticle* mc = static_cast <MCParticle*> ( mcs->getElementAt(i) );
         if (mc == nullptr) continue;
-        bool isHadron = std::abs( mc->getPDG() ) == 211 || std::abs( mc->getPDG() ) == 321 || std::abs( mc->getPDG() ) == 2212;
+        bool isPion = std::abs( mc->getPDG() ) == 211;
+        bool isKaon = std::abs( mc->getPDG() ) == 321;
+        bool isProton = std::abs( mc->getPDG() ) == 2212;
+        bool isHadron = isPion || isKaon || isProton;
         if ( not isHadron ) continue;
+        if (isPion) _nPionsGenerated++;
+        if (isKaon) _nKaonsGenerated++;
+        if (isProton) _nProtonsGenerated++;
 
-        // IMPORTANT: FILL VARIABLES ONLY AFTER resetVariables() and NOT BEFORE!
-        // EVEN IF THEY ARE EVENT VARIABLES. I do not care about optimisation right now.
         resetVariables();
-
-        // Event information ideally put in function...
-        _quarksToPythia = quarksToPythia;
-        _isHiggsProcess = isHiggsProcess;
-        _higgsDaughters = higgsDaughters;
-        _ipTrue = ipTrue;
-        auto primVertexIt = std::find_if(trueVertices.begin(), trueVertices.end(), [](const VertexData& vtx){return vtx.isPrimary;});
-        if ( primVertexIt != trueVertices.end() ) _primVertexTrue = (*primVertexIt).pos;
-
-        if ( primVtxCol->getNumberOfElements() > 0 ){
-            auto vtx = static_cast<Vertex*> (primVtxCol->getElementAt(0));
-            _primVertexReco = Vector3D( vtx->getPosition() );
-        }
-
-        if (_produce_refit_output){
-            if ( primVtxRefitCol->getNumberOfElements() > 0 ){
-                auto vtx = static_cast<Vertex*> (primVtxRefitCol->getElementAt(0));
-                _primRefitVertexReco = Vector3D( vtx->getPosition() );
-            }
-        }
 
         //IMPORTANT: Run exactly in the order below there are interdependencies in fill functions...
         auto pfo = getRelatedReconstructedParticle(mc, mc2pfo, pfo2mc);
@@ -615,6 +629,10 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
             _tree->Fill();
             continue;
         }
+        if (isPion) _nPionsTrack++;
+        if (isKaon) _nKaonsTrack++;
+        if (isProton) _nProtonsTrack++;
+
         _dEdx = pfo->getTracks()[0]->getdEdx();
 
         fillRecoVertexInfo(evt, mc, pfo2mc);
@@ -630,6 +648,9 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
             _tree->Fill();
             continue;
         }
+        if (isPion) _nPionsShower++;
+        if (isKaon) _nKaonsShower++;
+        if (isProton) _nProtonsShower++;
 
         if (not _dst_mode){
             fillTOFInfo(mc, pfo, *navToSimCalorimeterHits);
@@ -639,6 +660,7 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
         // drawDisplay(this, evt, displayPFO, pfo);
         _tree->Fill();
     }
+    _treeEvents->Fill();
 
 
 }
@@ -652,6 +674,7 @@ void BohdanAna::end(){
 void BohdanAna::initialiseTTree(){
     _file.reset( new TFile("results.root", "RECREATE") );
     _tree.reset( new TTree("treename", "treename") );
+    _treeEvents.reset( new TTree("treeEvents", "treeEvents") );
 
     // Event information
     _tree->Branch("quarksToPythia", &_quarksToPythia);
@@ -871,19 +894,23 @@ void BohdanAna::initialiseTTree(){
         _tree->Branch("energyHit", &_energyHit);
     }
 
+    _treeEvents->Branch("quarksToPythia", &_quarksToPythia);
+    _treeEvents->Branch("isHiggsProcess", &_isHiggsProcess);
+    _treeEvents->Branch("higgsDaughters", &_higgsDaughters);
+    _treeEvents->Branch("nPionsGenerated", &_nPionsGenerated);
+    _treeEvents->Branch("nKaonsGenerated", &_nKaonsGenerated);
+    _treeEvents->Branch("nProtonsGenerated", &_nProtonsGenerated);
+    _treeEvents->Branch("nPionsTrack", &_nPionsTrack);
+    _treeEvents->Branch("nKaonsTrack", &_nKaonsTrack);
+    _treeEvents->Branch("nProtonsTrack", &_nProtonsTrack);
+    _treeEvents->Branch("nPionsShower", &_nPionsShower);
+    _treeEvents->Branch("nKaonsShower", &_nKaonsShower);
+    _treeEvents->Branch("nProtonsShower", &_nProtonsShower);
+
 
 }
 
 void BohdanAna::resetVariables(){
-    // Event information
-    _quarksToPythia = 0;
-    _isHiggsProcess = false;
-    _higgsDaughters = 0;
-    _ipTrue = Vector3D();
-    _primVertexTrue = Vector3D();
-    _primVertexReco = Vector3D();
-    _primRefitVertexReco = Vector3D();
-
     // True infromation of MCParticle
     _pdg = 0;
     _imidiateParentPDG = 0;

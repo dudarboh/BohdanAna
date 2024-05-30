@@ -6,6 +6,8 @@ from string import ascii_letters
 ROOT.gStyle.SetPalette(ROOT.kBird)
 ROOT.gStyle.SetNumberContours(256)
 
+DEDX_COLOR = ROOT.TColor.GetColor("#c52700")
+
 
 SPEED_OF_LIGHT = 299.792458 # mm / ns
 PION_MASS = 0.13957039 # GeV/ c^{2}
@@ -178,3 +180,276 @@ def fit90(x):
     mean90_err = rms90/np.sqrt(n90percent)
     rms90_err = rms90/np.sqrt(2*n90percent)   # estimator in root
     return mean90, rms90, mean90_err, rms90_err
+
+
+
+### SEP POWER UTILS
+
+def convert_p_value_to_sep_power(p_value):
+    '''Return separation power equivalent to the given p-value (1 - efficiency)'''
+    return 2*ROOT.Math.gaussian_quantile_c(p_value, 1)
+
+def convert_sep_power_to_eff(sep_power):
+    '''Return efficiency from the given sep power'''
+    return ROOT.Math.gaussian_cdf(0.5*sep_power)
+
+def find_optimal_cut(h1, h2, debug=False):
+    '''Calcualte the x value between the two histograms where eff=1-misid'''
+    cut_mass = []
+    efficiencies = []
+    mis_ids = []
+    diff = []
+    n_signal = h1.GetEntries()
+    n_background = h2.GetEntries()
+
+    for bin in range(1, h1.GetXaxis().GetNbins() + 1):
+        bin_x = h1.GetXaxis().GetBinUpEdge(bin)
+        # integral includes first/last bins
+        eff = h1.Integral(0, bin)/n_signal if n_signal !=0 else 0
+        mis_id = h2.Integral(0, bin)/n_background if n_background !=0 else 0
+        if mis_id > eff:
+            # h1 is the right histogram and h2 is the left! Flip the effieincy!
+            eff, mis_id = 1-eff, 1-mis_id
+
+        cut_mass.append( bin_x )
+        efficiencies.append(eff)
+        mis_ids.append(mis_id)
+        diff.append( abs(1-eff - mis_id) )
+
+    optimal_idx = np.argmin( diff )
+
+    optimal_cut = cut_mass[optimal_idx]
+    optimal_eff = efficiencies[optimal_idx]
+    optimal_mis_id = mis_ids[optimal_idx]
+
+    # print(f"Cut: {round(optimal_cut, 2)} / eff: {round(optimal_eff, 2)} / mis id: {round(optimal_mis_id, 2)}")
+    if debug:
+        draw_optimal_cut(h1, h2, optimal_cut)
+
+    return optimal_cut, optimal_eff, optimal_mis_id
+
+def draw_optimal_cut(h1, h2, cut):
+    '''Draw two histograms and the calculated cut wehere eff=1-misid. Used for debugging'''
+    # my default pi/k/p colours
+    h1, h2 = h1.Clone(), h2.Clone()
+    h1.Scale(1./h1.GetEntries())
+    h2.Scale(1./h2.GetEntries())
+
+    h1_fill = h1.Clone()
+    h2_fill = h2.Clone()
+    for bin in range(1, h1_fill.GetXaxis().GetNbins() + 1):
+        if h1_fill.GetBinCenter(bin) < cut:
+            h1_fill.SetBinContent(bin, 0.)
+        else:
+            h2_fill.SetBinContent(bin, 0.)
+
+    margin = 0.22
+    ROOT.gStyle.SetPadLeftMargin(0.9*margin)
+    ROOT.gStyle.SetPadRightMargin(0.1*margin)
+    ROOT.gStyle.SetPadTopMargin(0.3*margin)
+    ROOT.gStyle.SetPadBottomMargin(0.7*margin)
+    canvas = ROOT.TCanvas(get_rand_string(),"", 600, 600)
+
+    h1.Draw("hist")
+    h1.GetXaxis().SetTitle("Mass^{2} (GeV^{2}/c^{4})")
+    h1.GetYaxis().SetTitle("Normalised N entries")
+    # h1.GetYaxis().SetTitleOffset(1.2)
+    h1.GetYaxis().SetMaxDigits(3)
+    h2.Draw("hist same")
+    h1_fill.Draw("hist f same")
+    h2_fill.Draw("hist f same")
+
+    ymax = 1.05*max(h1.GetMaximum(), h2.GetMaximum())
+    h1.SetMaximum(ymax)
+
+    h1.SetLineWidth(4)
+    h1.SetLineColor(pion.color)
+    h1_fill.SetFillStyle(3001)
+    h1_fill.SetFillColor(pion.color)
+    h1_fill.SetLineColor(pion.color)
+
+    h2.SetLineWidth(4)
+    h2.SetLineColor(kaon.color)
+    h2_fill.SetFillStyle(3001)
+    h2_fill.SetFillColor(kaon.color)
+    h2_fill.SetLineColor(kaon.color)
+
+    line = ROOT.TLine(cut, 0., cut, ymax)
+    line.SetLineColor(15)
+    line.SetLineWidth(2)
+    line.SetLineStyle(9)
+    line.Draw()
+    
+    canvas.Update()
+    input("wait")
+
+def calculate_pid_graphs(h1, h2):
+    '''Return graphs of the separation power, efficiency, mis-id, cut values versus momentum based on two 2D histograms'''
+    gr_cut = ROOT.TGraph()
+    gr_eff = ROOT.TGraph()
+    gr_misid = ROOT.TGraph()
+    gr_sep_power = ROOT.TGraph()
+
+    for i in range(1, h1.GetXaxis().GetNbins() + 1):
+        x_low, x, x_up = h1.GetXaxis().GetBinLowEdge(i), h1.GetXaxis().GetBinCenter(i), h1.GetXaxis().GetBinUpEdge(i)
+        h1_proj = h1.ProjectionY("h1_proj", i, i)
+        h2_proj = h2.ProjectionY("h2_proj", i, i)
+
+        # print(f"Momentum: {x_low:.2f} -- {x_up:.2f}")
+        cut, eff, misid = find_optimal_cut(h1_proj, h2_proj)
+        sep_power = convert_p_value_to_sep_power(1-eff)
+
+        gr_cut.SetPoint(i-1, x, cut)
+        gr_eff.SetPoint(i-1, x, eff)
+        gr_misid.SetPoint(i-1, x, misid)
+        gr_sep_power.SetPoint(i-1, x, sep_power)
+    return gr_cut, gr_eff, gr_misid, gr_sep_power
+
+def combine_two_graphs(gr1, gr2):
+    '''Return TGraph as a sum in quadratures of gr1 and gr2 point by point'''
+    n_points = gr1.GetN()
+    if n_points is not gr2.GetN():
+        raise ValueError(f'Two graphs must have equal number of points! First has {gr1.GetN()} and second has {gr2.GetN()}')
+
+    gr = ROOT.TGraph()
+    for i in range( n_points ):
+        x = gr1.GetPointX(i)
+        y1 = gr1.GetPointY(i)
+        y2 = gr2.GetPointY(i)
+        y = np.sqrt(y1*y1 + y2*y2)
+        gr.SetPoint(i, x, y)
+    return gr
+
+def convert_graph_sp_to_eff(gr_sp):
+    gr_eff = ROOT.TGraph()
+    for i in range( gr_sp.GetN() ):
+        x = gr_sp.GetPointX(i)
+        sp = gr_sp.GetPointY(i)
+        eff = convert_sep_power_to_eff(sp)
+        gr_eff.SetPoint(i, x, eff)
+    return gr_eff
+
+def draw_resolution_sep_powers(graphs):
+    '''Draw the separation power graphs for different TOF resolutions'''
+    canvas = create_canvas(0.38, 0.4, 0.65)
+    canvas.SetTicky(False)
+
+    legend = create_legend(0.4, 0.63, 0.98, 0.94)
+    for i, (res, gr) in enumerate(graphs.items()):
+        if i == 0:
+            # canvas.DrawFrame(0., MIN_SEP_POWER, 19., MAX_SEP_POWER)
+            x_last = MAX_MOMENTUM
+
+            gr.Draw("ALP")
+            gr.GetYaxis().SetTitleOffset(0.9)
+            gr.GetXaxis().SetRangeUser(0, x_last)
+            gr.GetXaxis().SetNdivisions(512)
+            gr.GetYaxis().SetRangeUser(MIN_SEP_POWER, MAX_SEP_POWER)
+            canvas.Modified()
+            canvas.Update()
+            # draw an axis on the right side
+            x_pos = canvas.GetUxmax()
+            axis_eff = ROOT.TGaxis(x_pos, canvas.GetUymin(), x_pos-0.001, canvas.GetUymax(), MIN_SEP_POWER, MAX_SEP_POWER)
+            axis_eff.SetTitleColor( ROOT.gStyle.GetTitleColor("Y") )
+            axis_eff.SetTitleFont( ROOT.gStyle.GetTitleFont("Y") )
+            axis_eff.SetTitleSize( ROOT.gStyle.GetTitleSize("Y") )
+            axis_eff.CenterTitle(True)
+            axis_eff.SetTitleOffset(2.2)
+            axis_eff.SetTitle("Efficiency (%)")
+            axis_eff.SetLabelColor( ROOT.gStyle.GetLabelColor("Y") )
+            axis_eff.SetLabelFont( ROOT.gStyle.GetLabelFont("Y") )
+            axis_eff.SetLabelOffset(-0.14)
+            axis_eff.SetLabelSize( ROOT.gStyle.GetLabelSize("Y") )
+            axis_eff.SetTickLength(0.03)
+            for j in range(int(MIN_SEP_POWER), int(MAX_SEP_POWER)+1):
+                axis_eff.ChangeLabel(j+1, -1, -1, -1, ROOT.kBlack, -1, f"{convert_sep_power_to_eff(j)*100:.2f}") # only in the new ROOT versions
+            axis_eff.DrawClone()
+        else:
+            gr.Draw("LPsame")
+
+        gr.SetLineColor(COLORS_RESOLUTION[i])
+        gr.SetMarkerColor(COLORS_RESOLUTION[i])
+        gr.SetLineWidth(4)
+        gr.SetMarkerStyle(20)
+        legend.AddEntry(gr, f"{res} ps","lp")
+
+    legend.DrawClone()
+
+    # latex = ROOT.TLatex()
+    # latex.SetTextFont(52)
+    # latex.DrawLatex(12, 6.06, "ILD preliminary")
+
+    canvas.Update()
+    return canvas
+
+def draw_dedx_sep_powers(gr_tof, gr_dedx):
+    '''Draw the separation power graphs for TOF and dEdx'''
+    COLORS_DEDX = [ ROOT.TColor.GetColor(c) for c in ["#00aaff", "#cd54b9", "#c52700"] ]
+    MIN_SEP_POWER, MAX_SEP_POWER = -0.2, 7.5
+
+    canvas = create_canvas(0.38, 0.4, 0.65)
+    canvas.SetLogx()
+    canvas.SetTicky(False)
+
+    legend = create_legend(0.35, 0.68, 0.74, 0.84)
+    gr_tof.Draw("ALP")
+    gr_tof.GetXaxis().SetRangeUser(0.5, 20)
+    gr_tof.GetXaxis().SetMoreLogLabels()
+    gr_tof.GetXaxis().SetNoExponent()
+    gr_tof.GetXaxis().SetNdivisions(506)
+    gr_tof.GetYaxis().SetTitleOffset(0.9)
+    gr_tof.GetYaxis().SetRangeUser(MIN_SEP_POWER, MAX_SEP_POWER)
+    gr_tof.SetLineColor(COLORS_DEDX[0])
+    gr_tof.SetMarkerColor(COLORS_DEDX[0])
+    gr_tof.SetLineWidth(4)
+    gr_tof.SetMarkerStyle(20)
+    legend.AddEntry(gr_tof, gr_tof.GetTitle(),"lp")
+    canvas.Modified()
+    canvas.Update()
+    # draw an axis on the right side    
+    x_pos = 10**canvas.GetUxmax() # NOTE: FREAKING ROOT https://root-forum.cern.ch/t/getumin-getumax-show-wrong-results-for-the-canvases-with-the-log-scale/58867
+    axis_eff = ROOT.TGaxis(x_pos, canvas.GetUymin(), x_pos-0.001, canvas.GetUymax(), MIN_SEP_POWER, MAX_SEP_POWER)
+    axis_eff.SetTitleColor( ROOT.gStyle.GetTitleColor("Y") )
+    axis_eff.SetTitleFont( ROOT.gStyle.GetTitleFont("Y") )
+    axis_eff.SetTitleSize( ROOT.gStyle.GetTitleSize("Y") )
+    axis_eff.CenterTitle(True)
+    axis_eff.SetTitleOffset(2.2)
+    axis_eff.SetTitle("Efficiency (%)")
+    axis_eff.SetLabelColor( ROOT.gStyle.GetLabelColor("Y") )
+    axis_eff.SetLabelFont( ROOT.gStyle.GetLabelFont("Y") )
+    axis_eff.SetLabelOffset(-0.14)
+    axis_eff.SetLabelSize( ROOT.gStyle.GetLabelSize("Y") )
+    axis_eff.SetTickLength(0.03)
+    for j in range(int(MIN_SEP_POWER), int(MAX_SEP_POWER)+1):
+        axis_eff.ChangeLabel(j+1, -1, -1, -1, ROOT.kBlack, -1, f"{convert_sep_power_to_eff(j)*100:.2f}")
+    axis_eff.DrawClone()
+    gr_dedx.Draw("LPsame")
+    gr_dedx.SetLineColor(COLORS_DEDX[2])
+    gr_dedx.SetMarkerColor(COLORS_DEDX[2])
+    gr_dedx.SetLineWidth(4)
+    gr_dedx.SetMarkerStyle(20)
+    legend.AddEntry(gr_dedx, gr_dedx.GetTitle(),"lp")
+
+    gr_combined = ROOT.TGraph()
+    gr_combined.SetTitle("dE/dx #oplus TOF")
+    for i in range( gr_tof.GetN() ):
+        x = gr_dedx.GetPointX(i)
+        sp_dedx = gr_dedx.GetPointY(i)
+        sp_tof = gr_tof.GetPointY(i)
+        gr_combined.SetPoint(i, x, np.sqrt(sp_dedx*sp_dedx + sp_tof*sp_tof))
+
+    gr_combined.SetLineColor(COLORS_DEDX[1])
+    gr_combined.SetMarkerColor(COLORS_DEDX[1])
+    gr_combined.SetLineWidth(4)
+    gr_combined.SetMarkerStyle(20)
+    legend.AddEntry(gr_combined, gr_combined.GetTitle(),"lp")
+    gr_combined.DrawClone("LPsame")
+
+    legend.DrawClone()
+
+    # latex = ROOT.TLatex()
+    # latex.SetTextFont(52)
+    # latex.DrawLatex(12, 6.06, "ILD preliminary")
+
+    canvas.Update()
+    return canvas

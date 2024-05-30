@@ -46,6 +46,7 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
         
         std::unique_ptr<TFile> _file;
         std::unique_ptr<TTree> _tree;
+        std::unique_ptr<TTree> _treeEvents;
 
         bool _dst_mode{};
         bool _produce_refit_output{};
@@ -54,6 +55,15 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
         int _global_pfo_number{};
 
         // Event information
+        int _nPionsGenerated{};
+        int _nKaonsGenerated{};
+        int _nProtonsGenerated{};
+        int _nPionsTrack{};
+        int _nKaonsTrack{};
+        int _nProtonsTrack{};
+        int _nPionsShower{};
+        int _nKaonsShower{};
+        int _nProtonsShower{};
         int _quarksToPythia{};
         bool _isHiggsProcess{};
         int _higgsDaughters{};
