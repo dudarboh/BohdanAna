@@ -98,8 +98,18 @@ void BohdanAna::fillMCTrueInfo(EVENT::MCParticle* mc, EVENT::ReconstructedPartic
         if ( firstStableParent != nullptr ) _firstStableParentPDG = firstStableParent->getPDG();
     }
     _mcVtx = Vector3D( mc->getVertex() );
-    _isOverlay = mc->isOverlay();
+    _timeTrue = mc->getTime();
+
+    _generatorStatus = mc->getGeneratorStatus();
     _isSimulated = mc->isCreatedInSimulation();
+    _isBackscatter = mc->isBackscatter();
+    _vertexIsNotEndpointOfParent = mc->vertexIsNotEndpointOfParent();
+    _isDecayedInTracker = mc->isDecayedInTracker();
+    _isDecayedInCalorimeter = mc->isDecayedInCalorimeter();
+    _hasLeftDetector = mc->hasLeftDetector();
+    _isStopped = mc->isStopped();
+    _isOverlay = mc->isOverlay();
+
     unsigned int quarkTypeDecay = getQuarkTypeDecay(mc);
     _isBottomQuarkDecay = quarkTypeDecay == 5;
     _isCharmQuarkDecay = quarkTypeDecay == 4;
@@ -117,7 +127,6 @@ void BohdanAna::fillMCTrueInfo(EVENT::MCParticle* mc, EVENT::ReconstructedPartic
     _d0True = getD0True(mc);
     _z0True = getZ0True(mc);
     _phiTrue = getPhiTrue(mc);
-    _timeTrue = mc->getTime();
     _mcMom = Vector3D( mc->getMomentum() );
 
 
@@ -702,8 +711,16 @@ void BohdanAna::initialiseTTree(){
     _tree->Branch("mcVtxX", &(_mcVtx[0]) );
     _tree->Branch("mcVtxY", &(_mcVtx[1]) );
     _tree->Branch("mcVtxZ", &(_mcVtx[2]) );
-    _tree->Branch("isOverlay", &_isOverlay);
+    _tree->Branch("timeTrue", &_timeTrue);
+    _tree->Branch("generatorStatus", &_generatorStatus);
     _tree->Branch("isSimulated", &_isSimulated);
+    _tree->Branch("isBackscatter", &_isBackscatter);
+    _tree->Branch("vertexIsNotEndpointOfParent", &_vertexIsNotEndpointOfParent);
+    _tree->Branch("isDecayedInTracker", &_isDecayedInTracker);
+    _tree->Branch("isDecayedInCalorimeter", &_isDecayedInCalorimeter);
+    _tree->Branch("hasLeftDetector", &_hasLeftDetector);
+    _tree->Branch("isStopped", &_isStopped);
+    _tree->Branch("isOverlay", &_isOverlay);
     _tree->Branch("isBottomQuarkDecay", &_isBottomQuarkDecay);
     _tree->Branch("isCharmQuarkDecay", &_isCharmQuarkDecay);
     _tree->Branch("isHadronisationDecay", &_isHadronisationDecay);
@@ -771,7 +788,6 @@ void BohdanAna::initialiseTTree(){
     _tree->Branch("d0True", &_d0True);
     _tree->Branch("z0True", &_z0True);
     _tree->Branch("phiTrue", &_phiTrue);
-    _tree->Branch("timeTrue", &_timeTrue);
     _tree->Branch("mcPx", &(_mcMom[0]) );
     _tree->Branch("mcPy", &(_mcMom[1]) );
     _tree->Branch("mcPz", &(_mcMom[2]) );
@@ -916,8 +932,16 @@ void BohdanAna::resetVariables(){
     _imidiateParentPDG = 0;
     _firstStableParentPDG = 0;
     _mcVtx = Vector3D();
-    _isOverlay = false;
+    _timeTrue = 0.f;
+    _generatorStatus = -1;
     _isSimulated = false;
+    _isBackscatter = false;
+    _vertexIsNotEndpointOfParent = false;
+    _isDecayedInTracker = false;
+    _isDecayedInCalorimeter = false;
+    _hasLeftDetector = false;
+    _isStopped = false;
+    _isOverlay = false;
     _isBottomQuarkDecay = false;
     _isCharmQuarkDecay = false;
     _isHadronisationDecay = false;
@@ -975,7 +999,6 @@ void BohdanAna::resetVariables(){
     _d0True = 0.f;
     _z0True = 0.f;
     _phiTrue = 0.f;
-    _timeTrue = 0.f;
     _mcMom = Vector3D();
 
     // TRACK STATE AT IP

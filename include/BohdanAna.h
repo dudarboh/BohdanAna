@@ -77,8 +77,16 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
         int _imidiateParentPDG{};
         int _firstStableParentPDG{};
         dd4hep::rec::Vector3D _mcVtx{};
-        bool _isOverlay{};
+        float _timeTrue{};
+        int _generatorStatus{};
         bool _isSimulated{};
+        bool _isBackscatter{};
+        bool _vertexIsNotEndpointOfParent{};
+        bool _isDecayedInTracker{};
+        bool _isDecayedInCalorimeter{};
+        bool _hasLeftDetector{};
+        bool _isStopped{};
+        bool _isOverlay{};
         bool _isBottomQuarkDecay{};
         bool _isCharmQuarkDecay{};
         bool _isHadronisationDecay{};
@@ -92,7 +100,6 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
         float _d0True{};
         float _z0True{};
         float _phiTrue{};
-        float _timeTrue{};
         dd4hep::rec::Vector3D _mcMom{};
 
         // TRUE VERTEX (NOTE: TRUE here means TRUE ON MC LEVEL BUT RECONSTRUCTABLE IN PRINCIPLE. E.g. has two reco tracks!)
