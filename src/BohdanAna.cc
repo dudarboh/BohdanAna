@@ -578,6 +578,8 @@ void BohdanAna::processEvent(EVENT::LCEvent * evt){
     }
 
     std::vector<VertexData> trueVertices = getReconstructableTrueVertices(evt);
+    _crossSection = evt->getParameters().getFloatVal("crossSection");
+    std::cout<<_crossSection<<std::endl;
     _quarksToPythia = getQuarksToPythia(evt);
     _isHiggsProcess = checkIsHiggsProcess(evt);
     _higgsDaughters = getHiggsDaughters(evt);
@@ -686,6 +688,7 @@ void BohdanAna::initialiseTTree(){
     _treeEvents.reset( new TTree("treeEvents", "treeEvents") );
 
     // Event information
+    _tree->Branch("crossSection", &_crossSection);
     _tree->Branch("quarksToPythia", &_quarksToPythia);
     _tree->Branch("isHiggsProcess", &_isHiggsProcess);
     _tree->Branch("higgsDaughters", &_higgsDaughters);

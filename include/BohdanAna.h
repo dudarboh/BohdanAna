@@ -55,6 +55,7 @@ class BohdanAna : public marlin::Processor, EventDisplayer {
         int _global_pfo_number{};
 
         // Event information
+        float _crossSection{};
         int _nPionsGenerated{};
         int _nKaonsGenerated{};
         int _nProtonsGenerated{};

@@ -104,6 +104,9 @@ def get_efficiency_graphs(tof_only=False):
             .Define("mom", "sqrt(mcPx*mcPx + mcPy*mcPy + mcPz*mcPz)")\
             .Filter("hasTrack")
 
+    n_events = ROOT.RDataFrame("treeEvents", "/nfs/dust/ilc/user/dudarboh/tof/2f_hadronic_dst.root").Count()
+
+
     df_k = df.Filter("abs(pdg) == 321")
     h_k_total = df_k.Histo1D((get_rand_string(), "Total;Momentum (GeV/c);N entries", 400, 0, 8), "mom" )
     h_k_total_shower = df_k.Filter("hasShower").Histo1D((get_rand_string(), "Total with shower;Momentum (GeV/c);N entries", 400, 0, 8), "mom" )
