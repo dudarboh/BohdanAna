@@ -12,15 +12,22 @@ request_cpus = 1
 request_memory = 1GB
 request_disk = 10KB
 
+#HZ Higgs to ss
+queue file from /afs/desy.de/user/d/dudarboh/analysis/data/DST/250GeV/higgs_excl_Pn2323h_ss_eLpR_DST.txt
+queue file from /afs/desy.de/user/d/dudarboh/analysis/data/DST/250GeV/higgs_excl_Pn2323h_ss_eRpL_DST.txt
+
+
 # HZ (Z invisible)
-# queue file from /afs/desy.de/user/d/dudarboh/analysis/data/DST/250GeV/higgs_Pn23n23h.txt
+# queue file from [0:250] /afs/desy.de/user/d/dudarboh/analysis/data/DST/250GeV/higgs_Pn23n23h_E250_eLpR_DST.txt
+# queue file from [0:250] /afs/desy.de/user/d/dudarboh/analysis/data/DST/250GeV/higgs_Pn23n23h_E250_eRpL_DST.txt
 
 # Z->qq
-# queue file from [0:250] /afs/desy.de/user/d/dudarboh/analysis/data/DST/250GeV/2f_Z_hadronic_E250_eLpR_DST.txt
+#queue file from [0:250] /afs/desy.de/user/d/dudarboh/analysis/data/DST/250GeV/2f_Z_hadronic_E250_eLpR_DST.txt
 # queue file from [0:250] /afs/desy.de/user/d/dudarboh/analysis/data/DST/250GeV/2f_Z_hadronic_E250_eRpL_DST.txt
 
-# WW->qqqq
-queue file from [0:500] /afs/desy.de/user/d/dudarboh/analysis/data/DST/250GeV/4f_WW_hadronic_E250_eLpR_DST.txt
+# WW->qq+nul
+# queue file from [0:250] /afs/desy.de/user/d/dudarboh/analysis/data/DST/250GeV/4f_WW_semileptonic_E250_eLpR_DST.txt
+# queue file from [0:250] /afs/desy.de/user/d/dudarboh/analysis/data/DST/250GeV/4f_WW_semileptonic_E250_eRpL_DST.txt
 
 
 # Files for REC analysis
