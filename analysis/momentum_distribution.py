@@ -7,15 +7,6 @@ dark24 = ['#2E91E5', '#E15F99', '#1CA71C', '#FB0D0D', '#DA16FF', '#222A2A', '#B6
 
 colors = [ROOT.TColor.GetColor(c) for c in dark24]
 
-# 2f_Z_hadronic_eLpR_dst.root
-# 2f_Z_hadronic_eRpL_dst.root
-# 4f_WW_semileptonic_eLpR_dst.root
-# 4f_WW_semileptonic_eRpL_dst.root
-# BohdanAna.root
-# higgs_n23n23h_eLpR_dst.root
-# higgs_n23n23h_eRpL_dst.root
-
-
 def general():
     histos = {}
 
@@ -198,7 +189,13 @@ def higgs():
     df_events = ROOT.RDataFrame("treeEvents", "/nfs/dust/ilc/user/dudarboh/tof/higgs_Pn23n23h_dst.root")
     df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/higgs_Pn23n23h_dst.root")\
                 .Filter("!isSimulated && !isOverlay")\
-                .Filter("abs(pdg) == 321")\
+                .Filter("abs(pdg) == 2212")\
+                .Define("mom", "sqrt(mcPx*mcPx + mcPy*mcPy + mcPz*mcPz)")
+
+    df_events_ss = ROOT.RDataFrame("treeEvents", "/nfs/dust/ilc/user/dudarboh/tof/higgs_Pn23n23h_ss_dst.root")
+    df_ss = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/higgs_Pn23n23h_ss_dst.root")\
+                .Filter("!isSimulated && !isOverlay")\
+                .Filter("abs(pdg) == 2212")\
                 .Define("mom", "sqrt(mcPx*mcPx + mcPy*mcPy + mcPz*mcPz)")
 
     n_events_bb = df_events.Filter("higgsDaughters == 505").Count()
@@ -206,14 +203,14 @@ def higgs():
     n_events_gg = df_events.Filter("higgsDaughters == 2121 || higgsDaughters == 909").Count()
     n_events_cc = df_events.Filter("higgsDaughters == 404").Count()
     n_events_zz = df_events.Filter("higgsDaughters == 2323").Count()
-    # n_events_ss = df_events.Filter("higgsDaughters == 303").Count()
+    n_events_ss = df_events_ss.Filter("higgsDaughters == 303").Count()
 
     histos["Hbb"] = df.Filter("higgsDaughters == 505").Histo1D((get_rand_string(), "", 500, 0, 10), "mom")
     histos["Hww"] = df.Filter("higgsDaughters == 2424").Histo1D((get_rand_string(), "", 500, 0, 10), "mom")
     histos["Hgg"] = df.Filter("higgsDaughters == 2121 || higgsDaughters == 909").Histo1D((get_rand_string(), "", 500, 0, 10), "mom")
     histos["Hcc"] = df.Filter("higgsDaughters == 404").Histo1D((get_rand_string(), "", 500, 0, 10), "mom")
     histos["Hzz"] = df.Filter("higgsDaughters == 2323").Histo1D((get_rand_string(), "", 500, 0, 10), "mom")
-    # histos["Hss"] = df.Filter("higgsDaughters == 303").Histo1D((get_rand_string(), "", 500, 0, 10), "mom")
+    histos["Hss"] = df_ss.Filter("higgsDaughters == 303").Histo1D((get_rand_string(), "", 500, 0, 10), "mom")
 
     #overflows
     of_hbb = df.Filter("higgsDaughters == 505").Filter("mom > 10").Count()
@@ -221,28 +218,28 @@ def higgs():
     of_hgg = df.Filter("higgsDaughters == 2121 || higgsDaughters == 909").Filter("mom > 10").Count()
     of_hcc = df.Filter("higgsDaughters == 404").Filter("mom > 10").Count()
     of_hzz = df.Filter("higgsDaughters == 2323").Filter("mom > 10").Count()
-    # of_hss = df.Filter("higgsDaughters == 303").Filter("mom > 10").Count()
+    of_hss = df_ss.Filter("higgsDaughters == 303").Filter("mom > 10").Count()
 
     hbb_overflow = 100.*of_hbb.GetValue()/histos["Hbb"].GetEntries()
     hww_overflow = 100.*of_hww.GetValue()/histos["Hww"].GetEntries()
     hgg_overflow = 100.*of_hgg.GetValue()/histos["Hgg"].GetEntries()
     hcc_overflow = 100.*of_hcc.GetValue()/histos["Hcc"].GetEntries()
     hzz_overflow = 100.*of_hzz.GetValue()/histos["Hzz"].GetEntries()
-    # hss_overflow = 100.*of_hss.GetValue()/histos["Hss"].GetEntries()
+    hss_overflow = 100.*of_hss.GetValue()/histos["Hss"].GetEntries()
 
     histos["Hbb"].Scale(1./n_events_bb.GetValue())
     histos["Hww"].Scale(1./n_events_ww.GetValue())
     histos["Hgg"].Scale(1./n_events_gg.GetValue())
     histos["Hcc"].Scale(1./n_events_cc.GetValue())
     histos["Hzz"].Scale(1./n_events_zz.GetValue())
-    # histos["Hss"].Scale(1./n_events_ss.GetValue())
+    histos["Hss"].Scale(1./n_events_ss.GetValue())
 
-    histos["Hbb"].SetTitle("ZH #rightarrow #nu_{#mu,#tau}#bar{#nu}_{#mu,#tau} b#bar{b}" + f" (overflow: {hbb_overflow:.1f} %)" + ";Momentum (GeV/c);N kaons per event")
+    histos["Hbb"].SetTitle("ZH #rightarrow #nu_{#mu,#tau}#bar{#nu}_{#mu,#tau} b#bar{b}" + f" (overflow: {hbb_overflow:.1f} %)" + ";Momentum (GeV/c);N protons per event")
     histos["Hww"].SetTitle("ZH #rightarrow #nu_{#mu,#tau}#bar{#nu}_{#mu,#tau} WW" + f" (overflow: {hww_overflow:.1f} %)")
     histos["Hgg"].SetTitle("ZH #rightarrow #nu_{#mu,#tau}#bar{#nu}_{#mu,#tau} gg" + f" (overflow: {hgg_overflow:.1f} %)")
     histos["Hcc"].SetTitle("ZH #rightarrow #nu_{#mu,#tau}#bar{#nu}_{#mu,#tau} c#bar{c}" + f" (overflow: {hcc_overflow:.1f} %)")
     histos["Hzz"].SetTitle("ZH #rightarrow #nu_{#mu,#tau}#bar{#nu}_{#mu,#tau} ZZ" + f" (overflow: {hzz_overflow:.1f} %)")
-    # histos["Hss"].SetTitle("ZH #rightarrow #nu_{#mu,#tau}#bar{#nu}_{#mu,#tau} s#bar{s}" + f" (overflow: {hss_overflow:.1f} %)")
+    histos["Hss"].SetTitle("ZH #rightarrow #nu_{#mu,#tau}#bar{#nu}_{#mu,#tau} s#bar{s}" + f" (overflow: {hss_overflow:.1f} %)")
 
     c = create_canvas()
     for i, h in enumerate(histos.values()):
@@ -258,4 +255,90 @@ def higgs():
     leg.SetFillStyle(0)
     c.Update()
     input("wait")
-higgs()
+# higgs()
+
+def overlay():
+    histos = {}
+
+    df_events = ROOT.RDataFrame("treeEvents", "/nfs/dust/ilc/user/dudarboh/tof/2f_Z_hadronic_dst.root")
+    df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/2f_Z_hadronic_dst.root")\
+                .Filter("!isSimulated && isOverlay")\
+                .Filter("abs(pdg) == 2212")\
+                .Define("mom", "sqrt(mcPx*mcPx + mcPy*mcPy + mcPz*mcPz)")
+
+    n_events = df_events.Count()
+
+    histos["overlay"] = df.Histo1D((get_rand_string(), "", 500, 0, 10), "mom")
+
+    #overflows
+    of_overlay = df.Filter("mom > 10").Count()
+
+    overlay_overflow = 100.*of_overlay.GetValue()/histos["overlay"].GetEntries()
+
+    histos["overlay"].Scale(1./n_events.GetValue())
+
+    histos["overlay"].SetTitle("#gamma#gamma #rightarrow low p_{T} hadrons" + f" (overflow: {overlay_overflow:.1f} %)" + ";Momentum (GeV/c);N protons per event")
+
+    c = create_canvas()
+    for i, h in enumerate(histos.values()):
+        h.SetLineColor(colors[i])
+        h.Draw("histo" if i==0 else "histo same")
+
+
+    histos["overlay"].SetMaximum(1.05*max([h.GetMaximum() for h in histos.values()]))
+    histos["overlay"].GetYaxis().SetMaxDigits(3)
+    histos["overlay"].GetXaxis().SetNdivisions(512)
+    leg = c.BuildLegend(0.2, 0.75, 0.76, 0.91, "", "l")
+    leg.SetMargin(0.15)
+    leg.SetFillStyle(0)
+    c.Update()
+    input("wait")
+# overlay()
+    
+
+def reco_impact():
+    #NOTE: .Filter("abs(imidiateParentPDG) != 211 && abs(imidiateParentPDG) != 321")\
+    histos = {}
+    df_events = ROOT.RDataFrame("treeEvents", "/nfs/dust/ilc/user/dudarboh/tof/2f_Z_hadronic_dst.root")
+    n_events = df_events.Filter("quarksToPythia == 33").Count()
+    df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/2f_Z_hadronic_dst.root")\
+                .Filter("!isSimulated && !isOverlay")\
+                .Filter("abs(pdg) == 2212")\
+                .Filter("quarksToPythia == 33")\
+                .Define("mom", "sqrt(mcPx*mcPx + mcPy*mcPy + mcPz*mcPz)")
+
+    histos["gen"] = df.Histo1D((get_rand_string(), "", 500, 0, 10), "mom" )
+    histos["track"] = df.Filter("hasTrack").Histo1D((get_rand_string(), "", 500, 0, 10), "mom" )
+    histos["nodecay"] = df.Filter("hasTrack && !isDecayedInTracker").Histo1D((get_rand_string(), "", 500, 0, 10), "mom" )
+    histos["shower"] = df.Filter("hasTrack && !isDecayedInTracker && hasShower").Histo1D((get_rand_string(), "", 500, 0, 10), "mom" )
+ 
+    histos["gen"].Scale(1./n_events.GetValue())
+    histos["track"].Scale(1./n_events.GetValue())
+    histos["nodecay"].Scale(1./n_events.GetValue())
+    histos["shower"].Scale(1./n_events.GetValue())
+
+    histos["gen"].SetTitle("Total generated;Momentum (GeV/c);N protons per event")
+    histos["track"].SetTitle("Have a track")
+    histos["nodecay"].SetTitle("Have a track + don't decay in a tracker")
+    histos["shower"].SetTitle("Have a track + don't decay in a tracker + have a shower")
+
+    c = create_canvas()
+    for i, h in enumerate(histos.values()):
+        h.SetLineWidth(4)
+        h.SetLineColor(colors[i])
+        h.Draw("histo" if i==0 else "histo same")
+
+
+    histos["gen"].SetMaximum(1.05*max([h.GetMaximum() for h in histos.values()]))
+    histos["gen"].GetYaxis().SetMaxDigits(3)
+    histos["gen"].GetXaxis().SetNdivisions(512)
+    leg = c.BuildLegend(0.28, 0.80, 0.93, 0.92, "", "l")
+    leg.SetMargin(0.15)
+    leg.SetFillStyle(0)
+
+    latex.SetTextSize(0.04)
+    latex.DrawLatexNDC(0.55, 0.55, "#splitline{Protons from Z#rightarrows#bar{s}}{E_{cm} = 250 GeV/c^{2}}")
+
+    c.Update()
+    input("wait")
+reco_impact()

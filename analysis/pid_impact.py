@@ -265,62 +265,7 @@ def get_efficiency_graphs(tof_only=False):
         return canvas2
 
 
-def draw_gen_vs_reco():
-    # df analysis
-    df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/2f_hadronic_dst.root")
-    df = df.Define("mom", "sqrt(mcPx*mcPx + mcPy*mcPy + mcPz*mcPz)")
-    df_gen = df.Filter("!isSimulated && !isOverlay").Filter("quarksToPythia == 55").Filter("abs(pdg) == 321")
-    df_reco = df_gen.Filter("hasTrack")
-    df_reco_shower = df_reco.Filter("hasShower")
 
-    #creation and styling
-    h1 = df_gen.Histo1D((get_rand_string(), "Generated;Momentum (GeV/c);N entries", 200, 0, 10), "mom" )
-    h2 = df_reco.Histo1D((get_rand_string(), "Has track;Momentum (GeV/c);N entries", 200, 0, 10), "mom" )
-    h3 = df_reco_shower.Histo1D((get_rand_string(), "Has track and shower;Momentum (GeV/c);N entries", 200, 0, 10), "mom" )
-    n_gen_low = df_gen.Filter("mom < 3").Count()
-    n_reco_low = df_reco.Filter("mom < 3").Count()
-    n_reco_shower_low = df_reco_shower.Filter("mom < 3").Count()
-    n_gen_total = df_gen.Count()
- 
-    h2.SetLineColor(ROOT.TColor.GetColor("#20bf55"))
-    h3.SetLineColor(ROOT.TColor.GetColor("#01baef"))
-    h1.SetLineWidth(4)
-    h2.SetLineWidth(4)
-    h3.SetLineWidth(4)
-
-    #Calculating
-    print(f"Fraction of generated below 3 GeV {100*n_gen_low.GetValue()/n_gen_total.GetValue()}")
-    print(f"Fraction of track below 3 GeV {100*n_reco_low.GetValue()/n_gen_total.GetValue()}")
-    print(f"Fraction of track+shower below 3 GeV {100*n_reco_shower_low.GetValue()/n_gen_total.GetValue()}")
-
-
-    # plotting
-    c1 = create_canvas()
-    h1.GetYaxis().SetTitleOffset(1.4)
-    h1.DrawClone()
-    h2.DrawClone("same")
-    h3.DrawClone("same")
-    leg = create_legend()
-    leg.AddEntry(h1.GetPtr(), h1.GetTitle(), "l")
-    leg.AddEntry(h2.GetPtr(), h2.GetTitle(), "l")
-    leg.AddEntry(h3.GetPtr(), h3.GetTitle(), "l")
-    leg.Draw()
-    c1.Update()
-
-    c2 = create_canvas()
-    h2.Divide(h1.GetPtr())
-    h3.Divide(h1.GetPtr())
-    h2.Draw("histo")
-    h2.GetYaxis().SetTitleOffset(1.4)
-    h3.Draw("histo same")
-    leg2 = create_legend()
-    leg2.AddEntry(h2.GetPtr(), h2.GetTitle(), "l")
-    leg2.AddEntry(h3.GetPtr(), h3.GetTitle(), "l")
-    leg2.Draw()
-    c2.Update()
-    #splitline{Kaons from Z#rightarrowq#bar{q}}{E_{cm} = 250 GeV/c^{2}}
-
-    input("wait")
 
 
 def test():
