@@ -341,4 +341,232 @@ def reco_impact():
 
     c.Update()
     input("wait")
-reco_impact()
+# reco_impact()
+
+
+
+def apply_efficiency(h_mom, gr_eff, mode="eff"):
+    '''Return histogram where each bin is multiplied by the interpolated graph value (mode=eff) or 1-graph value (mode=mis-id)'''
+    h = h_mom.Clone()
+    for i in range( 1, h_mom.GetXaxis().GetNbins() + 1 ):
+        x = h_mom.GetXaxis().GetBinCenter(i)
+        eff = gr_eff.Eval(x)
+        if mode == "eff":
+            h.SetBinContent(i, h_mom.GetBinContent(i)*eff )
+        elif mode == "misid":
+            h.SetBinContent(i, h_mom.GetBinContent(i)*(1-eff) )
+    return h
+
+
+def tof_impact(use_dedx=True):
+    df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna.root").Define("mom", "harmonicMomToEcal_IKF_zedLambda")
+    df_dedx = df.Filter("dEdx > 0. && tofClosest0 > 6.")
+    df_dedx_pi = df_dedx.Filter("abs(pdg) == 211")
+    df_dedx_k = df_dedx.Filter("abs(pdg) == 321")
+    df_dedx_p = df_dedx.Filter("abs(pdg) == 2212")
+
+    N_LOG_MOMENTUM_BINS, MIN_LOG_MOMENTUM, MAX_LOG_MOMENTUM = 30, -0.3, 1.3 # (0.5 to ~20) GeV/c
+    LOG_MOMENTUM_BINS = np.logspace(MIN_LOG_MOMENTUM, MAX_LOG_MOMENTUM, N_LOG_MOMENTUM_BINS+1)
+    N_DEDX_BINS, MIN_DEDX, MAX_DEDX = 3000, 0, 1e-6
+    DEDX_BINS = np.linspace(MIN_DEDX, MAX_DEDX, N_DEDX_BINS+1)
+
+    h2d_dedx_pi = df_dedx_pi.Histo2D((get_rand_string(), "", N_LOG_MOMENTUM_BINS, LOG_MOMENTUM_BINS, N_DEDX_BINS, DEDX_BINS), "mom", "dEdx")
+    h2d_dedx_k = df_dedx_k.Histo2D((get_rand_string(), "", N_LOG_MOMENTUM_BINS, LOG_MOMENTUM_BINS, N_DEDX_BINS, DEDX_BINS), "mom", "dEdx")
+    h2d_dedx_k = df_dedx_p.Histo2D((get_rand_string(), "", N_LOG_MOMENTUM_BINS, LOG_MOMENTUM_BINS, N_DEDX_BINS, DEDX_BINS), "mom", "dEdx")
+
+    df_tof = df.Filter("tofClosest0 > 6.")
+    df_tof30 = df_tof.Define("beta", "trackLengthToEcal_IKF_zedLambda/(tofClosest30*299.792458)")\
+                .Define("mass2", "mom*mom*( 1./(beta*beta) - 1.)")
+    df_tof30_pi = df_tof30.Filter("abs(pdg) == 211")
+    df_tof30_k = df_tof30.Filter("abs(pdg) == 321")
+    df_tof30_p = df_tof30.Filter("abs(pdg) == 2212")
+
+    N_MASS2_BINS, MIN_MASS2, MAX_MASS2 = 3000, -3, 3  # GeV^2/c^4
+    h2d_tof30_pi = df_tof30_pi.Histo2D((get_rand_string(), "", N_LOG_MOMENTUM_BINS, LOG_MOMENTUM_BINS, N_MASS2_BINS, MIN_MASS2, MAX_MASS2), "mom", "mass2")
+    h2d_tof30_k = df_tof30_k.Histo2D((get_rand_string(), "", N_LOG_MOMENTUM_BINS, LOG_MOMENTUM_BINS, N_MASS2_BINS, MIN_MASS2, MAX_MASS2), "mom", "mass2")
+    h2d_tof30_p = df_tof30_p.Histo2D((get_rand_string(), "", N_LOG_MOMENTUM_BINS, LOG_MOMENTUM_BINS, N_MASS2_BINS, MIN_MASS2, MAX_MASS2), "mom", "mass2")
+
+    df_tof10 = df_tof.Define("beta", "trackLengthToEcal_IKF_zedLambda/(tofClosest10*299.792458)")\
+                .Define("mass2", "mom*mom*( 1./(beta*beta) - 1.)")
+    df_tof10_pi = df_tof10.Filter("abs(pdg) == 211")
+    df_tof10_k = df_tof10.Filter("abs(pdg) == 321")
+    df_tof10_p = df_tof10.Filter("abs(pdg) == 2212")
+
+    h2d_tof10_pi = df_tof10_pi.Histo2D((get_rand_string(), "", N_LOG_MOMENTUM_BINS, LOG_MOMENTUM_BINS, N_MASS2_BINS, MIN_MASS2, MAX_MASS2), "mom", "mass2")
+    h2d_tof10_k = df_tof10_k.Histo2D((get_rand_string(), "", N_LOG_MOMENTUM_BINS, LOG_MOMENTUM_BINS, N_MASS2_BINS, MIN_MASS2, MAX_MASS2), "mom", "mass2")
+    h2d_tof10_p = df_tof10_p.Histo2D((get_rand_string(), "", N_LOG_MOMENTUM_BINS, LOG_MOMENTUM_BINS, N_MASS2_BINS, MIN_MASS2, MAX_MASS2), "mom", "mass2")
+
+    ################################################################ ENF OF RDATAFRAME
+
+    _, eff_dedx_pik, _, sp_dedx_pik = calculate_pid_graphs(h2d_dedx_pi, h2d_dedx_k)
+    _, eff_tof30_pik, _, sp_tof30_pik = calculate_pid_graphs(h2d_tof30_pi, h2d_tof30_k)
+    sp_dedx_tof30_pik = combine_two_graphs(sp_dedx_pik, sp_tof30_pik)
+    eff_dedx_tof30_pik = convert_graph_sp_to_eff( sp_dedx_tof30_pik )
+
+    _, eff_tof10_pik, _, sp_tof10_pik = calculate_pid_graphs(h2d_tof10_pi, h2d_tof10_k)
+    sp_dedx_tof10_pik = combine_two_graphs(sp_dedx_pik, sp_tof10_pik)
+    eff_dedx_tof10_pik = convert_graph_sp_to_eff ( sp_dedx_tof10_pik )
+
+    n_events_ss = ROOT.RDataFrame("treeEvents", "/nfs/dust/ilc/user/dudarboh/tof/2f_hadronic_dst.root").Filter("quarksToPythia == 33").Count()
+
+    df_ss = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/2f_hadronic_dst.root")\
+            .Filter("quarksToPythia == 33")\
+            .Filter("!isSimulated && !isOverlay")\
+            .Filter("hasTrack && !isDecayedInTracker")\
+            .Define("mom", "sqrt(mcPx*mcPx + mcPy*mcPy + mcPz*mcPz)")
+
+    df_ss_pi = df_ss.Filter("abs(pdg) == 211")
+    df_ss_k = df_ss.Filter("abs(pdg) == 321")
+
+    h_ss_pi = df_ss_pi.Histo1D((get_rand_string(), "Total;Momentum (GeV/c);N entries", 400, 0, 8), "mom" )
+    h_ss_k = df_ss_k.Histo1D((get_rand_string(), "Total;Momentum (GeV/c);N entries", 400, 0, 8), "mom" )
+
+    h_ss_pi.Scale(1./n_events_ss.GetValue())
+    h_ss_k.Scale(1./n_events_ss.GetValue())
+
+
+    if use_dedx:
+        # dE/dx kaon efficiency
+        h_dedx_k = apply_efficiency(h_ss_k, eff_dedx_pik)
+        h_dedx_k.SetLineColor( ROOT.TColor.GetColor("#ff0000") )
+        h_dedx_k.SetLineWidth(2)
+        h_dedx_k.SetLineStyle(2)
+
+        # dE/dx + TOF 30 kaon efficiency
+        h_dedx_tof30_k = apply_efficiency(h_ss_k, eff_dedx_tof30_pik)
+        h_dedx_tof30_k.SetLineColor( ROOT.TColor.GetColor("#ff0000") )
+        h_dedx_tof30_k.SetLineWidth(2)
+        h_dedx_tof30_k.SetLineStyle(7)
+
+        # dE/dx + TOF 10 kaon efficiency
+        h_dedx_tof10_k = apply_efficiency(h_ss_k, eff_dedx_tof10_pik)
+        h_dedx_tof10_k.SetLineColor( ROOT.TColor.GetColor("#ff0000") )
+        h_dedx_tof10_k.SetLineWidth(2)
+
+        # dE/dx pion mis-id
+        h_dedx_pi = apply_efficiency(h_ss_pi, eff_dedx_pik, mode="misid")
+        h_dedx_pi.SetLineColor( ROOT.TColor.GetColor("#0066ff") )
+        h_dedx_pi.SetLineWidth(2)
+        h_dedx_pi.SetLineStyle(2)
+
+
+        # dE/dx + TOF 30 pion mis-id
+        h_dedx_tof30_pi = apply_efficiency(h_ss_pi, eff_dedx_tof30_pik, mode="misid")
+        h_dedx_tof30_pi.SetLineColor( ROOT.TColor.GetColor("#0066ff") )
+        h_dedx_tof30_pi.SetLineWidth(2)
+        h_dedx_tof30_pi.SetLineStyle(7)
+
+
+        # dE/dx + TOF 10 pion mis-id
+        h_dedx_tof10_pi = apply_efficiency(h_ss_pi, eff_dedx_tof10_pik, mode="misid")
+        h_dedx_tof10_pi.SetLineColor( ROOT.TColor.GetColor("#0066ff") )
+        h_dedx_tof10_pi.SetLineWidth(2)
+
+        h_ss_k.GetYaxis().SetMaxDigits(3)
+        canvas1 = create_canvas()
+        h_ss_k.DrawClone()
+        h_dedx_k.DrawClone("same")
+        h_dedx_tof30_k.DrawClone("same")
+        h_dedx_tof10_k.DrawClone("same")
+        h_dedx_pi.DrawClone("same")
+        h_dedx_tof30_pi.DrawClone("same")
+        h_dedx_tof10_pi.DrawClone("same")
+
+        leg = create_legend(0.2, 0.75, 0.76, 0.91)
+        leg.SetNColumns(2)
+        leg.SetMargin(0.15)
+
+        h_leg1 = ROOT.TH1F(get_rand_string(), "K total (#varepsilon=100%)", 1, 0, 1)
+        leg.AddEntry(h_leg1, h_leg1.GetTitle(), "l")
+
+        h_leg2 = ROOT.TH1F(get_rand_string(), "dE/dx only", 1, 0, 1)
+        h_leg2.SetLineStyle(2)
+        leg.AddEntry(h_leg2, h_leg2.GetTitle(), "l")
+
+        h_leg3 = ROOT.TH1F(get_rand_string(), "K identified", 1, 0, 1)
+        h_leg3.SetLineColor(ROOT.TColor.GetColor("#ff0000"))
+        leg.AddEntry(h_leg3, h_leg3.GetTitle(), "l")
+
+        h_leg4 = ROOT.TH1F(get_rand_string(), "dE/dx + TOF 30 ps", 1, 0, 1)
+        h_leg4.SetLineStyle(7)
+        leg.AddEntry(h_leg4, h_leg4.GetTitle(), "l")
+
+        h_leg5 = ROOT.TH1F(get_rand_string(), "#pi misidentified", 1, 0, 1)
+        h_leg5.SetLineColor(ROOT.TColor.GetColor("#0066ff"))
+        leg.AddEntry(h_leg5, h_leg5.GetTitle(), "l")
+
+        h_leg6 = ROOT.TH1F(get_rand_string(), "dE/dx + TOF 10 ps", 1, 0, 1)
+        h_leg6.SetLineStyle(1)
+        leg.AddEntry(h_leg6, h_leg6.GetTitle(), "l")
+        leg.DrawClone()
+        latex.SetTextSize(0.04)
+        latex.DrawLatexNDC(0.55, 0.55, "#splitline{Protons from Z#rightarrows#bar{s}}{E_{cm} = 250 GeV/c^{2}}")
+        canvas1.Update()
+        input("wait")
+    else:
+        # TOF 30 kaon efficiency
+        h_tof30_k = apply_efficiency(h_ss_k, eff_tof30_pik)
+        h_tof30_k.SetLineColor( ROOT.TColor.GetColor("#ff0000") )
+        h_tof30_k.SetLineWidth(2)
+        h_tof30_k.SetLineStyle(7)
+
+        # TOF 10 kaon efficiency
+        h_tof10_k = apply_efficiency(h_ss_k, eff_tof10_pik)
+        h_tof10_k.SetLineColor( ROOT.TColor.GetColor("#ff0000") )
+        h_tof10_k.SetLineWidth(2)
+
+        # TOF 30 pion mis-id
+        h_tof30_pi = apply_efficiency(h_ss_pi, eff_tof30_pik, mode="misid")
+        h_tof30_pi.SetLineColor( ROOT.TColor.GetColor("#0066ff") )
+        h_tof30_pi.SetLineWidth(2)
+        h_tof30_pi.SetLineStyle(7)
+
+        # TOF 10 pion mis-id
+        h_tof10_pi = apply_efficiency(h_ss_pi, eff_tof10_pik, mode="misid")
+        h_tof10_pi.SetLineColor( ROOT.TColor.GetColor("#0066ff") )
+        h_tof10_pi.SetLineWidth(2)
+
+        h_ss_k.GetYaxis().SetMaxDigits(3)
+        canvas2 = create_canvas()
+        h_ss_k.DrawClone()
+        h_tof30_k.DrawClone("same")
+        h_tof10_k.DrawClone("same")
+        h_tof30_pi.DrawClone("same")
+        h_tof10_pi.DrawClone("same")
+
+        leg = create_legend(0.2, 0.75, 0.76, 0.91)
+        leg.SetNColumns(2)
+        leg.SetMargin(0.15)
+
+        h_leg1 = ROOT.TH1F(get_rand_string(), "K total (#varepsilon=100%)", 1, 0, 1)
+        leg.AddEntry(h_leg1, h_leg1.GetTitle(), "l")
+
+        h_leg2 = ROOT.TH1F(get_rand_string(), "", 1, 0, 1)
+        h_leg2.SetLineStyle(2)
+        leg.AddEntry(0, "", "")
+
+        h_leg3 = ROOT.TH1F(get_rand_string(), "K identified", 1, 0, 1)
+        h_leg3.SetLineColor(ROOT.TColor.GetColor("#ff0000"))
+        leg.AddEntry(h_leg3, h_leg3.GetTitle(), "l")
+
+        h_leg4 = ROOT.TH1F(get_rand_string(), "TOF 30 ps", 1, 0, 1)
+        h_leg4.SetLineStyle(7)
+        leg.AddEntry(h_leg4, h_leg4.GetTitle(), "l")
+
+        h_leg5 = ROOT.TH1F(get_rand_string(), "#pi misidentified", 1, 0, 1)
+        h_leg5.SetLineColor(ROOT.TColor.GetColor("#0066ff"))
+        leg.AddEntry(h_leg5, h_leg5.GetTitle(), "l")
+
+        h_leg6 = ROOT.TH1F(get_rand_string(), "TOF 10 ps", 1, 0, 1)
+        h_leg6.SetLineStyle(1)
+        leg.AddEntry(h_leg6, h_leg6.GetTitle(), "l")
+        leg.DrawClone()
+        latex.SetTextSize(0.04)
+        latex.DrawLatexNDC(0.55, 0.55, "#splitline{Protons from Z#rightarrows#bar{s}}{E_{cm} = 250 GeV/c^{2}}")
+        canvas2.Update()
+        input("wait")
+
+
+
+
+tof_impact()
