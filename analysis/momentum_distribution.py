@@ -358,9 +358,9 @@ def apply_efficiency(h_mom, gr_eff, mode="eff"):
     return h
 
 
-def tof_impact(use_dedx=True):
-    df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna.root").Define("mom", "harmonicMomToEcal_IKF_zedLambda")
-    df_dedx = df.Filter("dEdx > 0. && tofClosest0 > 6.")
+def tof_impact(use_dedx=True, process="zss", particle=kaon):
+    df_eff = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna.root").Define("mom", "harmonicMomToEcal_IKF_zedLambda")
+    df_dedx = df_eff.Filter("dEdx > 0. && tofClosest0 > 6.")
     df_dedx_pi = df_dedx.Filter("abs(pdg) == 211")
     df_dedx_k = df_dedx.Filter("abs(pdg) == 321")
     df_dedx_p = df_dedx.Filter("abs(pdg) == 2212")
@@ -372,9 +372,9 @@ def tof_impact(use_dedx=True):
 
     h2d_dedx_pi = df_dedx_pi.Histo2D((get_rand_string(), "", N_LOG_MOMENTUM_BINS, LOG_MOMENTUM_BINS, N_DEDX_BINS, DEDX_BINS), "mom", "dEdx")
     h2d_dedx_k = df_dedx_k.Histo2D((get_rand_string(), "", N_LOG_MOMENTUM_BINS, LOG_MOMENTUM_BINS, N_DEDX_BINS, DEDX_BINS), "mom", "dEdx")
-    h2d_dedx_k = df_dedx_p.Histo2D((get_rand_string(), "", N_LOG_MOMENTUM_BINS, LOG_MOMENTUM_BINS, N_DEDX_BINS, DEDX_BINS), "mom", "dEdx")
+    h2d_dedx_p = df_dedx_p.Histo2D((get_rand_string(), "", N_LOG_MOMENTUM_BINS, LOG_MOMENTUM_BINS, N_DEDX_BINS, DEDX_BINS), "mom", "dEdx")
 
-    df_tof = df.Filter("tofClosest0 > 6.")
+    df_tof = df_eff.Filter("tofClosest0 > 6.")
     df_tof30 = df_tof.Define("beta", "trackLengthToEcal_IKF_zedLambda/(tofClosest30*299.792458)")\
                 .Define("mass2", "mom*mom*( 1./(beta*beta) - 1.)")
     df_tof30_pi = df_tof30.Filter("abs(pdg) == 211")
@@ -407,83 +407,150 @@ def tof_impact(use_dedx=True):
     sp_dedx_tof10_pik = combine_two_graphs(sp_dedx_pik, sp_tof10_pik)
     eff_dedx_tof10_pik = convert_graph_sp_to_eff ( sp_dedx_tof10_pik )
 
-    n_events_ss = ROOT.RDataFrame("treeEvents", "/nfs/dust/ilc/user/dudarboh/tof/2f_hadronic_dst.root").Filter("quarksToPythia == 33").Count()
+    _, eff_dedx_kp, _, sp_dedx_kp = calculate_pid_graphs(h2d_dedx_k, h2d_dedx_p)
+    _, eff_tof30_kp, _, sp_tof30_kp = calculate_pid_graphs(h2d_tof30_k, h2d_tof30_p)
+    sp_dedx_tof30_kp = combine_two_graphs(sp_dedx_kp, sp_tof30_kp)
+    eff_dedx_tof30_kp = convert_graph_sp_to_eff( sp_dedx_tof30_kp )
 
-    df_ss = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/2f_hadronic_dst.root")\
+    _, eff_tof10_kp, _, sp_tof10_kp = calculate_pid_graphs(h2d_tof10_k, h2d_tof10_p)
+    sp_dedx_tof10_kp = combine_two_graphs(sp_dedx_kp, sp_tof10_kp)
+    eff_dedx_tof10_kp = convert_graph_sp_to_eff ( sp_dedx_tof10_kp )
+
+    n_events_ss = ROOT.RDataFrame("treeEvents", "/nfs/dust/ilc/user/dudarboh/tof/2f_Z_hadronic_dst.root").Filter("quarksToPythia == 33").Count()
+    df_ss = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/2f_Z_hadronic_dst.root")\
             .Filter("quarksToPythia == 33")\
             .Filter("!isSimulated && !isOverlay")\
             .Filter("hasTrack && !isDecayedInTracker")\
             .Define("mom", "sqrt(mcPx*mcPx + mcPy*mcPy + mcPz*mcPz)")
 
-    df_ss_pi = df_ss.Filter("abs(pdg) == 211")
-    df_ss_k = df_ss.Filter("abs(pdg) == 321")
+    n_events_gg = ROOT.RDataFrame("treeEvents", "/nfs/dust/ilc/user/dudarboh/tof/higgs_Pn23n23h_dst.root").Filter("higgsDaughters == 909 || higgsDaughters == 2121").Count()
+    df_gg = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/higgs_Pn23n23h_dst.root")\
+            .Filter("higgsDaughters == 909 || higgsDaughters == 2121")\
+            .Filter("!isSimulated && !isOverlay")\
+            .Filter("hasTrack && !isDecayedInTracker")\
+            .Define("mom", "sqrt(mcPx*mcPx + mcPy*mcPy + mcPz*mcPz)")
 
-    h_ss_pi = df_ss_pi.Histo1D((get_rand_string(), "Total;Momentum (GeV/c);N entries", 400, 0, 8), "mom" )
-    h_ss_k = df_ss_k.Histo1D((get_rand_string(), "Total;Momentum (GeV/c);N entries", 400, 0, 8), "mom" )
+    if process == "Zss":
+        n_events = n_events_ss
+        df = df_ss
+    elif process == "Hgg":
+        n_events = n_events_gg
+        df = df_gg
+    else:
+        raise("ERROR: Unknown process")
+    df_pi = df.Filter("abs(pdg) == 211")
+    df_k = df.Filter("abs(pdg) == 321")
+    df_p = df.Filter("abs(pdg) == 2212")
 
-    h_ss_pi.Scale(1./n_events_ss.GetValue())
-    h_ss_k.Scale(1./n_events_ss.GetValue())
+    h_pi = df_pi.Histo1D((get_rand_string(), "Total;Momentum (GeV/c);Particles / event / 0.1 GeV/c", 200, 0, 20), "mom" )
+    h_k = df_k.Histo1D((get_rand_string(), "Total;Momentum (GeV/c);Particles / event / 0.1 GeV/c", 200, 0, 20), "mom" )
+    h_p = df_p.Histo1D((get_rand_string(), "Total;Momentum (GeV/c);Particles / event / 0.1 GeV/c", 200, 0, 20), "mom" )
 
+    h_pi.Scale(1./n_events.GetValue())
+    h_k.Scale(1./n_events.GetValue())
+    h_p.Scale(1./n_events.GetValue())
 
+    if particle == kaon:
+        h_total_signal = h_k
+    elif particle == proton:
+        h_total_signal = h_p
+    else:
+        raise("Wrong particle")
+
+    canvas = create_canvas()
     if use_dedx:
         # dE/dx kaon efficiency
-        h_dedx_k = apply_efficiency(h_ss_k, eff_dedx_pik)
-        h_dedx_k.SetLineColor( ROOT.TColor.GetColor("#ff0000") )
-        h_dedx_k.SetLineWidth(2)
-        h_dedx_k.SetLineStyle(2)
+        if particle == kaon:
+            h_dedx_signal = apply_efficiency(h_k, eff_dedx_pik)
+        elif particle == proton:
+            h_dedx_signal = apply_efficiency(h_p, eff_dedx_kp)
+        h_dedx_signal.SetLineColor( ROOT.TColor.GetColor("#ff0000") )
+        h_dedx_signal.SetLineWidth(2)
+        h_dedx_signal.SetLineStyle(2)
 
         # dE/dx + TOF 30 kaon efficiency
-        h_dedx_tof30_k = apply_efficiency(h_ss_k, eff_dedx_tof30_pik)
-        h_dedx_tof30_k.SetLineColor( ROOT.TColor.GetColor("#ff0000") )
-        h_dedx_tof30_k.SetLineWidth(2)
-        h_dedx_tof30_k.SetLineStyle(7)
+        if particle == kaon:
+            h_dedx_tof30_signal = apply_efficiency(h_k, eff_dedx_tof30_pik)
+        elif particle == proton:
+            h_dedx_tof30_signal = apply_efficiency(h_p, eff_dedx_tof30_kp)
+        h_dedx_tof30_signal.SetLineColor( ROOT.TColor.GetColor("#ff0000") )
+        h_dedx_tof30_signal.SetLineWidth(2)
+        h_dedx_tof30_signal.SetLineStyle(7)
 
         # dE/dx + TOF 10 kaon efficiency
-        h_dedx_tof10_k = apply_efficiency(h_ss_k, eff_dedx_tof10_pik)
-        h_dedx_tof10_k.SetLineColor( ROOT.TColor.GetColor("#ff0000") )
-        h_dedx_tof10_k.SetLineWidth(2)
+        if particle == kaon:
+            h_dedx_tof10_signal = apply_efficiency(h_k, eff_dedx_tof10_pik)
+        elif particle == proton:
+            h_dedx_tof10_signal = apply_efficiency(h_p, eff_dedx_tof10_kp)        
+        h_dedx_tof10_signal.SetLineColor( ROOT.TColor.GetColor("#ff0000") )
+        h_dedx_tof10_signal.SetLineWidth(2)
 
         # dE/dx pion mis-id
-        h_dedx_pi = apply_efficiency(h_ss_pi, eff_dedx_pik, mode="misid")
-        h_dedx_pi.SetLineColor( ROOT.TColor.GetColor("#0066ff") )
-        h_dedx_pi.SetLineWidth(2)
-        h_dedx_pi.SetLineStyle(2)
+        if particle == kaon:
+            h_dedx_bkg = apply_efficiency(h_pi, eff_dedx_pik, mode="misid")
+        elif particle == proton:
+            h_dedx_bkg = apply_efficiency(h_k, eff_dedx_kp, mode="misid")        
+        h_dedx_bkg.SetLineColor( ROOT.TColor.GetColor("#0066ff") )
+        h_dedx_bkg.SetLineWidth(2)
+        h_dedx_bkg.SetLineStyle(2)
 
 
         # dE/dx + TOF 30 pion mis-id
-        h_dedx_tof30_pi = apply_efficiency(h_ss_pi, eff_dedx_tof30_pik, mode="misid")
-        h_dedx_tof30_pi.SetLineColor( ROOT.TColor.GetColor("#0066ff") )
-        h_dedx_tof30_pi.SetLineWidth(2)
-        h_dedx_tof30_pi.SetLineStyle(7)
+        if particle == kaon:
+            h_dedx_tof30_bkg = apply_efficiency(h_pi, eff_dedx_tof30_pik, mode="misid")
+        elif particle == proton:
+            h_dedx_tof30_bkg = apply_efficiency(h_k, eff_dedx_tof30_kp, mode="misid")
+        h_dedx_tof30_bkg.SetLineColor( ROOT.TColor.GetColor("#0066ff") )
+        h_dedx_tof30_bkg.SetLineWidth(2)
+        h_dedx_tof30_bkg.SetLineStyle(7)
 
 
         # dE/dx + TOF 10 pion mis-id
-        h_dedx_tof10_pi = apply_efficiency(h_ss_pi, eff_dedx_tof10_pik, mode="misid")
-        h_dedx_tof10_pi.SetLineColor( ROOT.TColor.GetColor("#0066ff") )
-        h_dedx_tof10_pi.SetLineWidth(2)
+        if particle == kaon:
+            h_dedx_tof10_bkg = apply_efficiency(h_pi, eff_dedx_tof10_pik, mode="misid")
+        elif particle == proton:
+            h_dedx_tof10_bkg = apply_efficiency(h_k, eff_dedx_tof10_kp, mode="misid")
+        h_dedx_tof10_bkg.SetLineColor( ROOT.TColor.GetColor("#0066ff") )
+        h_dedx_tof10_bkg.SetLineWidth(2)
 
-        h_ss_k.GetYaxis().SetMaxDigits(3)
-        canvas1 = create_canvas()
-        h_ss_k.DrawClone()
-        h_dedx_k.DrawClone("same")
-        h_dedx_tof30_k.DrawClone("same")
-        h_dedx_tof10_k.DrawClone("same")
-        h_dedx_pi.DrawClone("same")
-        h_dedx_tof30_pi.DrawClone("same")
-        h_dedx_tof10_pi.DrawClone("same")
+        h_total_signal.GetYaxis().SetMaxDigits(3)
+        if particle == kaon:
+            h_total_signal.GetXaxis().SetRangeUser(0, 8)
+        elif particle == proton:
+            h_total_signal.GetXaxis().SetRangeUser(0, 15)
+        h_total_signal.DrawCopy("histo")
+        h_dedx_signal.DrawCopy("histo same")
+        h_dedx_tof30_signal.DrawCopy("histo same")
+        h_dedx_tof10_signal.DrawCopy("histo same")
+        h_dedx_bkg.DrawCopy("histo same")
+        h_dedx_tof30_bkg.DrawCopy("histo same")
+        h_dedx_tof10_bkg.DrawCopy("histo same")
+        
+        h_total_signal.SetMaximum(1.05*max([h.GetMaximum() for h in [h_total_signal, h_dedx_signal, h_dedx_tof30_signal, h_dedx_tof10_signal, h_dedx_bkg, h_dedx_tof30_bkg, h_dedx_tof10_bkg]]))
 
         leg = create_legend(0.2, 0.75, 0.76, 0.91)
         leg.SetNColumns(2)
         leg.SetMargin(0.15)
 
-        h_leg1 = ROOT.TH1F(get_rand_string(), "K total (#varepsilon=100%)", 1, 0, 1)
+        if particle == kaon:
+            signal_total_title = "K total (#varepsilon=100%)"
+            signal_eff_title = "K identified"
+            bkg_misid_title = "#pi misidentified"
+        elif particle == proton:
+            signal_total_title = "p total (#varepsilon=100%)"
+            signal_eff_title = "p identified"
+            bkg_misid_title = "K misidentified"
+        else:
+            raise("Wrong particle")
+
+        h_leg1 = ROOT.TH1F(get_rand_string(), signal_total_title, 1, 0, 1)
         leg.AddEntry(h_leg1, h_leg1.GetTitle(), "l")
 
         h_leg2 = ROOT.TH1F(get_rand_string(), "dE/dx only", 1, 0, 1)
         h_leg2.SetLineStyle(2)
         leg.AddEntry(h_leg2, h_leg2.GetTitle(), "l")
 
-        h_leg3 = ROOT.TH1F(get_rand_string(), "K identified", 1, 0, 1)
+        h_leg3 = ROOT.TH1F(get_rand_string(), signal_eff_title, 1, 0, 1)
         h_leg3.SetLineColor(ROOT.TColor.GetColor("#ff0000"))
         leg.AddEntry(h_leg3, h_leg3.GetTitle(), "l")
 
@@ -491,61 +558,87 @@ def tof_impact(use_dedx=True):
         h_leg4.SetLineStyle(7)
         leg.AddEntry(h_leg4, h_leg4.GetTitle(), "l")
 
-        h_leg5 = ROOT.TH1F(get_rand_string(), "#pi misidentified", 1, 0, 1)
+        h_leg5 = ROOT.TH1F(get_rand_string(), bkg_misid_title, 1, 0, 1)
         h_leg5.SetLineColor(ROOT.TColor.GetColor("#0066ff"))
         leg.AddEntry(h_leg5, h_leg5.GetTitle(), "l")
 
         h_leg6 = ROOT.TH1F(get_rand_string(), "dE/dx + TOF 10 ps", 1, 0, 1)
         h_leg6.SetLineStyle(1)
         leg.AddEntry(h_leg6, h_leg6.GetTitle(), "l")
-        leg.DrawClone()
+        leg.DrawCopy()
+
         latex.SetTextSize(0.04)
-        latex.DrawLatexNDC(0.55, 0.55, "#splitline{Protons from Z#rightarrows#bar{s}}{E_{cm} = 250 GeV/c^{2}}")
-        canvas1.Update()
-        input("wait")
-    else:
+        if process == "Zss":
+            latex.DrawLatexNDC(0.55, 0.55, "Z#rightarrows#bar{s} at E_{cm} = 250 GeV/c^{2}")
+        elif process == "Hgg":
+            latex.DrawLatexNDC(0.55, 0.55, "H#rightarrowgg at E_{cm} = 250 GeV/c^{2}")
+    elif not use_dedx:
         # TOF 30 kaon efficiency
-        h_tof30_k = apply_efficiency(h_ss_k, eff_tof30_pik)
-        h_tof30_k.SetLineColor( ROOT.TColor.GetColor("#ff0000") )
-        h_tof30_k.SetLineWidth(2)
-        h_tof30_k.SetLineStyle(7)
+        if particle == kaon:
+            h_tof30_signal = apply_efficiency(h_k, eff_tof30_pik)
+        elif particle == proton:
+            h_tof30_signal = apply_efficiency(h_p, eff_tof30_kp)
+        h_tof30_signal.SetLineColor( ROOT.TColor.GetColor("#ff0000") )
+        h_tof30_signal.SetLineWidth(2)
+        h_tof30_signal.SetLineStyle(7)
 
         # TOF 10 kaon efficiency
-        h_tof10_k = apply_efficiency(h_ss_k, eff_tof10_pik)
-        h_tof10_k.SetLineColor( ROOT.TColor.GetColor("#ff0000") )
-        h_tof10_k.SetLineWidth(2)
+        if particle == kaon:
+            h_tof10_signal = apply_efficiency(h_k, eff_tof10_pik)
+        elif particle == proton:
+            h_tof10_signal = apply_efficiency(h_p, eff_tof10_kp)
+        h_tof10_signal.SetLineColor( ROOT.TColor.GetColor("#ff0000") )
+        h_tof10_signal.SetLineWidth(2)
 
         # TOF 30 pion mis-id
-        h_tof30_pi = apply_efficiency(h_ss_pi, eff_tof30_pik, mode="misid")
-        h_tof30_pi.SetLineColor( ROOT.TColor.GetColor("#0066ff") )
-        h_tof30_pi.SetLineWidth(2)
-        h_tof30_pi.SetLineStyle(7)
+        if particle == kaon:
+            h_tof30_bkg = apply_efficiency(h_pi, eff_tof30_pik, mode="misid")
+        elif particle == proton:
+            h_tof30_bkg = apply_efficiency(h_k, eff_tof30_kp, mode="misid")        
+        h_tof30_bkg.SetLineColor( ROOT.TColor.GetColor("#0066ff") )
+        h_tof30_bkg.SetLineWidth(2)
+        h_tof30_bkg.SetLineStyle(7)
 
         # TOF 10 pion mis-id
-        h_tof10_pi = apply_efficiency(h_ss_pi, eff_tof10_pik, mode="misid")
-        h_tof10_pi.SetLineColor( ROOT.TColor.GetColor("#0066ff") )
-        h_tof10_pi.SetLineWidth(2)
+        if particle == kaon:
+            h_tof10_bkg = apply_efficiency(h_pi, eff_tof10_pik, mode="misid")
+        elif particle == proton:
+            h_tof10_bkg = apply_efficiency(h_k, eff_tof10_kp, mode="misid")        
+        h_tof10_bkg.SetLineColor( ROOT.TColor.GetColor("#0066ff") )
+        h_tof10_bkg.SetLineWidth(2)
 
-        h_ss_k.GetYaxis().SetMaxDigits(3)
-        canvas2 = create_canvas()
-        h_ss_k.DrawClone()
-        h_tof30_k.DrawClone("same")
-        h_tof10_k.DrawClone("same")
-        h_tof30_pi.DrawClone("same")
-        h_tof10_pi.DrawClone("same")
+        h_total_signal.GetYaxis().SetMaxDigits(3)
+        if particle == kaon:
+            h_total_signal.GetXaxis().SetRangeUser(0, 8)
+        elif particle == proton:
+            h_total_signal.GetXaxis().SetRangeUser(0, 15)
+        h_total_signal.DrawCopy("histo")
+        h_tof30_signal.DrawCopy("histo same")
+        h_tof10_signal.DrawCopy("histo same")
+        h_tof30_bkg.DrawCopy("histo same")
+        h_tof10_bkg.DrawCopy("histo same")
 
         leg = create_legend(0.2, 0.75, 0.76, 0.91)
         leg.SetNColumns(2)
         leg.SetMargin(0.15)
 
-        h_leg1 = ROOT.TH1F(get_rand_string(), "K total (#varepsilon=100%)", 1, 0, 1)
+        if particle == kaon:
+            signal_total_title = "K total (#varepsilon=100%)"
+            signal_eff_title = "K identified"
+            bkg_misid_title = "#pi misidentified"
+        elif particle == proton:
+            signal_total_title = "p total (#varepsilon=100%)"
+            signal_eff_title = "p identified"
+            bkg_misid_title = "K misidentified"
+
+        h_leg1 = ROOT.TH1F(get_rand_string(), signal_total_title, 1, 0, 1)
         leg.AddEntry(h_leg1, h_leg1.GetTitle(), "l")
 
         h_leg2 = ROOT.TH1F(get_rand_string(), "", 1, 0, 1)
         h_leg2.SetLineStyle(2)
         leg.AddEntry(0, "", "")
 
-        h_leg3 = ROOT.TH1F(get_rand_string(), "K identified", 1, 0, 1)
+        h_leg3 = ROOT.TH1F(get_rand_string(), signal_eff_title, 1, 0, 1)
         h_leg3.SetLineColor(ROOT.TColor.GetColor("#ff0000"))
         leg.AddEntry(h_leg3, h_leg3.GetTitle(), "l")
 
@@ -553,20 +646,65 @@ def tof_impact(use_dedx=True):
         h_leg4.SetLineStyle(7)
         leg.AddEntry(h_leg4, h_leg4.GetTitle(), "l")
 
-        h_leg5 = ROOT.TH1F(get_rand_string(), "#pi misidentified", 1, 0, 1)
+        h_leg5 = ROOT.TH1F(get_rand_string(), bkg_misid_title, 1, 0, 1)
         h_leg5.SetLineColor(ROOT.TColor.GetColor("#0066ff"))
         leg.AddEntry(h_leg5, h_leg5.GetTitle(), "l")
 
         h_leg6 = ROOT.TH1F(get_rand_string(), "TOF 10 ps", 1, 0, 1)
         h_leg6.SetLineStyle(1)
         leg.AddEntry(h_leg6, h_leg6.GetTitle(), "l")
-        leg.DrawClone()
+        leg.DrawCopy()
         latex.SetTextSize(0.04)
-        latex.DrawLatexNDC(0.55, 0.55, "#splitline{Protons from Z#rightarrows#bar{s}}{E_{cm} = 250 GeV/c^{2}}")
-        canvas2.Update()
-        input("wait")
+        if process == "Zss":
+            latex.DrawLatexNDC(0.55, 0.55, "Z#rightarrows#bar{s} at E_{cm} = 250 GeV/c^{2}")
+        elif process == "Hgg":
+            latex.DrawLatexNDC(0.55, 0.55, "H#rightarrowgg at E_{cm} = 250 GeV/c^{2}")
+    canvas.Update()
+    # input("wait")
+    return canvas
 
 
 
 
-tof_impact()
+
+c1 = tof_impact(use_dedx=True, process="Zss", particle=kaon)
+c2 = tof_impact(use_dedx=True, process="Hgg", particle=kaon)
+c3 = tof_impact(use_dedx=True, process="Zss", particle=proton)
+c4 = tof_impact(use_dedx=True, process="Hgg", particle=proton)
+c5 = tof_impact(use_dedx=False, process="Zss", particle=kaon)
+c6 = tof_impact(use_dedx=False, process="Hgg", particle=kaon)
+c7 = tof_impact(use_dedx=False, process="Zss", particle=proton)
+c8 = tof_impact(use_dedx=False, process="Hgg", particle=proton)
+input("wait")
+
+def count_particle_species():
+    df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/2f_Z_hadronic_dst.root")\
+            .Filter("quarksToPythia == 33")\
+            .Filter("!isSimulated && !isOverlay")\
+            .Filter("hasTrack && !isDecayedInTracker")\
+            .Define("mom", "sqrt(mcPx*mcPx + mcPy*mcPy + mcPz*mcPz)")
+    n_total = df.Count()
+    n_pi = df.Filter("abs(pdg) == 211").Count()
+    n_k = df.Filter("abs(pdg) == 321").Count()
+    n_p = df.Filter("abs(pdg) == 2212").Count()
+
+    print("Pi fraction:", 100*n_pi.GetValue()/n_total.GetValue())
+    print("K fraction:", 100*n_k.GetValue()/n_total.GetValue())
+    print("P fraction:", 100*n_p.GetValue()/n_total.GetValue())
+
+    df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/higgs_Pn23n23h_dst.root")\
+            .Filter("higgsDaughters == 909 || higgsDaughters == 2121")\
+            .Filter("!isSimulated && !isOverlay")\
+            .Filter("hasTrack && !isDecayedInTracker")\
+            .Define("mom", "sqrt(mcPx*mcPx + mcPy*mcPy + mcPz*mcPz)")
+    n_total = df.Count()
+    n_pi = df.Filter("abs(pdg) == 211").Count()
+    n_k = df.Filter("abs(pdg) == 321").Count()
+    n_p = df.Filter("abs(pdg) == 2212").Count()
+
+    print("Pi fraction:", 100*n_pi.GetValue()/n_total.GetValue())
+    print("K fraction:", 100*n_k.GetValue()/n_total.GetValue())
+    print("P fraction:", 100*n_p.GetValue()/n_total.GetValue())
+
+    input("wait")
+# count_particle_species()
