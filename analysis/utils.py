@@ -19,8 +19,9 @@ latex.SetTextFont(52)
 latex.SetTextSize(0.04)
 
 class Particle:
-    def __init__(self, name, legend, color, mass, momentum, track_length, pdg):
+    def __init__(self, name, short_name, legend, color, mass, momentum, track_length, pdg):
         self.name = name
+        self.short_name = short_name
         self.legend = legend
         self.color = color
         self.mass = mass
@@ -35,9 +36,9 @@ class Particle:
         self.legend_graph.SetFillColor(self.color)
 
 def create_list_of_particles(momentum, track_length):
-    pion = Particle('pion', ' #pi^{#pm}', ROOT.TColor.GetColor('#1b9e77'), PION_MASS, momentum, track_length, 211)
-    kaon = Particle('kaon', ' K^{#pm}', ROOT.TColor.GetColor('#d95f02'), KAON_MASS, momentum, track_length, 321)
-    proton = Particle('proton', ' p', ROOT.TColor.GetColor('#7570b3'), PROTON_MASS, momentum, track_length, 2212)
+    pion = Particle('pion', "pi", ' #pi^{#pm}', ROOT.TColor.GetColor('#1b9e77'), PION_MASS, momentum, track_length, 211)
+    kaon = Particle('kaon', "k", ' K^{#pm}', ROOT.TColor.GetColor('#d95f02'), KAON_MASS, momentum, track_length, 321)
+    proton = Particle('proton', "p", ' p', ROOT.TColor.GetColor('#7570b3'), PROTON_MASS, momentum, track_length, 2212)
     return [pion, kaon, proton]
 
 particles = create_list_of_particles(1., 1) # just for colours! overwrite when studying mass_uncertainty!
