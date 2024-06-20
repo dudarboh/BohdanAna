@@ -3,6 +3,7 @@ ROOT.gStyle.SetPalette(ROOT.kBird)
 ROOT.gStyle.SetNumberContours(256)
 ROOT.EnableImplicitMT()
 
+# NOTE: TIMING CUT IS PRESENT !!!!!!!
 df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna.root")\
         .Filter("tofClosest0 > 6.")\
         .Define("pTrue", "sqrt(mcPx*mcPx + mcPy*mcPy + mcPz*mcPz)")\
