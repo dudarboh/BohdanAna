@@ -85,3 +85,61 @@ def check_set_bias():
 
     input("wait")
 
+def mom_vs_nhits_correlation():
+
+    ROOT.gInterpreter.Declare('#include "tof.hpp"')
+
+    def filter_n_layers(df, n_layers):
+        '''Return df with hits only within first n_layers'''
+        df = df.Redefine("dl", f"dl[layerHit<{n_layers}]")\
+                .Redefine("dToImpact", f"dToImpact[layerHit<{n_layers}]")\
+                .Redefine("dToLine", f"dToLine[layerHit<{n_layers}]")\
+                .Redefine("tHit", f"tHit[layerHit<{n_layers}]")\
+                .Redefine("layerHit", f"layerHit[layerHit<{n_layers}]")
+        return df
+
+    def smear_time(df):
+        '''Return df with time smeared with time_resolution (in ps)'''
+        # Only with 50 ps for now
+        df = df.Redefine("tHit", "smear(rdfslot_, tHit, gaus50)")\
+                .Define("tSurface", "getTimeAtSurface(tHit, dToImpact)")
+        return df
+
+    df = ROOT.RDataFrame("treename", "/nfs/dust/ilc/user/dudarboh/tof/BohdanAna.root")\
+            .Filter("rdfentry_ < 3000000")\
+            .Filter("if (rdfentry_ % 1000000 == 0){ std::cout << rdfentry_ << std::endl; } return true;")\
+            .Filter("abs(pdg) == 211 || abs(pdg) == 321 || abs(pdg) == 2212")\
+            .Filter("tofClosest0 > 6.")\
+            .Filter("caloIDClosest == 1")\
+            .Define("nHitsIn10Layers", "getNHitsInLayers(layerHit, 10)")\
+            .Filter("nHitsIn10Layers > 0")
+    df = df.Define("rImpact", "ROOT::Math::XYZVector(recoCaloX, recoCaloY, recoCaloZ)")\
+            .Define("momImpact", "ROOT::Math::XYZVector(recoCaloPx, recoCaloPy, recoCaloPz)")\
+            .Define("hitPos", "hitPos(xHit, yHit, zHit)")
+
+    df = df.Define("dToImpact", "dToImpact(hitPos, rImpact)")\
+            .Define("dToLine", "dToLine(hitPos, rImpact, momImpact)")\
+            .Define("dl", "sqrt(dToImpact*dToImpact - dToLine*dToLine)")
+
+    df = filter_n_layers(df, 10)
+    df = smear_time(df)
+
+
+    df = df.Define("mom2", "harmonicMomToEcal_IKF_zedLambda*harmonicMomToEcal_IKF_zedLambda")\
+        .Define("mom", "sqrt(mom2)")\
+        .Define("tSurface_cyl_mask", "tSurface[selectCylinderHits(dToLine, 10.)]")\
+        .Define("tSurface_both_masks", "tSurface_cyl_mask[selectMedianHits(tSurface_cyl_mask, 170.)]")\
+        .Define("nHits_after_selection", "tSurface_both_masks.size()")
+
+    # c1 = create_canvas()
+    h = df.Histo2D( (get_rand_string(), ";N hits;Momentum (GeV/c)", 40, 0, 40, 1000, 0., 10.), "nHits_after_selection","mom" )
+    c1 = draw_2d_plot(h)
+    # h.Draw("COLZ")
+    c2 = create_canvas()
+    h_x = h.ProfileX("name", 1, -1, "s")
+    h_x.Draw()
+    h_x.GetYaxis().SetRangeUser(0., 10.)
+    c1.Update()
+    c2.Update()
+    input("wait")
+mom_vs_nhits_correlation()

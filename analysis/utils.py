@@ -131,13 +131,13 @@ def create_legend(x1=0.2, y1=0.75, x2=0.76, y2=0.91):
 
 def create_canvas(margin=0.22, left_margin_fraction=0.8, bottom_margin_fraction=0.7):
     '''
-    Create a square canvas 600x600 with equal horizontal and vertical margins to ensure also a square plot inside the axes!
+    Create a square canvas 1200x1200 with equal horizontal and vertical margins to ensure also a square plot inside the axes!
     '''
     ROOT.gStyle.SetPadLeftMargin( left_margin_fraction * margin )
     ROOT.gStyle.SetPadRightMargin( (1 - left_margin_fraction) * margin )
     ROOT.gStyle.SetPadBottomMargin(bottom_margin_fraction * margin)
     ROOT.gStyle.SetPadTopMargin( (1 - bottom_margin_fraction) * margin)
-    canvas = ROOT.TCanvas(get_rand_string(), "", 600, 600)
+    canvas = ROOT.TCanvas(get_rand_string(), "", 1200, 1200)
     return canvas
 
 def draw_vertical_mass_lines(maxy):
